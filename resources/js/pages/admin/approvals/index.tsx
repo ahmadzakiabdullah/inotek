@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Head, useForm, router, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,6 +53,9 @@ import {
     FileCheck,
     ExternalLink,
     AlertCircle,
+    Plus,
+    Trash2,
+    UserPlus,
 } from 'lucide-react';
 
 interface TeamMember {
@@ -71,6 +74,7 @@ interface Category {
     id: number;
     code: string;
     name: string;
+    session_id?: number;
 }
 
 interface Project {
@@ -98,12 +102,20 @@ interface Project {
     session?: CompetitionSession;
 }
 
+interface Student {
+    id: number;
+    name: string;
+    email: string;
+}
+
 interface Props {
     projects: Project[];
     sessions: CompetitionSession[];
+    categories: Category[];
+    students: Student[];
 }
 
-export default function ApprovalsIndex({ projects, sessions }: Props) {
+export default function ApprovalsIndex({ projects, sessions, categories, students }: Props) {
     const { auth } = usePage().props as any;
     const userRole = auth?.user?.role;
 
@@ -128,6 +140,93 @@ export default function ApprovalsIndex({ projects, sessions }: Props) {
     const editCodeForm = useForm({
         pcode: '',
     });
+
+    const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+    const [studentSearch, setStudentSearch] = useState('');
+    const [isStudentDropdownOpen, setIsStudentDropdownOpen] = useState(false);
+
+    // Form for register
+    const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
+        user_id: '',
+        category_id: '',
+        title: '',
+        abstract: '',
+        institution_type: 'utem',
+        supervisor_name: '',
+        supervisor_email: '',
+        supervisor_phone: '',
+        video_url: '',
+        poster_url: '',
+        team_members: [] as TeamMember[],
+    });
+
+    const activeSession = useMemo(() => {
+        return sessions.find((s) => s.is_active);
+    }, [sessions]);
+
+    const activeCategories = useMemo(() => {
+        if (!activeSession) return [];
+        return categories.filter((c) => c.session_id === activeSession.id);
+    }, [categories, activeSession]);
+
+    const filteredStudents = useMemo(() => {
+        const query = studentSearch.toLowerCase();
+        if (!query) return students;
+        return students.filter((s) =>
+            s.name.toLowerCase().includes(query) ||
+            s.email.toLowerCase().includes(query)
+        );
+    }, [students, studentSearch]);
+
+    const selectedStudent = useMemo(() => {
+        return students.find((s) => s.id.toString() === data.user_id);
+    }, [students, data.user_id]);
+
+    useEffect(() => {
+        const handleOutsideClick = (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            if (!target.closest('.student-search-container')) {
+                setIsStudentDropdownOpen(false);
+            }
+        };
+        document.addEventListener('click', handleOutsideClick);
+        return () => document.removeEventListener('click', handleOutsideClick);
+    }, []);
+
+    const addTeamMember = () => {
+        setData('team_members', [
+            ...data.team_members,
+            { name: '', email: '', phone: '' },
+        ]);
+    };
+
+    const removeTeamMember = (index: number) => {
+        const updated = [...data.team_members];
+        updated.splice(index, 1);
+        setData('team_members', updated);
+    };
+
+    const updateTeamMember = (index: number, field: keyof TeamMember, value: string) => {
+        const updated = [...data.team_members];
+        updated[index] = { ...updated[index], [field]: value };
+        setData('team_members', updated);
+    };
+
+    const handleCloseRegister = () => {
+        setIsRegisterOpen(false);
+        reset();
+        clearErrors();
+        setStudentSearch('');
+    };
+
+    const handleRegisterSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        post('/admin/approvals/store', {
+            onSuccess: () => {
+                handleCloseRegister();
+            },
+        });
+    };
 
     // Filter projects based on query and filters
     const filteredProjects = useMemo(() => {
@@ -298,6 +397,15 @@ export default function ApprovalsIndex({ projects, sessions }: Props) {
                             cancel, and manage project codes.
                         </p>
                     </div>
+                    {userRole === 'admin' && (
+                        <Button
+                            onClick={() => setIsRegisterOpen(true)}
+                            className="gap-2 text-white bg-primary hover:bg-primary/95 shadow-md hover:shadow-lg transition-all"
+                        >
+                            <Plus className="h-4 w-4" />
+                            Register Project
+                        </Button>
+                    )}
                 </div>
 
                 {/* Stats Cards */}
@@ -957,6 +1065,364 @@ export default function ApprovalsIndex({ projects, sessions }: Props) {
                             </DialogFooter>
                         </form>
                     )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Register Project Dialog */}
+            <Dialog
+                open={isRegisterOpen}
+                onOpenChange={(open) => !open && handleCloseRegister()}
+            >
+                <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto border border-border/50 bg-card/95 backdrop-blur-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-xl font-bold text-foreground">
+                            <Plus className="h-5 w-5 text-primary" />
+                            Register New Project
+                        </DialogTitle>
+                        <DialogDescription>
+                            Create a direct, approved project registration for an existing registered student.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {!activeSession && (
+                        <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive flex items-center gap-2">
+                            <AlertCircle className="h-4 w-4 shrink-0" />
+                            <span>No active competition session is currently open. You cannot register a project.</span>
+                        </div>
+                    )}
+
+                    <form onSubmit={handleRegisterSubmit} className="space-y-6 py-2">
+                        {/* Student Search Select */}
+                        <div className="student-search-container relative space-y-2">
+                            <Label htmlFor="student-search" className="text-sm font-semibold">
+                                Select Student (Registered User)
+                            </Label>
+                            {selectedStudent ? (
+                                <div className="flex items-center justify-between rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm shadow-sm">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                            <User className="h-5 w-5" />
+                                        </div>
+                                        <div>
+                                            <p className="font-semibold text-foreground">{selectedStudent.name}</p>
+                                            <p className="text-xs text-muted-foreground">{selectedStudent.email}</p>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                            setData('user_id', '');
+                                            setStudentSearch('');
+                                        }}
+                                        className="text-xs text-destructive hover:bg-destructive/10"
+                                    >
+                                        Change Student
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="relative">
+                                    <Search className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        id="student-search"
+                                        placeholder="Search by student name or email..."
+                                        value={studentSearch}
+                                        onChange={(e) => {
+                                            setStudentSearch(e.target.value);
+                                            setIsStudentDropdownOpen(true);
+                                        }}
+                                        onFocus={() => setIsStudentDropdownOpen(true)}
+                                        className="pl-9 bg-background/50 border-border/50"
+                                        disabled={!activeSession}
+                                        required
+                                    />
+                                    {isStudentDropdownOpen && (
+                                        <div className="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-border bg-popover p-1 shadow-lg backdrop-blur-md">
+                                            {filteredStudents.length > 0 ? (
+                                                filteredStudents.map((student) => (
+                                                    <button
+                                                        key={student.id}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setData('user_id', student.id.toString());
+                                                            setStudentSearch(student.name);
+                                                            setIsStudentDropdownOpen(false);
+                                                        }}
+                                                        className="flex w-full flex-col rounded-sm px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                                                    >
+                                                        <span className="font-medium text-foreground">{student.name}</span>
+                                                        <span className="text-xs text-muted-foreground">{student.email}</span>
+                                                    </button>
+                                                ))
+                                            ) : (
+                                                <p className="p-3 text-center text-xs text-muted-foreground">
+                                                    No registered students found
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            <InputError message={errors.user_id} />
+                        </div>
+
+                        {/* Category & Institution Type */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="category_id" className="text-sm font-semibold">Category</Label>
+                                <Select
+                                    value={data.category_id}
+                                    onValueChange={(val) => setData('category_id', val)}
+                                    disabled={!activeSession}
+                                >
+                                    <SelectTrigger id="category_id" className="bg-background/50 border-border/50">
+                                        <SelectValue placeholder="Select a category" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {activeCategories.map((cat) => (
+                                            <SelectItem key={cat.id} value={cat.id.toString()}>
+                                                {cat.name} ({cat.code})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <InputError message={errors.category_id} />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="institution_type" className="text-sm font-semibold">Institution Type</Label>
+                                <Select
+                                    value={data.institution_type}
+                                    onValueChange={(val) => setData('institution_type', val)}
+                                    disabled={!activeSession}
+                                >
+                                    <SelectTrigger id="institution_type" className="bg-background/50 border-border/50">
+                                        <SelectValue placeholder="Select type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="utem">UTeM</SelectItem>
+                                        <SelectItem value="ipt">Other IPT</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <InputError message={errors.institution_type} />
+                            </div>
+                        </div>
+
+                        {/* Title & Abstract */}
+                        <div className="space-y-2">
+                            <Label htmlFor="title" className="text-sm font-semibold">Project Title</Label>
+                            <Input
+                                id="title"
+                                value={data.title}
+                                onChange={(e) => setData('title', e.target.value)}
+                                placeholder="Enter project title"
+                                className="bg-background/50 border-border/50"
+                                disabled={!activeSession}
+                                required
+                            />
+                            <InputError message={errors.title} />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="abstract" className="text-sm font-semibold">Abstract Description</Label>
+                            <Textarea
+                                id="abstract"
+                                value={data.abstract}
+                                onChange={(e) => setData('abstract', e.target.value)}
+                                placeholder="Provide a detailed project abstract..."
+                                className="h-28 resize-none bg-background/50 border-border/50"
+                                disabled={!activeSession}
+                                required
+                            />
+                            <InputError message={errors.abstract} />
+                        </div>
+
+                        {/* Supervisor Details */}
+                        <div className="rounded-lg border border-border/50 bg-muted/5 p-4 space-y-4">
+                            <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                                <User className="h-4 w-4 text-primary" />
+                                Supervisor Information
+                            </h3>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="supervisor_name" className="text-xs font-semibold">Supervisor Name</Label>
+                                    <Input
+                                        id="supervisor_name"
+                                        value={data.supervisor_name}
+                                        onChange={(e) => setData('supervisor_name', e.target.value)}
+                                        placeholder="e.g. Dr. Ahmad"
+                                        className="h-9 bg-background/50 border-border/50"
+                                        disabled={!activeSession}
+                                        required
+                                    />
+                                    <InputError message={errors.supervisor_name} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="supervisor_email" className="text-xs font-semibold">Supervisor Email</Label>
+                                    <Input
+                                        id="supervisor_email"
+                                        type="email"
+                                        value={data.supervisor_email}
+                                        onChange={(e) => setData('supervisor_email', e.target.value)}
+                                        placeholder="e.g. supervisor@utem.edu.my"
+                                        className="h-9 bg-background/50 border-border/50"
+                                        disabled={!activeSession}
+                                        required
+                                    />
+                                    <InputError message={errors.supervisor_email} />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="supervisor_phone" className="text-xs font-semibold">Supervisor Phone (Optional)</Label>
+                                <Input
+                                    id="supervisor_phone"
+                                    value={data.supervisor_phone}
+                                    onChange={(e) => setData('supervisor_phone', e.target.value)}
+                                    placeholder="e.g. +60123456789"
+                                    className="h-9 bg-background/50 border-border/50"
+                                    disabled={!activeSession}
+                                />
+                                <InputError message={errors.supervisor_phone} />
+                            </div>
+                        </div>
+
+                        {/* Video & Poster URLs */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="video_url" className="text-sm font-semibold">Video Demo URL (Optional)</Label>
+                                <Input
+                                    id="video_url"
+                                    type="url"
+                                    value={data.video_url}
+                                    onChange={(e) => setData('video_url', e.target.value)}
+                                    placeholder="e.g. https://youtube.com/watch?v=..."
+                                    className="bg-background/50 border-border/50"
+                                    disabled={!activeSession}
+                                />
+                                <InputError message={errors.video_url} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="poster_url" className="text-sm font-semibold">Poster URL (Optional)</Label>
+                                <Input
+                                    id="poster_url"
+                                    type="url"
+                                    value={data.poster_url}
+                                    onChange={(e) => setData('poster_url', e.target.value)}
+                                    placeholder="e.g. https://drive.google.com/..."
+                                    className="bg-background/50 border-border/50"
+                                    disabled={!activeSession}
+                                />
+                                <InputError message={errors.poster_url} />
+                            </div>
+                        </div>
+
+                        {/* Team Members */}
+                        <div className="space-y-4 rounded-lg border border-border/50 bg-muted/5 p-4">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                                        <UserPlus className="h-4 w-4 text-primary" />
+                                        Team Members (Optional)
+                                    </h3>
+                                    <p className="text-xs text-muted-foreground">Add extra team members to this project registration.</p>
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={addTeamMember}
+                                    disabled={!activeSession}
+                                    className="h-8 gap-1 text-xs"
+                                >
+                                    <Plus className="h-3.5 w-3.5" />
+                                    Add Member
+                                </Button>
+                            </div>
+
+                            {data.team_members.length > 0 ? (
+                                <div className="space-y-3">
+                                    {data.team_members.map((member, index) => (
+                                        <div key={index} className="relative rounded-lg border border-border/40 bg-background/30 p-3 space-y-3">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                                    Member #{index + 1}
+                                                </span>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => removeTeamMember(index)}
+                                                    className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                                                >
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                                <div className="space-y-1">
+                                                    <Label htmlFor={`member-${index}-name`} className="text-[11px] font-semibold">Full Name</Label>
+                                                    <Input
+                                                        id={`member-${index}-name`}
+                                                        value={member.name}
+                                                        onChange={(e) => updateTeamMember(index, 'name', e.target.value)}
+                                                        placeholder="Member Name"
+                                                        className="h-8 text-xs bg-background/50 border-border/50"
+                                                        required
+                                                    />
+                                                    <InputError message={errors[`team_members.${index}.name` as any]} />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <Label htmlFor={`member-${index}-email`} className="text-[11px] font-semibold">Email</Label>
+                                                    <Input
+                                                        id={`member-${index}-email`}
+                                                        type="email"
+                                                        value={member.email || ''}
+                                                        onChange={(e) => updateTeamMember(index, 'email', e.target.value)}
+                                                        placeholder="member@email.com"
+                                                        className="h-8 text-xs bg-background/50 border-border/50"
+                                                    />
+                                                    <InputError message={errors[`team_members.${index}.email` as any]} />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <Label htmlFor={`member-${index}-phone`} className="text-[11px] font-semibold">Phone</Label>
+                                                    <Input
+                                                        id={`member-${index}-phone`}
+                                                        value={member.phone || ''}
+                                                        onChange={(e) => updateTeamMember(index, 'phone', e.target.value)}
+                                                        placeholder="+601..."
+                                                        className="h-8 text-xs bg-background/50 border-border/50"
+                                                    />
+                                                    <InputError message={errors[`team_members.${index}.phone` as any]} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-xs text-muted-foreground italic text-center py-4 border border-dashed border-border/40 rounded-lg bg-background/10">
+                                    No team members added yet. Single-presenter project.
+                                </p>
+                            )}
+                        </div>
+
+                        <DialogFooter className="pt-4 gap-2 sm:gap-0">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={handleCloseRegister}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={processing || !activeSession}
+                                className="bg-primary hover:bg-primary/95 text-white"
+                            >
+                                {processing ? 'Registering...' : 'Register Project'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
                 </DialogContent>
             </Dialog>
         </>

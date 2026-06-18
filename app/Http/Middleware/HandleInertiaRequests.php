@@ -37,7 +37,15 @@ class HandleInertiaRequests extends Middleware
     {
         return [
             ...parent::share($request),
-            'name' => config('app.name'),
+            'name' => \App\Models\Setting::get('system_name', config('app.name', 'Laravel')),
+            'version' => config('app.version'),
+            'settings' => [
+                'system_name' => \App\Models\Setting::get('system_name', config('app.name', 'Laravel')),
+                'global_font' => \App\Models\Setting::get('global_font', 'Inter'),
+                'primary_color' => \App\Models\Setting::get('primary_color', '#4f46e5'),
+                'date_format' => \App\Models\Setting::get('date_format', 'd/m/Y'),
+                'timezone' => \App\Models\Setting::get('timezone', 'Asia/Kuala_Lumpur'),
+            ],
             'auth' => [
                 'user' => $request->user() ? array_merge($request->user()->toArray(), [
                     'role' => $request->user()->role?->name,

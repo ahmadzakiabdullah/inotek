@@ -124,7 +124,7 @@ class JudgeController extends Controller
             ->first();
 
         return Inertia::render('judge/EvaluationForm', [
-            'project' => $project->load(['category', 'teamMembers']),
+            'project' => $project->load(['category', 'teamMembers', 'user']),
             'rubric' => $rubric,
             'existingScore' => $existingScore,
             'roundNo' => $roundNo,

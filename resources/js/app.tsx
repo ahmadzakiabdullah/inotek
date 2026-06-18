@@ -7,7 +7,7 @@ import AuthLayout from '@/layouts/auth-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import { ActiveThemeProvider } from '@/components/active-theme';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = (window as any).appName || import.meta.env.VITE_APP_NAME || 'Laravel';
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),

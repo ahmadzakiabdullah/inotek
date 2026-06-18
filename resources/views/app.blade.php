@@ -34,12 +34,40 @@
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
+        @php
+            $systemName = \App\Models\Setting::get('system_name', config('app.name', 'Laravel'));
+            $selectedFont = \App\Models\Setting::get('global_font', 'Inter');
+            $primaryColor = \App\Models\Setting::get('primary_color', '#4f46e5'); // Default Indigo
+        @endphp
+
+        <!-- Google Fonts Dynamic Import -->
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family={{ str_replace(' ', '+', $selectedFont) }}:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+        <style>
+            :root {
+                --primary: {{ $primaryColor }} !important;
+                --sidebar-primary: {{ $primaryColor }} !important;
+                --ring: {{ $primaryColor }} !important;
+            }
+            body {
+                --text-family: '{{ $selectedFont }}', sans-serif !important;
+                --font-sans: '{{ $selectedFont }}', sans-serif !important;
+                font-family: '{{ $selectedFont }}', sans-serif !important;
+            }
+        </style>
+
+        <script>
+            window.appName = "{{ $systemName }}";
+        </script>
+
         @fonts
 
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
         <x-inertia::head>
-            <title>{{ config('app.name', 'Laravel') }}</title>
+            <title>{{ $systemName }}</title>
         </x-inertia::head>
     </head>
     <body class="font-sans antialiased">

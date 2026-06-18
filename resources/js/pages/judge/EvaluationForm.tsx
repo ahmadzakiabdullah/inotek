@@ -6,6 +6,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import InputError from '@/components/input-error';
 import { ArrowLeft, Award, Lock, ShieldAlert, Sparkles, CheckCircle2 } from 'lucide-react';
 
@@ -45,6 +52,11 @@ interface Project {
         name: string;
         email: string | null;
     }>;
+    user?: {
+        id: number;
+        name: string;
+        email: string | null;
+    } | null;
 }
 
 interface Score {
@@ -71,6 +83,19 @@ export default function EvaluationForm({ project, rubric, existingScore, roundNo
     });
 
     const [points, setPoints] = useState<Record<number, number>>(initialPoints);
+
+    const presenters = React.useMemo(() => {
+        const list: string[] = [];
+        if (project.user?.name) {
+            list.push(project.user.name);
+        }
+        project.team_members.forEach((member) => {
+            if (member.name && !list.includes(member.name)) {
+                list.push(member.name);
+            }
+        });
+        return list;
+    }, [project.user, project.team_members]);
 
     const { data, setData, post, processing, errors } = useForm({
         scores: points,
@@ -313,16 +338,78 @@ export default function EvaluationForm({ project, rubric, existingScore, roundNo
                                         <InputError message={errors.comments} />
                                     </div>
 
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="best_presenter">Best Presenter Nomination (Student Name)</Label>
-                                        <Input
-                                            id="best_presenter"
-                                            value={data.best_presenter}
-                                            onChange={(e) => setData('best_presenter', e.target.value)}
-                                            placeholder="Enter the name of the team member with the best presentation..."
-                                            className="bg-background/50 border-border/50"
-                                            disabled={isLocked}
-                                        />
+                                    <div className="space-y-3">
+                                        <Label className="text-sm font-semibold">Nominate for Best Presenter?</Label>
+                                        
+                                        <div className="flex gap-2">
+                                            <Button
+                                                type="button"
+                                                variant={data.best_presenter ? "default" : "outline"}
+                                                disabled={isLocked}
+                                                onClick={() => {
+                                                    if (presenters.length === 1) {
+                                                        setData('best_presenter', presenters[0]);
+                                                    } else if (presenters.length > 1) {
+                                                        setData('best_presenter', data.best_presenter || presenters[0]);
+                                                    } else {
+                                                        setData('best_presenter', 'Yes');
+                                                    }
+                                                }}
+                                                className={`h-9 px-4 text-xs font-semibold ${
+                                                    data.best_presenter 
+                                                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white' 
+                                                        : 'border-border/50 hover:bg-muted'
+                                                }`}
+                                            >
+                                                Yes
+                                            </Button>
+                                            
+                                            <Button
+                                                type="button"
+                                                variant={!data.best_presenter ? "default" : "outline"}
+                                                disabled={isLocked}
+                                                onClick={() => setData('best_presenter', '')}
+                                                className={`h-9 px-4 text-xs font-semibold ${
+                                                    !data.best_presenter 
+                                                        ? 'bg-neutral-600 hover:bg-neutral-700 text-white' 
+                                                        : 'border-border/50 hover:bg-muted'
+                                                }`}
+                                            >
+                                                No
+                                            </Button>
+                                        </div>
+
+                                        {/* If nominated and there are multiple team members, show selection list */}
+                                        {data.best_presenter && presenters.length > 1 && (
+                                            <div className="space-y-1.5 pt-2 animate-fadeIn">
+                                                <Label htmlFor="select_presenter" className="text-xs text-muted-foreground">Select Nominee</Label>
+                                                <Select
+                                                    value={presenters.includes(data.best_presenter) ? data.best_presenter : presenters[0]}
+                                                    onValueChange={(val) => setData('best_presenter', val)}
+                                                    disabled={isLocked}
+                                                >
+                                                    <SelectTrigger id="select_presenter">
+                                                        <SelectValue placeholder="Select Nominee" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {presenters.map((name) => (
+                                                            <SelectItem key={name} value={name}>
+                                                                {name} {name === project.user?.name ? '(Owner/Creator)' : '(Team Member)'}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        )}
+
+                                        {/* If nominated and single presenter, show automatic nomination info */}
+                                        {data.best_presenter && presenters.length <= 1 && (
+                                            <div className="text-xs text-muted-foreground bg-muted/30 p-2.5 rounded border border-border/40 mt-2 flex items-center gap-2">
+                                                <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                                                <span>Nominee: <strong className="text-foreground font-semibold">{data.best_presenter}</strong></span>
+                                            </div>
+                                        )}
+
                                         <InputError message={errors.best_presenter} />
                                     </div>
                                 </CardContent>

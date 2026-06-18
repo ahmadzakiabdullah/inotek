@@ -39,8 +39,10 @@ import {
 import { Button } from '@/components/ui/button';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-    const { url: pathname } = usePage();
+    const { url: pathname, props: pageProps } = usePage();
     const { setOpen, setOpenMobile, isMobile } = useSidebar();
+    const appVersion = (pageProps as any).version || '1.5.0';
+    const systemName = (pageProps as any).name || 'INOTEK';
     const isTablet = useIsTablet();
 
     useEffect(() => {
@@ -61,7 +63,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                 <SidebarMenuButton className="h-10 group-data-[collapsible=icon]:px-0! hover:bg-[var(--primary)]/5 hover:text-foreground">
                                     <Logo />
                                     <span className="font-semibold text-foreground">
-                                        Shadcn UI Kit
+                                        {systemName}
                                     </span>
                                     <ChevronsUpDown className="ml-auto group-data-[collapsible=icon]:hidden" />
                                 </SidebarMenuButton>
@@ -135,6 +137,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         </Button>
                     </CardContent>
                 </Card>
+                <div className="px-4 py-1 text-[10px] font-mono text-muted-foreground/40 group-data-[collapsible=icon]:hidden border-t border-border/10">
+                    INOTEK v{appVersion}
+                </div>
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

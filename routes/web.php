@@ -27,6 +27,8 @@ Route::get('leaderboard', [LeaderboardController::class, 'index'])->name('leader
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::inertia('account/profile', 'account/profile')->name('account.profile');
+    Route::get('changelog', [\App\Http\Controllers\ChangelogController::class, 'index'])->name('changelog');
+    Route::post('changelog/clear-cache', [\App\Http\Controllers\ChangelogController::class, 'clearCache'])->name('changelog.clear-cache');
 
     // Participant Project Routes
     Route::resource('projects', ProjectController::class)->except(['create', 'show', 'edit']);
@@ -54,6 +56,10 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         // Manual Announcements
         Route::get('announcements', [NotificationController::class, 'createAnnouncement'])->name('announcements.index');
         Route::post('announcements', [NotificationController::class, 'sendAnnouncement'])->name('announcements.send');
+
+        // System Settings
+        Route::get('settings', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'index'])->name('settings.index');
+        Route::post('settings', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'update'])->name('settings.update');
     });
 
 Route::middleware(['auth', 'verified', 'role:admin,lecturer'])
@@ -63,6 +69,7 @@ Route::middleware(['auth', 'verified', 'role:admin,lecturer'])
         // Project Approvals
         Route::get('approvals', [ProjectApprovalController::class, 'index'])->name('approvals.index');
         Route::post('approvals/approve', [ProjectApprovalController::class, 'approve'])->name('approvals.approve');
+        Route::post('approvals/store', [ProjectApprovalController::class, 'storeProject'])->name('approvals.storeProject');
         Route::post('approvals/{project}/reject', [ProjectApprovalController::class, 'reject'])->name('approvals.reject');
         Route::post('approvals/cancel', [ProjectApprovalController::class, 'cancel'])->name('approvals.cancel');
         Route::put('approvals/{project}/code', [ProjectApprovalController::class, 'updateCode'])->name('approvals.code');

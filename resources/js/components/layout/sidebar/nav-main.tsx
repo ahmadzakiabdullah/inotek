@@ -104,24 +104,6 @@ export function getNavItems(userRole: string | null | undefined): NavGroup[] {
                     href: '/leaderboard',
                     icon: Trophy,
                 },
-                {
-                    title: 'Profile',
-                    href: '/account/profile',
-                    icon: UserIcon,
-                },
-                {
-                    title: 'Settings',
-                    href: '/settings/profile',
-                    icon: SettingsIcon,
-                    items: [
-                        { title: 'Profile Settings', href: '/settings/profile' },
-                        {
-                            title: 'Security & Passkeys',
-                            href: '/settings/security',
-                        },
-                        { title: 'Appearance', href: '/settings/appearance' },
-                    ],
-                },
             ],
         },
     ];
@@ -131,15 +113,6 @@ export function getNavItems(userRole: string | null | undefined): NavGroup[] {
             title: 'Admin Portal',
             items: [
                 {
-                    title: 'User & Access Admin',
-                    href: '/admin/users',
-                    icon: UsersIcon,
-                    items: [
-                        { title: 'Users Management', href: '/admin/users' },
-                        { title: 'Roles Management', href: '/admin/roles' },
-                    ],
-                },
-                {
                     title: 'Competition Setup',
                     href: '/admin/sessions',
                     icon: CalendarIcon,
@@ -147,6 +120,15 @@ export function getNavItems(userRole: string | null | undefined): NavGroup[] {
                         { title: 'Sessions Management', href: '/admin/sessions' },
                         { title: 'Categories Management', href: '/admin/categories' },
                         { title: 'Rubrics Management', href: '/admin/rubrics' },
+                    ],
+                },
+                {
+                    title: 'User & Access Admin',
+                    href: '/admin/users',
+                    icon: UsersIcon,
+                    items: [
+                        { title: 'Users Management', href: '/admin/users' },
+                        { title: 'Roles Management', href: '/admin/roles' },
                     ],
                 },
                 {
@@ -160,10 +142,11 @@ export function getNavItems(userRole: string | null | undefined): NavGroup[] {
                     ],
                 },
                 {
-                    title: 'System Logs & Alerts',
-                    href: '/admin/audit-logs',
-                    icon: ShieldAlertIcon,
+                    title: 'System Administration',
+                    href: '/admin/settings',
+                    icon: SettingsIcon,
                     items: [
+                        { title: 'System Settings', href: '/admin/settings' },
                         { title: 'System Audit Logs', href: '/admin/audit-logs' },
                         { title: 'Broadcast Alerts', href: '/admin/announcements' },
                     ],
@@ -215,6 +198,36 @@ export function getNavItems(userRole: string | null | undefined): NavGroup[] {
             ],
         });
     }
+
+    // Add Account & Settings at the bottom
+    items.push({
+        title: 'Account & Settings',
+        items: [
+            {
+                title: 'Profile',
+                href: '/account/profile',
+                icon: UserIcon,
+            },
+            {
+                title: 'System Updates',
+                href: '/changelog',
+                icon: ActivityIcon,
+            },
+            {
+                title: 'Settings',
+                href: '/settings/profile',
+                icon: SettingsIcon,
+                items: [
+                    { title: 'Profile Settings', href: '/settings/profile' },
+                    {
+                        title: 'Security & Passkeys',
+                        href: '/settings/security',
+                    },
+                    { title: 'Appearance', href: '/settings/appearance' },
+                ],
+            },
+        ],
+    });
 
     return items;
 }

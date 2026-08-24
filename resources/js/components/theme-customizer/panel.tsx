@@ -1,12 +1,6 @@
 'use client';
 
 import { Palette } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
     PresetSelector,
     SidebarModeSelector,
@@ -16,6 +10,12 @@ import {
     ThemeRadiusSelector,
     ResetThemeButton,
 } from '@/components/theme-customizer/index';
+import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 export function ThemeCustomizerPanel() {

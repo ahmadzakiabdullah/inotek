@@ -1,9 +1,10 @@
-import React from 'react';
 import { Head, useForm } from '@inertiajs/react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { BellRing, Send, Sparkles, CheckCircle2, AlertTriangle, Info, XCircle } from 'lucide-react';
+import React from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import {
     Select,
     SelectContent,
@@ -11,8 +12,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { BellRing, Send, Sparkles, CheckCircle2, AlertTriangle, Info, XCircle } from 'lucide-react';
-import { toast } from 'sonner';
+import { Textarea } from '@/components/ui/textarea';
 
 const typeIcons: Record<string, React.ReactNode> = {
     info: <Info className="h-5 w-5 text-blue-500" />,
@@ -38,7 +38,7 @@ export default function Index() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        post('/admin/announcements', {
+        post('/dashboard/announcements', {
             onSuccess: () => {
                 toast.success('Announcement broadcasted in real-time!');
                 reset('title', 'message');
@@ -200,7 +200,7 @@ Index.layout = {
         },
         {
             title: 'Broadcast Announcement',
-            href: '/admin/announcements',
+            href: '/dashboard/announcements',
         },
     ],
 };

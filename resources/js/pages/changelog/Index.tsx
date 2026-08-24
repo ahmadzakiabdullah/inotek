@@ -1,8 +1,4 @@
-import React from 'react';
 import { Head, usePage, router } from '@inertiajs/react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { 
     Activity, 
     Calendar, 
@@ -14,6 +10,10 @@ import {
     Trash2,
     Info
 } from 'lucide-react';
+import React from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface VersionChange {
     version: string;
@@ -171,7 +171,9 @@ export default function Index({ timeline }: ChangelogProps) {
                                                     bg: 'bg-muted/10'
                                                 };
 
-                                                if (items.length === 0) return null;
+                                                if (items.length === 0) {
+return null;
+}
 
                                                 return (
                                                     <div key={group} className="space-y-2">

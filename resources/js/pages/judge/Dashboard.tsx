@@ -1,12 +1,12 @@
-import React, { useMemo, useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ClipboardCheck, Play, Award, CheckCircle, FileSpreadsheet, Hourglass, Search, Sparkles } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
 import DashboardNotifications from '@/components/dashboard-notifications';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Progress } from '@/components/ui/progress';
 import {
     Select,
     SelectContent,
@@ -14,7 +14,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { ClipboardCheck, Play, Award, CheckCircle, FileSpreadsheet, Hourglass, Search, Sparkles } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface Assignment {
     id: number;
@@ -49,6 +49,7 @@ export default function JudgeDashboard({ assignments, activeSession, error }: Pr
         const total = assignments.length;
         const evaluated = assignments.filter((a) => a.is_evaluated).length;
         const pending = total - evaluated;
+
         return { total, evaluated, pending };
     }, [assignments]);
 

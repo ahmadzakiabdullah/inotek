@@ -1,7 +1,7 @@
 import React from 'react';
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
-import { AppSidebar } from '@/components/layout/sidebar/app-sidebar';
 import { SiteHeader } from '@/components/layout/header';
+import { AppSidebar } from '@/components/layout/sidebar/app-sidebar';
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import type { AppLayoutProps } from '@/types';
 
 export default function AppSidebarLayout({

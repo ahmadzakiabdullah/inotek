@@ -1,16 +1,20 @@
 'use client';
 
+import type {
+    ReactNode} from 'react';
 import {
-    ReactNode,
     createContext,
     useContext,
     useEffect,
     useState,
 } from 'react';
-import { DEFAULT_THEME, ThemeType } from '@/lib/themes';
+import type { ThemeType } from '@/lib/themes';
+import { DEFAULT_THEME } from '@/lib/themes';
 
 function setThemeCookie(key: string, value: string | null) {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') {
+return;
+}
 
     if (!value) {
         document.cookie = `${key}=; path=/; max-age=0; SameSite=Lax; ${window.location.protocol === 'https:' ? 'Secure;' : ''}`;
@@ -80,10 +84,12 @@ export function ActiveThemeProvider({
 
 export function useThemeConfig() {
     const context = useContext(ThemeContext);
+
     if (context === undefined) {
         throw new Error(
             'useThemeConfig must be used within an ActiveThemeProvider',
         );
     }
+
     return context;
 }

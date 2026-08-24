@@ -1,6 +1,5 @@
 'use client';
 
-import * as React from 'react';
 import {
     format,
     subDays,
@@ -13,9 +12,9 @@ import {
     startOfWeek,
 } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
+import * as React from 'react';
 import type { DateRange } from 'react-day-picker';
 
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -23,13 +22,6 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from '@/components/ui/tooltip';
 import {
     Select,
     SelectContent,
@@ -37,7 +29,15 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 const dateFilterPresets = [
     { name: 'Today', value: 'today' },
@@ -241,6 +241,7 @@ export default function CalendarDateRangePicker({
                             selected={date}
                             onSelect={(newDate) => {
                                 setDate(newDate);
+
                                 if (newDate?.from) {
                                     setCurrentMonth(newDate.from);
                                 }

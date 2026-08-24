@@ -1,10 +1,12 @@
 'use client';
 
-import * as React from 'react';
 import { Link } from '@inertiajs/react';
-import { BadgeCheckIcon, BriefcaseBusinessIcon, ClockIcon } from 'lucide-react';
 import { DownloadIcon } from '@radix-ui/react-icons';
+import { BadgeCheckIcon, BriefcaseBusinessIcon, ClockIcon } from 'lucide-react';
+import * as React from 'react';
 
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
     Card,
     CardAction,
@@ -12,8 +14,6 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 
 export function LatestActivity() {
     return (

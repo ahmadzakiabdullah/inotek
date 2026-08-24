@@ -1,9 +1,8 @@
 'use client';
 
-import * as React from 'react';
 import { Check, Plus, Send } from 'lucide-react';
+import * as React from 'react';
 
-import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -35,6 +34,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 const users = [
     {
@@ -149,7 +149,11 @@ export function ChatWidget() {
                     <form
                         onSubmit={(event) => {
                             event.preventDefault();
-                            if (inputLength === 0) return;
+
+                            if (inputLength === 0) {
+return;
+}
+
                             setMessages([
                                 ...messages,
                                 {

@@ -1,5 +1,6 @@
 'use client';
 
+import { Bar, BarChart, LabelList } from 'recharts';
 import {
     Card,
     CardContent,
@@ -7,9 +8,9 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Bar, BarChart, LabelList } from 'recharts';
+import type {
+    ChartConfig} from '@/components/ui/chart';
 import {
-    ChartConfig,
     ChartContainer,
     ChartTooltip,
     ChartTooltipContent,

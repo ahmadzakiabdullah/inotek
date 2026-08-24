@@ -1,37 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
 import { Head, useForm, usePage } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import InputError from '@/components/input-error';
-import {
-    NativeSelect,
-    NativeSelectOption,
-} from '@/components/ui/native-select';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
 import {
     Users,
     Plus,
@@ -47,6 +14,39 @@ import {
     Shield,
     AlertTriangle,
 } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import InputError from '@/components/input-error';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    NativeSelect,
+    NativeSelectOption,
+} from '@/components/ui/native-select';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 
 interface Role {
     id: number;
@@ -112,6 +112,7 @@ export default function UsersIndex({ users, roles }: Props) {
         return users.filter((user) => {
             const roleLabel = user.role?.label || 'No Role';
             const term = searchTerm.toLowerCase();
+
             return (
                 user.name.toLowerCase().includes(term) ||
                 user.username.toLowerCase().includes(term) ||
@@ -123,7 +124,9 @@ export default function UsersIndex({ users, roles }: Props) {
 
     // Client-side Datatable processing: Sorting
     const sortedUsers = useMemo(() => {
-        if (!sortBy) return filteredUsers;
+        if (!sortBy) {
+return filteredUsers;
+}
 
         return [...filteredUsers].sort((a, b) => {
             let valA = '';
@@ -152,6 +155,7 @@ export default function UsersIndex({ users, roles }: Props) {
     // Client-side Datatable processing: Pagination
     const paginatedUsers = useMemo(() => {
         const startIndex = (currentPage - 1) * pageSize;
+
         return sortedUsers.slice(startIndex, startIndex + pageSize);
     }, [sortedUsers, currentPage, pageSize]);
 
@@ -171,6 +175,7 @@ export default function UsersIndex({ users, roles }: Props) {
         const lecturers = users.filter((u) => u.role_id === 2).length;
         const judges = users.filter((u) => u.role_id === 3).length;
         const standardUsers = users.filter((u) => u.role_id === 4).length;
+
         return { total, admins, lecturers, judges, standardUsers };
     }, [users]);
 
@@ -204,7 +209,7 @@ export default function UsersIndex({ users, roles }: Props) {
 
     const handleCreateSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        createForm.post('/admin/users', {
+        createForm.post('/dashboard/users', {
             onSuccess: () => {
                 setIsCreateOpen(false);
                 createForm.reset();
@@ -227,9 +232,12 @@ export default function UsersIndex({ users, roles }: Props) {
 
     const handleEditSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedUser) return;
 
-        editForm.put(`/admin/users/${selectedUser.id}`, {
+        if (!selectedUser) {
+return;
+}
+
+        editForm.put(`/dashboard/users/${selectedUser.id}`, {
             onSuccess: () => {
                 setIsEditOpen(false);
                 setSelectedUser(null);
@@ -244,9 +252,12 @@ export default function UsersIndex({ users, roles }: Props) {
 
     const handleDeleteSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedUser) return;
 
-        deleteForm.delete(`/admin/users/${selectedUser.id}`, {
+        if (!selectedUser) {
+return;
+}
+
+        deleteForm.delete(`/dashboard/users/${selectedUser.id}`, {
             onSuccess: () => {
                 setIsDeleteOpen(false);
                 setSelectedUser(null);
@@ -1009,7 +1020,7 @@ UsersIndex.layout = {
         },
         {
             title: 'Users Management',
-            href: '/admin/users',
+            href: '/dashboard/users',
         },
     ],
 };

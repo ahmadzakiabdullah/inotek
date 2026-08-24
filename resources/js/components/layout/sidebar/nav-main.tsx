@@ -1,18 +1,7 @@
 'use client';
 
-import {
-    SidebarGroup,
-    SidebarGroupContent,
-    SidebarGroupLabel,
-    SidebarMenu,
-    SidebarMenuBadge,
-    SidebarMenuButton,
-    SidebarMenuItem,
-    SidebarMenuSub,
-    SidebarMenuSubButton,
-    SidebarMenuSubItem,
-    useSidebar,
-} from '@/components/ui/sidebar';
+
+import { Link, usePage } from '@inertiajs/react';
 import {
     ActivityIcon,
     ArchiveRestoreIcon,
@@ -46,7 +35,7 @@ import {
     UserIcon,
     UsersIcon,
     WalletMinimalIcon,
-    type LucideIcon,
+    
     GithubIcon,
     RedoDotIcon,
     Paintbrush,
@@ -57,9 +46,10 @@ import {
     PuzzleIcon,
     ShieldAlertIcon,
     Trophy,
-    BellIcon,
+    BellIcon
 } from 'lucide-react';
-import { Link, usePage } from '@inertiajs/react';
+import type {LucideIcon} from 'lucide-react';
+import * as React from 'react';
 import {
     Collapsible,
     CollapsibleContent,
@@ -72,6 +62,19 @@ import {
     DropdownMenuLabel,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+    SidebarGroup,
+    SidebarGroupContent,
+    SidebarGroupLabel,
+    SidebarMenu,
+    SidebarMenuBadge,
+    SidebarMenuButton,
+    SidebarMenuItem,
+    SidebarMenuSub,
+    SidebarMenuSubButton,
+    SidebarMenuSubItem,
+    useSidebar,
+} from '@/components/ui/sidebar';
 
 type NavGroup = {
     title: string;
@@ -90,18 +93,21 @@ type NavItem = {
 }[];
 
 export function getNavItems(userRole: string | null | undefined): NavGroup[] {
-    let items: NavGroup[] = [
+    const items: NavGroup[] = [
         {
             title: 'Platform',
             items: [
                 {
                     title: 'Dashboard',
-                    href: userRole === 'judge' ? '/judge/evaluations' : '/dashboard',
+                    href:
+                        userRole === 'judge'
+                            ? '/dashboard/judge/evaluations'
+                            : '/dashboard',
                     icon: ChartPieIcon,
                 },
                 {
                     title: 'Live Leaderboard',
-                    href: '/leaderboard',
+                    href: '/dashboard/leaderboard',
                     icon: Trophy,
                 },
             ],
@@ -114,41 +120,74 @@ export function getNavItems(userRole: string | null | undefined): NavGroup[] {
             items: [
                 {
                     title: 'Competition Setup',
-                    href: '/admin/sessions',
+                    href: '/dashboard/sessions',
                     icon: CalendarIcon,
                     items: [
-                        { title: 'Sessions Management', href: '/admin/sessions' },
-                        { title: 'Categories Management', href: '/admin/categories' },
-                        { title: 'Rubrics Management', href: '/admin/rubrics' },
+                        {
+                            title: 'Sessions Management',
+                            href: '/dashboard/sessions',
+                        },
+                        {
+                            title: 'Categories Management',
+                            href: '/dashboard/categories',
+                        },
+                        {
+                            title: 'Rubrics Management',
+                            href: '/dashboard/rubrics',
+                        },
                     ],
                 },
                 {
                     title: 'User & Access Admin',
-                    href: '/admin/users',
+                    href: '/dashboard/users',
                     icon: UsersIcon,
                     items: [
-                        { title: 'Users Management', href: '/admin/users' },
-                        { title: 'Roles Management', href: '/admin/roles' },
+                        {
+                            title: 'Users Management',
+                            href: '/dashboard/users',
+                        },
+                        {
+                            title: 'Roles Management',
+                            href: '/dashboard/roles',
+                        },
                     ],
                 },
                 {
                     title: 'Judging Workspace',
-                    href: '/admin/approvals',
+                    href: '/dashboard/approvals',
                     icon: ClipboardCheckIcon,
                     items: [
-                        { title: 'Project Approvals', href: '/admin/approvals' },
-                        { title: 'Judge Assignments', href: '/admin/assignments' },
-                        { title: 'Round 2 Shortlist', href: '/admin/round2' },
+                        {
+                            title: 'Project Approvals',
+                            href: '/dashboard/approvals',
+                        },
+                        {
+                            title: 'Judge Assignments',
+                            href: '/dashboard/assignments',
+                        },
+                        {
+                            title: 'Round 2 Shortlist',
+                            href: '/dashboard/round2',
+                        },
                     ],
                 },
                 {
                     title: 'System Administration',
-                    href: '/admin/settings',
+                    href: '/dashboard/admin-settings',
                     icon: SettingsIcon,
                     items: [
-                        { title: 'System Settings', href: '/admin/settings' },
-                        { title: 'System Audit Logs', href: '/admin/audit-logs' },
-                        { title: 'Broadcast Alerts', href: '/admin/announcements' },
+                        {
+                            title: 'System Settings',
+                            href: '/dashboard/admin-settings',
+                        },
+                        {
+                            title: 'System Audit Logs',
+                            href: '/dashboard/audit-logs',
+                        },
+                        {
+                            title: 'Broadcast Alerts',
+                            href: '/dashboard/announcements',
+                        },
                     ],
                 },
             ],
@@ -161,7 +200,7 @@ export function getNavItems(userRole: string | null | undefined): NavGroup[] {
             items: [
                 {
                     title: 'Evaluation Panel',
-                    href: '/judge/evaluations',
+                    href: '/dashboard/judge/evaluations',
                     icon: ClipboardCheckIcon,
                 },
             ],
@@ -174,12 +213,12 @@ export function getNavItems(userRole: string | null | undefined): NavGroup[] {
             items: [
                 {
                     title: 'Supervised Projects',
-                    href: '/projects',
+                    href: '/dashboard/projects',
                     icon: FolderIcon,
                 },
                 {
                     title: 'Project Approvals',
-                    href: '/admin/approvals',
+                    href: '/dashboard/approvals',
                     icon: SquareCheckIcon,
                 },
             ],
@@ -192,7 +231,7 @@ export function getNavItems(userRole: string | null | undefined): NavGroup[] {
             items: [
                 {
                     title: 'My Project Submission',
-                    href: '/projects',
+                    href: '/dashboard/projects',
                     icon: FolderIcon,
                 },
             ],
@@ -205,25 +244,31 @@ export function getNavItems(userRole: string | null | undefined): NavGroup[] {
         items: [
             {
                 title: 'Profile',
-                href: '/account/profile',
+                href: '/dashboard/profile',
                 icon: UserIcon,
             },
             {
                 title: 'System Updates',
-                href: '/changelog',
+                href: '/dashboard/changelog',
                 icon: ActivityIcon,
             },
             {
                 title: 'Settings',
-                href: '/settings/profile',
+                href: '/dashboard/settings/profile',
                 icon: SettingsIcon,
                 items: [
-                    { title: 'Profile Settings', href: '/settings/profile' },
+                    {
+                        title: 'Profile Settings',
+                        href: '/dashboard/settings/profile',
+                    },
                     {
                         title: 'Security & Passkeys',
-                        href: '/settings/security',
+                        href: '/dashboard/settings/security',
                     },
-                    { title: 'Appearance', href: '/settings/appearance' },
+                    {
+                        title: 'Appearance',
+                        href: '/dashboard/settings/appearance',
+                    },
                 ],
             },
         ],

@@ -1,35 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
 import { Head, useForm } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
-import InputError from '@/components/input-error';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
 import {
     ClipboardList,
     Plus,
@@ -44,6 +13,37 @@ import {
     Trash,
     Layers,
 } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import InputError from '@/components/input-error';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
 
 interface CompetitionSession {
     id: number;
@@ -253,7 +253,7 @@ export default function RubricsIndex({ rubrics, categories }: Props) {
             items: formattedItems,
         }));
 
-        createForm.post('/admin/rubrics', {
+        createForm.post('/dashboard/rubrics', {
             onSuccess: () => {
                 setIsCreateOpen(false);
                 createForm.reset();
@@ -283,7 +283,10 @@ export default function RubricsIndex({ rubrics, categories }: Props) {
 
     const handleEditSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedRubric) return;
+
+        if (!selectedRubric) {
+return;
+}
 
         const formattedItems = editForm.data.items.map((item) => ({
             ...item,
@@ -295,7 +298,7 @@ export default function RubricsIndex({ rubrics, categories }: Props) {
             items: formattedItems,
         }));
 
-        editForm.put(`/admin/rubrics/${selectedRubric.id}`, {
+        editForm.put(`/dashboard/rubrics/${selectedRubric.id}`, {
             onSuccess: () => {
                 setIsEditOpen(false);
                 setSelectedRubric(null);
@@ -310,9 +313,12 @@ export default function RubricsIndex({ rubrics, categories }: Props) {
 
     const handleDeleteSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedRubric) return;
 
-        deleteForm.delete(`/admin/rubrics/${selectedRubric.id}`, {
+        if (!selectedRubric) {
+return;
+}
+
+        deleteForm.delete(`/dashboard/rubrics/${selectedRubric.id}`, {
             onSuccess: () => {
                 setIsDeleteOpen(false);
                 setSelectedRubric(null);
@@ -324,6 +330,7 @@ export default function RubricsIndex({ rubrics, categories }: Props) {
     const getWeightsSum = (items: RubricItem[]) => {
         return items.reduce((sum, item) => {
             const val = parseFloat(item.weight.toString());
+
             return sum + (isNaN(val) ? 0 : val);
         }, 0);
     };
@@ -370,7 +377,10 @@ export default function RubricsIndex({ rubrics, categories }: Props) {
 
     const handleSaveCriteriaEdit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (editingCriteriaIndex === null || !editingCriteriaForm) return;
+
+        if (editingCriteriaIndex === null || !editingCriteriaForm) {
+return;
+}
 
         const form = editingCriteriaForm === 'create' ? createForm : editForm;
         const currentItems = [...form.data.items];
@@ -389,7 +399,7 @@ export default function RubricsIndex({ rubrics, categories }: Props) {
             scale_descriptions: criteriaEditData.scale_descriptions,
         };
 
-        form.setData('items', currentItems);
+        (form as any).setData('items', currentItems);
         setIsCriteriaEditOpen(false);
     };
 
@@ -405,7 +415,7 @@ export default function RubricsIndex({ rubrics, categories }: Props) {
             description: '',
             scale_descriptions: { 0: '', 1: '', 2: '', 3: '', 4: '', 5: '' }
         });
-        form.setData('items', currentItems);
+        (form as any).setData('items', currentItems);
         
         // Open the criteria modal immediately for the newly added item
         const formType = form === createForm ? 'create' : 'edit';
@@ -418,7 +428,7 @@ export default function RubricsIndex({ rubrics, categories }: Props) {
     ) => {
         const currentItems = [...form.data.items];
         currentItems.splice(index, 1);
-        form.setData('items', currentItems);
+        (form as any).setData('items', currentItems);
     };
 
     const toggleCategoryCheckbox = (
@@ -427,13 +437,18 @@ export default function RubricsIndex({ rubrics, categories }: Props) {
         checked: boolean,
     ) => {
         const currentIds = [...form.data.category_ids];
+
         if (checked) {
             currentIds.push(categoryId);
         } else {
             const idx = currentIds.indexOf(categoryId);
-            if (idx > -1) currentIds.splice(idx, 1);
+
+            if (idx > -1) {
+currentIds.splice(idx, 1);
+}
         }
-        form.setData('category_ids', currentIds);
+
+        (form as any).setData('category_ids', currentIds);
     };
 
     return (
@@ -1344,7 +1359,7 @@ RubricsIndex.layout = {
         },
         {
             title: 'Rubrics Management',
-            href: '/admin/rubrics',
+            href: '/dashboard/rubrics',
         },
     ],
 };

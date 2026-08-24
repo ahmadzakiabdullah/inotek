@@ -1,36 +1,4 @@
 import { Head, Link, router } from '@inertiajs/react';
-import React from 'react';
-import { Progress } from '@/components/ui/progress';
-import DashboardNotifications from '@/components/dashboard-notifications';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import {
-    Timeline,
-    TimelineContent,
-    TimelineDate,
-    TimelineHeader,
-    TimelineIndicator,
-    TimelineItem,
-    TimelineSeparator,
-    TimelineTitle,
-} from '@/components/ui/timeline';
-import { cn } from '@/lib/utils';
 import {
     FolderHeart,
     Users,
@@ -52,6 +20,38 @@ import {
     Loader2,
     BellRing,
 } from 'lucide-react';
+import React from 'react';
+import DashboardNotifications from '@/components/dashboard-notifications';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import {
+    Timeline,
+    TimelineContent,
+    TimelineDate,
+    TimelineHeader,
+    TimelineIndicator,
+    TimelineItem,
+    TimelineSeparator,
+    TimelineTitle,
+} from '@/components/ui/timeline';
+import { cn } from '@/lib/utils';
 
 // Definitions
 interface CompetitionSession {
@@ -158,7 +158,10 @@ const getStatusDetails = (status: number) => {
 };
 
 const StatsGrid = ({ stats }: { stats: Props['stats'] }) => {
-    if (!stats) return null;
+    if (!stats) {
+return null;
+}
+
     return (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card className="group relative overflow-hidden border border-border/50 bg-card/60 transition-all duration-200 hover:border-primary/20 hover:shadow-md">
@@ -256,19 +259,22 @@ const AdminDashboard = ({
     const [isNudging, setIsNudging] = React.useState(false);
 
     const handleNudgeJudges = () => {
-        if (pendingJudges.length === 0) return;
+        if (pendingJudges.length === 0) {
+return;
+}
+
         if (
             confirm(
-                'Are you sure you want to send reminder emails to all judges with pending evaluations?'
+                'Are you sure you want to send reminder emails to all judges with pending evaluations?',
             )
         ) {
             router.post(
-                '/admin/judges/nudge',
+                '/dashboard/judges/nudge',
                 {},
                 {
                     onStart: () => setIsNudging(true),
                     onFinish: () => setIsNudging(false),
-                }
+                },
             );
         }
     };
@@ -290,134 +296,170 @@ const AdminDashboard = ({
             <StatsGrid stats={stats} />
 
             {/* Judging Real-Time Monitor */}
-            {activeSession && (categoryProgress.length > 0 || pendingJudges.length > 0) && (
-                <div className="grid gap-6 lg:grid-cols-2">
-                    {/* Category Progress Card */}
-                    <Card className="border border-border/50 bg-card/40 backdrop-blur-sm">
-                        <CardHeader>
-                            <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                                <Sparkles className="h-5 w-5 text-primary" />
-                                Judging Progress by Category
-                            </CardTitle>
-                            <CardDescription>
-                                Real-time completion rate of assigned project evaluations.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            {categoryProgress.length > 0 ? (
-                                categoryProgress.map((cat) => (
-                                    <div key={cat.id} className="space-y-2">
-                                        <div className="flex items-center justify-between text-sm">
-                                            <div className="flex items-center gap-2">
-                                                <Badge variant="outline" className="bg-background font-semibold">
-                                                    {cat.code}
-                                                </Badge>
-                                                <span className="font-medium text-foreground max-w-[180px] truncate" title={cat.name}>
-                                                    {cat.name}
-                                                </span>
-                                            </div>
-                                            <span className="text-xs text-muted-foreground font-medium">
-                                                {cat.completed_scores} / {cat.total_assignments} evaluated ({cat.progress_percentage}%)
-                                            </span>
-                                        </div>
-                                        <Progress 
-                                            value={cat.progress_percentage} 
-                                            className="h-2"
-                                            indicatorColor={
-                                                cat.progress_percentage === 100 
-                                                    ? "bg-emerald-500" 
-                                                    : cat.progress_percentage > 50 
-                                                        ? "bg-primary" 
-                                                        : "bg-amber-500"
-                                            }
-                                        />
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="flex min-h-[120px] flex-col items-center justify-center rounded-lg border border-dashed bg-background/20 p-4 text-center">
-                                    <p className="text-sm text-muted-foreground">No categories setup for this session.</p>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    {/* Pending Judges Card */}
-                    <Card className="border border-border/50 bg-card/40 backdrop-blur-sm">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-                            <div className="space-y-1">
-                                <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                                    <BellRing className="h-5 w-5 text-amber-500" />
-                                    Pending Evaluations
+            {activeSession &&
+                (categoryProgress.length > 0 || pendingJudges.length > 0) && (
+                    <div className="grid gap-6 lg:grid-cols-2">
+                        {/* Category Progress Card */}
+                        <Card className="border border-border/50 bg-card/40 backdrop-blur-sm">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                                    <Sparkles className="h-5 w-5 text-primary" />
+                                    Judging Progress by Category
                                 </CardTitle>
                                 <CardDescription>
-                                    Judges with outstanding assigned reviews.
+                                    Real-time completion rate of assigned
+                                    project evaluations.
                                 </CardDescription>
-                            </div>
-                            {pendingJudges.length > 0 && (
-                                <Button 
-                                    onClick={handleNudgeJudges} 
-                                    disabled={isNudging}
-                                    size="sm"
-                                    className="gap-1.5 shadow-sm bg-amber-600 hover:bg-amber-700 text-white"
-                                >
-                                    {isNudging ? (
-                                        <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
-                                    ) : (
-                                        <BellRing className="h-3.5 w-3.5" />
-                                    )}
-                                    Nudge Judges
-                                </Button>
-                            )}
-                        </CardHeader>
-                        <CardContent>
-                            {pendingJudges.length > 0 ? (
-                                <div className="max-h-[320px] overflow-y-auto pr-1 space-y-3">
-                                    {pendingJudges.map((judge) => (
-                                        <div key={judge.id} className="flex flex-col gap-2 rounded-lg border border-border/40 bg-background/30 p-3 hover:bg-muted/10 transition-colors">
-                                            <div className="flex items-start justify-between">
-                                                <div className="flex flex-col">
-                                                    <span className="text-sm font-semibold text-foreground">
-                                                        {judge.name}
-                                                    </span>
-                                                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                                        <Mail className="h-3 w-3" />
-                                                        {judge.email}
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {categoryProgress.length > 0 ? (
+                                    categoryProgress.map((cat) => (
+                                        <div key={cat.id} className="space-y-2">
+                                            <div className="flex items-center justify-between text-sm">
+                                                <div className="flex items-center gap-2">
+                                                    <Badge
+                                                        variant="outline"
+                                                        className="bg-background font-semibold"
+                                                    >
+                                                        {cat.code}
+                                                    </Badge>
+                                                    <span
+                                                        className="max-w-[180px] truncate font-medium text-foreground"
+                                                        title={cat.name}
+                                                    >
+                                                        {cat.name}
                                                     </span>
                                                 </div>
-                                                <Badge variant="destructive" className="bg-red-500/10 text-red-500 hover:bg-red-500/20 border-red-500/10 text-[11px] font-semibold">
-                                                    {judge.pending_projects.length} Pending
-                                                </Badge>
+                                                <span className="text-xs font-medium text-muted-foreground">
+                                                    {cat.completed_scores} /{' '}
+                                                    {cat.total_assignments}{' '}
+                                                    evaluated (
+                                                    {cat.progress_percentage}%)
+                                                </span>
                                             </div>
-                                            
-                                            {/* List pending projects briefly */}
-                                            <div className="flex flex-wrap gap-1.5 mt-1">
-                                                {judge.pending_projects.map((proj, idx) => (
-                                                    <Badge 
-                                                        key={idx} 
-                                                        variant="secondary" 
-                                                        className="text-[10px] py-0 px-1.5 font-normal bg-muted border border-border/50 text-muted-foreground"
-                                                        title={`${proj.title} (Round ${proj.round_no})`}
-                                                    >
-                                                        {proj.pcode || 'No Code'} (R{proj.round_no})
-                                                    </Badge>
-                                                ))}
-                                            </div>
+                                            <Progress
+                                                value={cat.progress_percentage}
+                                                className="h-2"
+                                                indicatorColor={
+                                                    cat.progress_percentage ===
+                                                    100
+                                                        ? 'bg-emerald-500'
+                                                        : cat.progress_percentage >
+                                                            50
+                                                          ? 'bg-primary'
+                                                          : 'bg-amber-500'
+                                                }
+                                            />
                                         </div>
-                                    ))}
+                                    ))
+                                ) : (
+                                    <div className="flex min-h-[120px] flex-col items-center justify-center rounded-lg border border-dashed bg-background/20 p-4 text-center">
+                                        <p className="text-sm text-muted-foreground">
+                                            No categories setup for this
+                                            session.
+                                        </p>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        {/* Pending Judges Card */}
+                        <Card className="border border-border/50 bg-card/40 backdrop-blur-sm">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                                <div className="space-y-1">
+                                    <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                                        <BellRing className="h-5 w-5 text-amber-500" />
+                                        Pending Evaluations
+                                    </CardTitle>
+                                    <CardDescription>
+                                        Judges with outstanding assigned
+                                        reviews.
+                                    </CardDescription>
                                 </div>
-                            ) : (
-                                <div className="flex min-h-[220px] flex-col items-center justify-center rounded-lg border border-dashed bg-background/20 p-6 text-center">
-                                    <CheckCircle2 className="mb-2 h-8 w-8 text-emerald-500" />
-                                    <p className="text-sm font-semibold text-foreground">All evaluations complete</p>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        No pending assignments or outstanding judge scores!
-                                    </p>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
+                                {pendingJudges.length > 0 && (
+                                    <Button
+                                        onClick={handleNudgeJudges}
+                                        disabled={isNudging}
+                                        size="sm"
+                                        className="gap-1.5 bg-amber-600 text-white shadow-sm hover:bg-amber-700"
+                                    >
+                                        {isNudging ? (
+                                            <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
+                                        ) : (
+                                            <BellRing className="h-3.5 w-3.5" />
+                                        )}
+                                        Nudge Judges
+                                    </Button>
+                                )}
+                            </CardHeader>
+                            <CardContent>
+                                {pendingJudges.length > 0 ? (
+                                    <div className="max-h-[320px] space-y-3 overflow-y-auto pr-1">
+                                        {pendingJudges.map((judge) => (
+                                            <div
+                                                key={judge.id}
+                                                className="flex flex-col gap-2 rounded-lg border border-border/40 bg-background/30 p-3 transition-colors hover:bg-muted/10"
+                                            >
+                                                <div className="flex items-start justify-between">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-sm font-semibold text-foreground">
+                                                            {judge.name}
+                                                        </span>
+                                                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                                            <Mail className="h-3 w-3" />
+                                                            {judge.email}
+                                                        </span>
+                                                    </div>
+                                                    <Badge
+                                                        variant="destructive"
+                                                        className="border-red-500/10 bg-red-500/10 text-[11px] font-semibold text-red-500 hover:bg-red-500/20"
+                                                    >
+                                                        {
+                                                            judge
+                                                                .pending_projects
+                                                                .length
+                                                        }{' '}
+                                                        Pending
+                                                    </Badge>
+                                                </div>
+
+                                                {/* List pending projects briefly */}
+                                                <div className="mt-1 flex flex-wrap gap-1.5">
+                                                    {judge.pending_projects.map(
+                                                        (proj, idx) => (
+                                                            <Badge
+                                                                key={idx}
+                                                                variant="secondary"
+                                                                className="border border-border/50 bg-muted px-1.5 py-0 text-[10px] font-normal text-muted-foreground"
+                                                                title={`${proj.title} (Round ${proj.round_no})`}
+                                                            >
+                                                                {proj.pcode ||
+                                                                    'No Code'}{' '}
+                                                                (R
+                                                                {proj.round_no})
+                                                            </Badge>
+                                                        ),
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="flex min-h-[220px] flex-col items-center justify-center rounded-lg border border-dashed bg-background/20 p-6 text-center">
+                                        <CheckCircle2 className="mb-2 h-8 w-8 text-emerald-500" />
+                                        <p className="text-sm font-semibold text-foreground">
+                                            All evaluations complete
+                                        </p>
+                                        <p className="mt-1 text-xs text-muted-foreground">
+                                            No pending assignments or
+                                            outstanding judge scores!
+                                        </p>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
 
             <Card className="border border-border/50 bg-card/40 backdrop-blur-sm">
                 <CardHeader className="flex flex-row items-center justify-between">
@@ -426,11 +468,12 @@ const AdminDashboard = ({
                             Recently Submitted Projects
                         </CardTitle>
                         <CardDescription>
-                            List of recently submitted projects awaiting approval or review.
+                            List of recently submitted projects awaiting
+                            approval or review.
                         </CardDescription>
                     </div>
                     <Button asChild variant="outline" size="sm">
-                        <Link href="/admin/approvals">
+                        <Link href="/dashboard/approvals">
                             Manage Approvals
                             <ChevronRight className="ml-1 h-4 w-4" />
                         </Link>
@@ -457,6 +500,7 @@ const AdminDashboard = ({
                                         const statusInfo = getStatusDetails(
                                             proj.status,
                                         );
+
                                         return (
                                             <TableRow
                                                 key={proj.id}
@@ -513,7 +557,7 @@ const AdminDashboard = ({
                                                         variant="ghost"
                                                         className="h-8 w-8 p-0"
                                                     >
-                                                        <Link href="/admin/approvals">
+                                                        <Link href="/dashboard/approvals">
                                                             <Eye className="h-4 w-4 text-muted-foreground" />
                                                         </Link>
                                                     </Button>
@@ -570,11 +614,12 @@ const LecturerDashboard = ({
                             Supervised Projects List
                         </CardTitle>
                         <CardDescription>
-                            Student innovation projects where you are assigned as the supervisor.
+                            Student innovation projects where you are assigned
+                            as the supervisor.
                         </CardDescription>
                     </div>
                     <Button asChild variant="outline" size="sm">
-                        <Link href="/admin/approvals">
+                        <Link href="/dashboard/approvals">
                             Review Approvals
                             <ChevronRight className="ml-1 h-4 w-4" />
                         </Link>
@@ -601,6 +646,7 @@ const LecturerDashboard = ({
                                         const statusInfo = getStatusDetails(
                                             proj.status,
                                         );
+
                                         return (
                                             <TableRow
                                                 key={proj.id}
@@ -657,7 +703,7 @@ const LecturerDashboard = ({
                                                         variant="ghost"
                                                         className="h-8 w-8 p-0"
                                                     >
-                                                        <Link href="/admin/approvals">
+                                                        <Link href="/dashboard/approvals">
                                                             <Eye className="h-4 w-4 text-muted-foreground" />
                                                         </Link>
                                                     </Button>
@@ -701,7 +747,9 @@ const UserDashboard = ({
                             No Active Competition Session
                         </h2>
                         <p className="text-sm text-muted-foreground">
-                            There is currently no active innovation competition session. Please await official announcements from the administration.
+                            There is currently no active innovation competition
+                            session. Please await official announcements from
+                            the administration.
                         </p>
                     </div>
                 </CardContent>
@@ -725,7 +773,8 @@ const UserDashboard = ({
                             Join the Innovation Competition!
                         </h2>
                         <p className="text-sm text-muted-foreground">
-                            You have not registered your innovation project for competition session{' '}
+                            You have not registered your innovation project for
+                            competition session{' '}
                             <strong className="text-foreground">
                                 {activeSession.name}
                             </strong>
@@ -739,7 +788,7 @@ const UserDashboard = ({
                             size="lg"
                             className="shadow-lg transition-all duration-200 hover:shadow-primary/20"
                         >
-                            <Link href="/projects">
+                            <Link href="/dashboard/projects">
                                 Register Innovation Project
                                 <ArrowRight className="ml-2 h-4 w-4" />
                             </Link>
@@ -755,6 +804,7 @@ const UserDashboard = ({
 
     // Timeline calculation
     let activeStep = 1;
+
     if (project.status === 3) {
         activeStep = 2;
     } else if (project.status === 4) {
@@ -931,7 +981,7 @@ const UserDashboard = ({
                             size="sm"
                             className="w-full sm:w-auto"
                         >
-                            <Link href="/projects">
+                            <Link href="/dashboard/projects">
                                 {project.status === 1 ||
                                 project.status === 2 ? (
                                     <>
@@ -963,7 +1013,9 @@ const UserDashboard = ({
                             Action Required: Project Correction
                         </AlertTitle>
                         <AlertDescription className="mt-2 text-xs leading-relaxed text-orange-700 dark:text-orange-400">
-                            The supervisor or administrator has requested corrections to your project registration with the following comments:
+                            The supervisor or administrator has requested
+                            corrections to your project registration with the
+                            following comments:
                             <div className="mt-2 rounded border border-orange-200 bg-white/70 p-2.5 font-mono text-foreground dark:border-orange-900/50 dark:bg-zinc-900/50">
                                 {project.admin_comments ||
                                     'No detailed comments provided.'}
@@ -979,7 +1031,8 @@ const UserDashboard = ({
                             Project Review Flow
                         </CardTitle>
                         <CardDescription>
-                            Current status of the validation & approval process for the innovation project.
+                            Current status of the validation & approval process
+                            for the innovation project.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-2 pr-4 pl-7">
@@ -995,7 +1048,8 @@ const UserDashboard = ({
                                     <TimelineDate>Draft Completed</TimelineDate>
                                 </TimelineHeader>
                                 <TimelineContent className="pb-6 text-[11px] text-muted-foreground">
-                                    Initial project info and supervisor details registered.
+                                    Initial project info and supervisor details
+                                    registered.
                                 </TimelineContent>
                                 <TimelineSeparator />
                             </TimelineItem>
@@ -1139,18 +1193,32 @@ export default function Dashboard({
     return (
         <>
             <Head title="Dashboard" />
-            <div className="space-y-6">
-                <div className="flex flex-col gap-1.5">
-                    <h1 className="text-2xl font-bold tracking-tight lg:text-3xl">
-                        Dashboard
-                    </h1>
-                    <p className="text-sm text-muted-foreground">
-                        Welcome back! Logged in as{' '}
-                        <strong className="text-foreground">
-                            {getRoleTitle()}
-                        </strong>
-                        .
-                    </p>
+            <div className="space-y-6 pb-8">
+                <div className="flex flex-col gap-4 rounded-xl border border-border/60 bg-card/50 p-5 shadow-sm sm:flex-row sm:items-end sm:justify-between">
+                    <div className="space-y-1.5">
+                        <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">
+                            INOTEK workspace
+                        </p>
+                        <h1 className="text-2xl font-bold tracking-tight lg:text-3xl">
+                            Dashboard
+                        </h1>
+                        <p className="text-sm text-muted-foreground">
+                            Welcome back! Logged in as{' '}
+                            <strong className="text-foreground">
+                                {getRoleTitle()}
+                            </strong>
+                            .
+                        </p>
+                    </div>
+                    {activeSession && (
+                        <Badge
+                            variant="outline"
+                            className="w-fit gap-1.5 rounded-full px-3 py-1 text-xs"
+                        >
+                            <span className="size-1.5 animate-pulse rounded-full bg-emerald-500" />
+                            {activeSession.name}
+                        </Badge>
+                    )}
                 </div>
                 <DashboardNotifications />
                 {renderContent()}

@@ -1,42 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
 import { Head, useForm, router, usePage } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import InputError from '@/components/input-error';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import {
     CheckCheck,
     XOctagon,
@@ -57,6 +19,44 @@ import {
     Trash2,
     UserPlus,
 } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import InputError from '@/components/input-error';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
 
 interface TeamMember {
     name: string;
@@ -165,13 +165,20 @@ export default function ApprovalsIndex({ projects, sessions, categories, student
     }, [sessions]);
 
     const activeCategories = useMemo(() => {
-        if (!activeSession) return [];
+        if (!activeSession) {
+return [];
+}
+
         return categories.filter((c) => c.session_id === activeSession.id);
     }, [categories, activeSession]);
 
     const filteredStudents = useMemo(() => {
         const query = studentSearch.toLowerCase();
-        if (!query) return students;
+
+        if (!query) {
+return students;
+}
+
         return students.filter((s) =>
             s.name.toLowerCase().includes(query) ||
             s.email.toLowerCase().includes(query)
@@ -185,11 +192,13 @@ export default function ApprovalsIndex({ projects, sessions, categories, student
     useEffect(() => {
         const handleOutsideClick = (e: MouseEvent) => {
             const target = e.target as HTMLElement;
+
             if (!target.closest('.student-search-container')) {
                 setIsStudentDropdownOpen(false);
             }
         };
         document.addEventListener('click', handleOutsideClick);
+
         return () => document.removeEventListener('click', handleOutsideClick);
     }, []);
 
@@ -221,7 +230,7 @@ export default function ApprovalsIndex({ projects, sessions, categories, student
 
     const handleRegisterSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        post('/admin/approvals/store', {
+        post('/dashboard/approvals/store', {
             onSuccess: () => {
                 handleCloseRegister();
             },
@@ -262,6 +271,7 @@ export default function ApprovalsIndex({ projects, sessions, categories, student
         const pending = projects.filter((p) => p.status === 3).length; // Submitted status
         const approved = projects.filter((p) => p.status === 4).length; // Approved status
         const rejected = projects.filter((p) => p.status === 2).length; // Edit mode/rejected status
+
         return { total, pending, approved, rejected };
     }, [projects]);
 
@@ -286,14 +296,17 @@ export default function ApprovalsIndex({ projects, sessions, categories, student
     };
 
     const handleBulkApprove = () => {
-        if (selectedProjectIds.length === 0) return;
+        if (selectedProjectIds.length === 0) {
+return;
+}
+
         if (
             confirm(
                 `Are you sure you want to approve ${selectedProjectIds.length} selected projects?`,
             )
         ) {
             router.post(
-                '/admin/approvals/approve',
+                '/dashboard/approvals/approve',
                 {
                     project_ids: selectedProjectIds,
                 },
@@ -305,14 +318,17 @@ export default function ApprovalsIndex({ projects, sessions, categories, student
     };
 
     const handleBulkCancel = () => {
-        if (selectedProjectIds.length === 0) return;
+        if (selectedProjectIds.length === 0) {
+return;
+}
+
         if (
             confirm(
                 `Are you sure you want to cancel/reject ${selectedProjectIds.length} selected projects?`,
             )
         ) {
             router.post(
-                '/admin/approvals/cancel',
+                '/dashboard/approvals/cancel',
                 {
                     project_ids: selectedProjectIds,
                 },
@@ -331,9 +347,12 @@ export default function ApprovalsIndex({ projects, sessions, categories, student
 
     const handleRejectSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!rejectProject) return;
 
-        rejectForm.post(`/admin/approvals/${rejectProject.id}/reject`, {
+        if (!rejectProject) {
+return;
+}
+
+        rejectForm.post(`/dashboard/approvals/${rejectProject.id}/reject`, {
             onSuccess: () => {
                 setRejectProject(null);
                 rejectForm.reset();
@@ -349,9 +368,12 @@ export default function ApprovalsIndex({ projects, sessions, categories, student
 
     const handleEditCodeSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!editCodeProject) return;
 
-        editCodeForm.put(`/admin/approvals/${editCodeProject.id}/code`, {
+        if (!editCodeProject) {
+return;
+}
+
+        editCodeForm.put(`/dashboard/approvals/${editCodeProject.id}/code`, {
             onSuccess: () => {
                 setEditCodeProject(null);
                 editCodeForm.reset();
@@ -617,6 +639,7 @@ export default function ApprovalsIndex({ projects, sessions, categories, student
                                                 expandedRowId === project.id;
                                             const isPending =
                                                 project.status === 3;
+
                                             return (
                                                 <React.Fragment
                                                     key={project.id}
@@ -731,7 +754,7 @@ export default function ApprovalsIndex({ projects, sessions, categories, student
                                                                             size="icon"
                                                                             onClick={() => {
                                                                                 router.post(
-                                                                                    '/admin/approvals/approve',
+                                                                                    '/dashboard/approvals/approve',
                                                                                     {
                                                                                         project_ids:
                                                                                             [
@@ -1437,7 +1460,7 @@ ApprovalsIndex.layout = {
         },
         {
             title: 'Project Approvals',
-            href: '/admin/approvals',
+            href: '/dashboard/approvals',
         },
     ],
 };

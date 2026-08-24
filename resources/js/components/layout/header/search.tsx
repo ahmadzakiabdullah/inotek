@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { CommandIcon, SearchIcon } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { router, usePage } from '@inertiajs/react';
-
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
+import { CommandIcon, SearchIcon } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { getNavItems } from '@/components/layout/sidebar/nav-main';
+import { Button } from '@/components/ui/button';
 import {
     CommandDialog,
     CommandEmpty,
@@ -15,9 +15,9 @@ import {
     CommandList,
     CommandSeparator,
 } from '@/components/ui/command';
-import { Button } from '@/components/ui/button';
 import { DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { getNavItems } from '@/components/layout/sidebar/nav-main';
+import { Input } from '@/components/ui/input';
+
 
 export default function Search() {
     const [open, setOpen] = useState(false);
@@ -32,11 +32,13 @@ export default function Search() {
             }
         };
         document.addEventListener('keydown', down);
+
         return () => document.removeEventListener('keydown', down);
     }, []);
 
     const items = React.useMemo(() => {
         const rawGroups = getNavItems(userRole);
+
         return rawGroups.map(group => {
             const flattenedItems: any[] = [];
             group.items.forEach(item => {
@@ -52,6 +54,7 @@ export default function Search() {
                     flattenedItems.push(item);
                 }
             });
+
             return {
                 title: group.title,
                 items: flattenedItems,

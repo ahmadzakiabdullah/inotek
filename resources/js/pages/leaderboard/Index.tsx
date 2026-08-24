@@ -1,11 +1,32 @@
+import { Head, Link, usePage } from '@inertiajs/react';
+import {
+    Trophy,
+    Award,
+    Sparkles,
+    AlertCircle,
+    RefreshCw,
+    BarChart3,
+    Medal,
+} from 'lucide-react';
 import React, { useState, useEffect } from 'react';
-import { Head, Link } from '@inertiajs/react';
-import { Trophy, Award, Sparkles, AlertCircle, RefreshCw, BarChart3, Medal } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface Category {
     id: number;
@@ -37,11 +58,18 @@ interface Props {
     leaderboardData: Record<number, LeaderboardProject[]>;
 }
 
-export default function LeaderboardIndex({ activeSession, categories, leaderboardData }: Props) {
-    const [localLeaderboardData, setLocalLeaderboardData] = useState(leaderboardData);
+export default function LeaderboardIndex({
+    activeSession,
+    categories,
+    leaderboardData,
+}: Props) {
+    const { component } = usePage();
+    const isAppLayout = component === 'leaderboard/App';
+    const [localLeaderboardData, setLocalLeaderboardData] =
+        useState(leaderboardData);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [activeCategoryTab, setActiveCategoryTab] = useState(
-        categories.length > 0 ? categories[0].id.toString() : ''
+        categories.length > 0 ? categories[0].id.toString() : '',
     );
 
     // Fetch updated score rankings
@@ -78,6 +106,7 @@ export default function LeaderboardIndex({ activeSession, categories, leaderboar
             if (channel && echo) {
                 channel.stopListening('.score.updated');
             }
+
             clearInterval(pollInterval);
         };
     }, []);
@@ -86,11 +115,14 @@ export default function LeaderboardIndex({ activeSession, categories, leaderboar
         return (
             <>
                 <Head title="Live Leaderboard" />
-                <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-background to-muted/20 p-6 text-center space-y-4">
+                <div className="flex min-h-screen flex-col items-center justify-center space-y-4 bg-background p-6 text-center">
                     <AlertCircle className="h-16 w-16 text-muted-foreground/40" />
-                    <h1 className="text-2xl font-bold tracking-tight">No Active Session</h1>
+                    <h1 className="text-2xl font-bold tracking-tight">
+                        No Active Session
+                    </h1>
                     <p className="max-w-sm text-sm text-muted-foreground">
-                        The live scoring leaderboard is currently unavailable because there is no active competition session.
+                        The live scoring leaderboard is currently unavailable
+                        because there is no active competition session.
                     </p>
                     <Button asChild size="sm">
                         <Link href="/">Return to Home</Link>
@@ -102,31 +134,41 @@ export default function LeaderboardIndex({ activeSession, categories, leaderboar
 
     // Helper to get award badge variant/class
     const getAwardBadge = (award: string | null) => {
-        if (!award) return null;
+        if (!award) {
+return null;
+}
+
         const normalized = award.toLowerCase();
+
         if (normalized === 'gold') {
             return (
-                <Badge className="bg-yellow-500 hover:bg-yellow-600 text-slate-900 border-none font-bold uppercase tracking-wider text-[10px] gap-1 px-2 py-0.5">
+                <Badge className="gap-1 border-none bg-yellow-500 px-2 py-0.5 text-[10px] font-bold tracking-wider text-slate-900 uppercase hover:bg-yellow-600">
                     <Medal className="h-3 w-3" /> Gold
                 </Badge>
             );
         }
+
         if (normalized === 'silver') {
             return (
-                <Badge className="bg-slate-300 hover:bg-slate-400 text-slate-900 border-none font-bold uppercase tracking-wider text-[10px] gap-1 px-2 py-0.5">
+                <Badge className="gap-1 border-none bg-slate-300 px-2 py-0.5 text-[10px] font-bold tracking-wider text-slate-900 uppercase hover:bg-slate-400">
                     <Medal className="h-3 w-3" /> Silver
                 </Badge>
             );
         }
+
         if (normalized === 'bronze') {
             return (
-                <Badge className="bg-amber-600 hover:bg-amber-700 text-white border-none font-bold uppercase tracking-wider text-[10px] gap-1 px-2 py-0.5">
+                <Badge className="gap-1 border-none bg-amber-600 px-2 py-0.5 text-[10px] font-bold tracking-wider text-white uppercase hover:bg-amber-700">
                     <Medal className="h-3 w-3" /> Bronze
                 </Badge>
             );
         }
+
         return (
-            <Badge variant="outline" className="border-primary/30 text-primary font-bold uppercase tracking-wider text-[10px]">
+            <Badge
+                variant="outline"
+                className="border-primary/30 text-[10px] font-bold tracking-wider text-primary uppercase"
+            >
                 {award}
             </Badge>
         );
@@ -136,24 +178,38 @@ export default function LeaderboardIndex({ activeSession, categories, leaderboar
         <>
             <Head title="Live Scoring Leaderboard" />
 
-            <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100 p-6 md:p-12">
-                <div className="mx-auto max-w-6xl space-y-8">
+            <div
+                className={
+                    isAppLayout
+                        ? 'space-y-6'
+                        : 'min-h-screen bg-background p-6 text-foreground md:p-12'
+                }
+            >
+                <div
+                    className={
+                        isAppLayout
+                            ? 'mx-auto max-w-6xl space-y-6'
+                            : 'mx-auto max-w-6xl space-y-8'
+                    }
+                >
                     {/* Header Banner */}
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-800 pb-6">
+                    <div className="flex flex-col gap-4 rounded-xl border border-border/60 bg-card/60 p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
                         <div className="space-y-1">
                             <div className="flex items-center gap-2">
-                                <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                                <span className="text-xs font-semibold text-emerald-500 uppercase tracking-widest">
+                                <span className="flex h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
+                                <span className="text-xs font-semibold tracking-widest text-emerald-600 uppercase dark:text-emerald-400">
                                     Live Standings
                                 </span>
                             </div>
-                            <h1 className="flex items-center gap-2 text-3xl font-extrabold tracking-tight lg:text-4xl text-white">
-                                <Trophy className="h-8 w-8 text-yellow-500" />
+                            <h1 className="flex items-center gap-2 text-3xl font-extrabold tracking-tight lg:text-4xl">
+                                <Trophy className="h-8 w-8 text-primary" />
                                 INOTEK Leaderboard
                             </h1>
-                            <p className="text-sm text-slate-400">
+                            <p className="text-sm text-muted-foreground">
                                 Real-time competition standings for{' '}
-                                <span className="font-semibold text-slate-200">{activeSession.name}</span>
+                                <span className="font-semibold text-foreground">
+                                    {activeSession.name}
+                                </span>
                             </p>
                         </div>
                         <div className="flex items-center gap-3">
@@ -162,13 +218,20 @@ export default function LeaderboardIndex({ activeSession, categories, leaderboar
                                 variant="outline"
                                 size="sm"
                                 disabled={isRefreshing}
-                                className="h-9 border-slate-800 bg-slate-900/50 text-slate-200 hover:bg-slate-800 hover:text-white"
+                                className="h-9"
                             >
-                                <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                                <RefreshCw
+                                    className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`}
+                                />
                                 Refresh
                             </Button>
-                            <Button asChild size="sm" variant="default" className="h-9 bg-primary text-primary-foreground">
-                                <Link href="/dashboard">Portal Login</Link>
+                            <Button
+                                asChild
+                                size="sm"
+                                variant="default"
+                                className="h-9 bg-primary text-primary-foreground"
+                            >
+                                <Link href="/dashboard">Dashboard</Link>
                             </Button>
                         </div>
                     </div>
@@ -181,12 +244,12 @@ export default function LeaderboardIndex({ activeSession, categories, leaderboar
                         >
                             {/* Scrollable Tabs row */}
                             <div className="overflow-x-auto pb-1">
-                                <TabsList className="bg-slate-900/60 border border-slate-800 p-1 flex w-max min-w-full">
+                                <TabsList className="flex w-max min-w-full border border-border bg-muted/60 p-1">
                                     {categories.map((cat) => (
                                         <TabsTrigger
                                             key={cat.id}
                                             value={cat.id.toString()}
-                                            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs md:text-sm font-semibold rounded px-4 py-2 text-slate-400"
+                                            className="rounded px-4 py-2 text-xs font-semibold md:text-sm"
                                         >
                                             [{cat.code}] {cat.name}
                                         </TabsTrigger>
@@ -195,116 +258,230 @@ export default function LeaderboardIndex({ activeSession, categories, leaderboar
                             </div>
 
                             {categories.map((cat) => {
-                                const projects = localLeaderboardData[cat.id] || [];
+                                const projects =
+                                    localLeaderboardData[cat.id] || [];
 
                                 return (
-                                    <TabsContent key={cat.id} value={cat.id.toString()} className="space-y-4">
-                                        <Card className="border border-slate-800 bg-slate-900/40 backdrop-blur-md overflow-hidden shadow-2xl">
-                                            <CardHeader className="border-b border-slate-800/80 bg-slate-950/20 p-6">
+                                    <TabsContent
+                                        key={cat.id}
+                                        value={cat.id.toString()}
+                                        className="space-y-4"
+                                    >
+                                        <Card className="overflow-hidden border-border/60 bg-card shadow-sm">
+                                            <CardHeader className="border-b border-border/70 bg-muted/20 p-6">
                                                 <div className="flex items-center justify-between">
                                                     <div>
-                                                        <CardTitle className="text-xl font-bold text-white flex items-center gap-2">
+                                                        <CardTitle className="flex items-center gap-2 text-xl font-bold">
                                                             <BarChart3 className="h-5 w-5 text-primary" />
                                                             Category Standings
                                                         </CardTitle>
-                                                        <CardDescription className="text-slate-400 mt-1">
-                                                            Projects registered under {cat.name} sorted by evaluation average.
+                                                        <CardDescription className="mt-1">
+                                                            Projects registered
+                                                            under {cat.name}{' '}
+                                                            sorted by evaluation
+                                                            average.
                                                         </CardDescription>
                                                     </div>
-                                                    <Badge variant="secondary" className="bg-slate-800 text-slate-300 border-none font-mono">
-                                                        {projects.length} projects
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="font-mono"
+                                                    >
+                                                        {projects.length}{' '}
+                                                        projects
                                                     </Badge>
                                                 </div>
                                             </CardHeader>
                                             <CardContent className="p-0">
                                                 <div className="overflow-x-auto">
                                                     <Table>
-                                                        <TableHeader className="bg-slate-950/40">
-                                                            <TableRow className="border-b border-slate-800 hover:bg-transparent">
-                                                                <TableHead className="w-[80px] py-4 pl-6 text-center font-bold text-slate-300">Rank</TableHead>
-                                                                <TableHead className="w-[120px] font-bold text-slate-300">Code</TableHead>
-                                                                <TableHead className="font-bold text-slate-300">Project Details</TableHead>
-                                                                <TableHead className="w-[120px] text-center font-bold text-slate-300">R1 Avg</TableHead>
-                                                                <TableHead className="w-[120px] text-center font-bold text-slate-300">R2 Avg</TableHead>
-                                                                <TableHead className="w-[150px] text-center font-bold text-slate-300">Final Score</TableHead>
-                                                                <TableHead className="w-[150px] pr-6 text-right font-bold text-slate-300">Award</TableHead>
+                                                        <TableHeader className="bg-muted/30">
+                                                            <TableRow className="border-b border-border/70 hover:bg-transparent">
+                                                                <TableHead className="w-[80px] py-4 pl-6 text-center font-bold">
+                                                                    Rank
+                                                                </TableHead>
+                                                                <TableHead className="w-[120px] font-bold">
+                                                                    Code
+                                                                </TableHead>
+                                                                <TableHead className="font-bold">
+                                                                    Project
+                                                                    Details
+                                                                </TableHead>
+                                                                <TableHead className="w-[120px] text-center font-bold">
+                                                                    R1 Avg
+                                                                </TableHead>
+                                                                <TableHead className="w-[120px] text-center font-bold">
+                                                                    R2 Avg
+                                                                </TableHead>
+                                                                <TableHead className="w-[150px] text-center font-bold">
+                                                                    Final Score
+                                                                </TableHead>
+                                                                <TableHead className="w-[150px] pr-6 text-right font-bold">
+                                                                    Award
+                                                                </TableHead>
                                                             </TableRow>
                                                         </TableHeader>
                                                         <TableBody>
-                                                            {projects.length > 0 ? (
-                                                                projects.map((proj, idx) => {
-                                                                    const rank = idx + 1;
-                                                                    const isTop3 = rank <= 3;
+                                                            {projects.length >
+                                                            0 ? (
+                                                                projects.map(
+                                                                    (
+                                                                        proj,
+                                                                        idx,
+                                                                    ) => {
+                                                                        const rank =
+                                                                            idx +
+                                                                            1;
+                                                                        const isTop3 =
+                                                                            rank <=
+                                                                            3;
 
-                                                                    return (
-                                                                        <TableRow
-                                                                            key={proj.id}
-                                                                            className={`border-b border-slate-800/60 transition-colors hover:bg-slate-800/10 ${rank === 1 ? 'bg-yellow-500/[0.02]' : ''}`}
-                                                                        >
-                                                                            <TableCell className="py-4 pl-6 text-center align-middle font-black">
-                                                                                {rank === 1 ? (
-                                                                                    <span className="flex items-center justify-center mx-auto h-7 w-7 rounded-full bg-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/10" title="First Place">
-                                                                                        1
-                                                                                    </span>
-                                                                                ) : rank === 2 ? (
-                                                                                    <span className="flex items-center justify-center mx-auto h-7 w-7 rounded-full bg-slate-300 text-slate-950 shadow-lg shadow-slate-300/10" title="Second Place">
-                                                                                        2
-                                                                                    </span>
-                                                                                ) : rank === 3 ? (
-                                                                                    <span className="flex items-center justify-center mx-auto h-7 w-7 rounded-full bg-amber-600 text-white shadow-lg shadow-amber-600/10" title="Third Place">
-                                                                                        3
-                                                                                    </span>
-                                                                                ) : (
-                                                                                    <span className="text-slate-400 font-mono text-sm">{rank}</span>
-                                                                                )}
-                                                                            </TableCell>
-                                                                            <TableCell className="py-4 align-middle font-mono text-xs font-bold text-slate-300">
-                                                                                {proj.pcode || (
-                                                                                    <span className="text-slate-600 italic">Pending</span>
-                                                                                )}
-                                                                            </TableCell>
-                                                                            <TableCell className="py-4 align-middle">
-                                                                                <div className="space-y-0.5">
-                                                                                    <div className="text-sm font-semibold text-white leading-snug">
-                                                                                        {proj.title}
+                                                                        return (
+                                                                            <TableRow
+                                                                                key={
+                                                                                    proj.id
+                                                                                }
+                                                                                className={`border-b border-border/60 transition-colors hover:bg-muted/50 ${rank === 1 ? 'bg-amber-500/[0.04]' : ''}`}
+                                                                            >
+                                                                                <TableCell className="py-4 pl-6 text-center align-middle font-black">
+                                                                                    {rank ===
+                                                                                    1 ? (
+                                                                                        <span
+                                                                                            className="mx-auto flex h-7 w-7 items-center justify-center rounded-full bg-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/10"
+                                                                                            title="First Place"
+                                                                                        >
+                                                                                            1
+                                                                                        </span>
+                                                                                    ) : rank ===
+                                                                                      2 ? (
+                                                                                        <span
+                                                                                            className="mx-auto flex h-7 w-7 items-center justify-center rounded-full bg-slate-300 text-slate-950 shadow-lg shadow-slate-300/10"
+                                                                                            title="Second Place"
+                                                                                        >
+                                                                                            2
+                                                                                        </span>
+                                                                                    ) : rank ===
+                                                                                      3 ? (
+                                                                                        <span
+                                                                                            className="mx-auto flex h-7 w-7 items-center justify-center rounded-full bg-amber-600 text-white shadow-lg shadow-amber-600/10"
+                                                                                            title="Third Place"
+                                                                                        >
+                                                                                            3
+                                                                                        </span>
+                                                                                    ) : (
+                                                                                        <span className="font-mono text-sm text-muted-foreground">
+                                                                                            {
+                                                                                                rank
+                                                                                            }
+                                                                                        </span>
+                                                                                    )}
+                                                                                </TableCell>
+                                                                                <TableCell className="py-4 align-middle font-mono text-xs font-bold">
+                                                                                    {proj.pcode || (
+                                                                                        <span className="text-muted-foreground italic">
+                                                                                            Pending
+                                                                                        </span>
+                                                                                    )}
+                                                                                </TableCell>
+                                                                                <TableCell className="py-4 align-middle">
+                                                                                    <div className="space-y-0.5">
+                                                                                        <div className="text-sm leading-snug font-semibold">
+                                                                                            {
+                                                                                                proj.title
+                                                                                            }
+                                                                                        </div>
+                                                                                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                                                                                            <span>
+                                                                                                Registered
+                                                                                                by:{' '}
+                                                                                                {
+                                                                                                    proj.username
+                                                                                                }
+                                                                                            </span>
+                                                                                        </div>
                                                                                     </div>
-                                                                                    <div className="text-[10px] text-slate-500 flex items-center gap-1.5">
-                                                                                        <span>Registered by: {proj.username}</span>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </TableCell>
-                                                                            <TableCell className="py-4 text-center align-middle font-mono text-xs text-slate-400">
-                                                                                {proj.avg_r1 > 0 ? (
-                                                                                    <span>{proj.avg_r1}% <span className="text-[9px] opacity-60">({proj.judges_r1} J)</span></span>
-                                                                                ) : (
-                                                                                    <span className="text-slate-700 italic">-</span>
-                                                                                )}
-                                                                            </TableCell>
-                                                                            <TableCell className="py-4 text-center align-middle font-mono text-xs text-slate-400">
-                                                                                {proj.avg_r2 > 0 ? (
-                                                                                    <span>{proj.avg_r2}% <span className="text-[9px] opacity-60">({proj.judges_r2} J)</span></span>
-                                                                                ) : (
-                                                                                    <span className="text-slate-700 italic">-</span>
-                                                                                )}
-                                                                            </TableCell>
-                                                                            <TableCell className="py-4 text-center align-middle">
-                                                                                <Badge
-                                                                                    variant="outline"
-                                                                                    className={`font-mono font-bold text-xs py-0.5 px-2.5 rounded border border-slate-700 bg-slate-900/80 ${proj.final_score > 0 ? 'text-primary' : 'text-slate-500'}`}
-                                                                                >
-                                                                                    {proj.final_score > 0 ? `${proj.final_score}%` : 'No scores'}
-                                                                                </Badge>
-                                                                            </TableCell>
-                                                                            <TableCell className="py-4 pr-6 text-right align-middle">
-                                                                                {getAwardBadge(proj.award_level)}
-                                                                            </TableCell>
-                                                                        </TableRow>
-                                                                    );
-                                                                })
+                                                                                </TableCell>
+                                                                                <TableCell className="py-4 text-center align-middle font-mono text-xs text-muted-foreground">
+                                                                                    {proj.avg_r1 >
+                                                                                    0 ? (
+                                                                                        <span>
+                                                                                            {
+                                                                                                proj.avg_r1
+                                                                                            }
+                                                                                            %{' '}
+                                                                                            <span className="text-[9px] opacity-60">
+                                                                                                (
+                                                                                                {
+                                                                                                    proj.judges_r1
+                                                                                                }{' '}
+                                                                                                J)
+                                                                                            </span>
+                                                                                        </span>
+                                                                                    ) : (
+                                                                                        <span className="text-slate-700 italic">
+                                                                                            -
+                                                                                        </span>
+                                                                                    )}
+                                                                                </TableCell>
+                                                                                <TableCell className="py-4 text-center align-middle font-mono text-xs text-muted-foreground">
+                                                                                    {proj.avg_r2 >
+                                                                                    0 ? (
+                                                                                        <span>
+                                                                                            {
+                                                                                                proj.avg_r2
+                                                                                            }
+                                                                                            %{' '}
+                                                                                            <span className="text-[9px] opacity-60">
+                                                                                                (
+                                                                                                {
+                                                                                                    proj.judges_r2
+                                                                                                }{' '}
+                                                                                                J)
+                                                                                            </span>
+                                                                                        </span>
+                                                                                    ) : (
+                                                                                        <span className="text-slate-700 italic">
+                                                                                            -
+                                                                                        </span>
+                                                                                    )}
+                                                                                </TableCell>
+                                                                                <TableCell className="py-4 text-center align-middle">
+                                                                                    <Badge
+                                                                                        variant="outline"
+                                                                                        className={`rounded border-border bg-muted/60 px-2.5 py-0.5 font-mono text-xs font-bold ${proj.final_score > 0 ? 'text-primary' : 'text-muted-foreground'}`}
+                                                                                    >
+                                                                                        {proj.final_score >
+                                                                                        0
+                                                                                            ? `${proj.final_score}%`
+                                                                                            : 'No scores'}
+                                                                                    </Badge>
+                                                                                </TableCell>
+                                                                                <TableCell className="py-4 pr-6 text-right align-middle">
+                                                                                    {getAwardBadge(
+                                                                                        proj.award_level,
+                                                                                    )}
+                                                                                </TableCell>
+                                                                            </TableRow>
+                                                                        );
+                                                                    },
+                                                                )
                                                             ) : (
                                                                 <TableRow>
-                                                                    <TableCell colSpan={7} className="py-12 text-center text-sm text-slate-500 italic">
-                                                                        No projects have been approved or scored in this category yet.
+                                                                    <TableCell
+                                                                        colSpan={
+                                                                            7
+                                                                        }
+                                                                        className="py-12 text-center text-sm text-muted-foreground italic"
+                                                                    >
+                                                                        No
+                                                                        projects
+                                                                        have
+                                                                        been
+                                                                        approved
+                                                                        or
+                                                                        scored
+                                                                        in this
+                                                                        category
+                                                                        yet.
                                                                     </TableCell>
                                                                 </TableRow>
                                                             )}
@@ -318,7 +495,7 @@ export default function LeaderboardIndex({ activeSession, categories, leaderboar
                             })}
                         </Tabs>
                     ) : (
-                        <div className="rounded-xl border border-slate-800 bg-slate-900/20 p-8 text-center text-slate-400">
+                        <div className="rounded-xl border border-dashed border-border bg-muted/20 p-8 text-center text-muted-foreground">
                             No competition categories defined for this session.
                         </div>
                     )}

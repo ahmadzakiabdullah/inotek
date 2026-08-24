@@ -1,9 +1,9 @@
-import React from 'react';
 import { Head, Link } from '@inertiajs/react';
 import { CheckCircle, AlertTriangle, ShieldCheck, User, Users, Folder, Calendar, Award } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface TeamMember {
     name: string;

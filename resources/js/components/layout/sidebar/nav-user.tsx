@@ -1,5 +1,13 @@
 'use client';
 
+import { usePage, router } from '@inertiajs/react';
+import { DotsVerticalIcon } from '@radix-ui/react-icons';
+import {
+    BellIcon,
+    CreditCardIcon,
+    LogOutIcon,
+    UserCircle2Icon,
+} from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
     DropdownMenu,
@@ -16,14 +24,6 @@ import {
     SidebarMenuItem,
     useSidebar,
 } from '@/components/ui/sidebar';
-import {
-    BellIcon,
-    CreditCardIcon,
-    LogOutIcon,
-    UserCircle2Icon,
-} from 'lucide-react';
-import { DotsVerticalIcon } from '@radix-ui/react-icons';
-import { usePage, router } from '@inertiajs/react';
 
 export function NavUser() {
     const { isMobile } = useSidebar();

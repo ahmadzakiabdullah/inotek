@@ -1,9 +1,10 @@
-import { BellIcon, ClockIcon } from 'lucide-react';
 import { usePage, router } from '@inertiajs/react';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { BellIcon, ClockIcon } from 'lucide-react';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -12,8 +13,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Notification {
     id: string;
@@ -36,7 +36,11 @@ const typeColors: Record<string, string> = {
 const playNotificationSound = () => {
     try {
         const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-        if (!AudioContext) return;
+
+        if (!AudioContext) {
+return;
+}
+
         const ctx = new AudioContext();
         
         const playNote = (freq: number, startTime: number, duration: number) => {
@@ -73,7 +77,9 @@ const Notifications = () => {
     const list = (auth?.notifications || []) as Notification[];
 
     useEffect(() => {
-        if (!user || !(window as any).Echo) return;
+        if (!user || !(window as any).Echo) {
+return;
+}
 
         const echo = (window as any).Echo;
         const channel = echo.private(`App.Models.User.${user.id}`);

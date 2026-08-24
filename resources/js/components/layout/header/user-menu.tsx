@@ -1,3 +1,4 @@
+import { Link, usePage, router } from '@inertiajs/react';
 import {
     BadgeCheck,
     Bell,
@@ -17,7 +18,6 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Link, usePage, router } from '@inertiajs/react';
 import { Progress } from '@/components/ui/progress';
 
 export default function UserMenu() {

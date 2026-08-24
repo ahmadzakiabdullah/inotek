@@ -2,6 +2,7 @@
 
 import { Line, LineChart, Tooltip } from 'recharts';
 
+import { ExportButton } from '@/components/CardActionMenus';
 import {
     Card,
     CardContent,
@@ -9,8 +10,8 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { ExportButton } from '@/components/CardActionMenus';
-import { ChartConfig, ChartContainer } from '@/components/ui/chart';
+import type { ChartConfig} from '@/components/ui/chart';
+import { ChartContainer } from '@/components/ui/chart';
 
 const chartData = [
     {
@@ -107,6 +108,7 @@ export function ExerciseMinutes() {
                                         </div>
                                     );
                                 }
+
                                 return null;
                             }}
                         />

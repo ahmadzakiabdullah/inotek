@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
 import { Head, useForm, Link } from '@inertiajs/react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Sliders, Lock, Unlock, ClipboardList, CheckSquare, Sparkles, Trophy, MessageSquare } from 'lucide-react';
+import React, { useState } from 'react';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Sliders, Lock, Unlock, ClipboardList, CheckSquare, Sparkles, Trophy, MessageSquare } from 'lucide-react';
-import { toast } from 'sonner';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface Project {
     id: number;
@@ -22,6 +22,7 @@ interface Round2Score {
     category_id: number;
     round2_total: number;
     comments: string | null;
+    category?: { name: string } | null;
 }
 
 interface CompetitionSession {
@@ -44,7 +45,7 @@ export default function Round2Index({ shortlist, round2Scores, activeSession, li
 
     const handleLockToggle = (e: React.FormEvent) => {
         e.preventDefault();
-        lockForm.post('/admin/round2/lock', {
+        lockForm.post('/dashboard/round2/lock', {
             onSuccess: () => {
                 toast.success(
                     activeSession?.r2_locked
@@ -83,7 +84,7 @@ export default function Round2Index({ shortlist, round2Scores, activeSession, li
                     {activeSession && (
                         <div className="flex items-center gap-2">
                             {/* Limit Adjuster Form */}
-                            <form method="GET" action="/admin/round2" className="flex items-center gap-2 mr-2">
+                            <form method="GET" action="/dashboard/round2" className="flex items-center gap-2 mr-2">
                                 <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">Shortlist size:</span>
                                 <select
                                     name="limit"
@@ -285,7 +286,7 @@ Round2Index.layout = {
         },
         {
             title: 'Round 2 Shortlist',
-            href: '/admin/round2',
+            href: '/dashboard/round2',
         },
     ],
 };

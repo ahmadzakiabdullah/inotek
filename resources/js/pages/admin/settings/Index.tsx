@@ -1,7 +1,9 @@
-import React from 'react';
 import { Head, useForm } from '@inertiajs/react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Settings, Sparkles, Paintbrush, Globe, LayoutGrid, Check } from 'lucide-react';
+import React from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
     Select,
@@ -10,8 +12,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Settings, Sparkles, Paintbrush, Globe, LayoutGrid, Check } from 'lucide-react';
-import { toast } from 'sonner';
 
 interface SettingsProps {
     currentSettings: {
@@ -73,7 +73,7 @@ export default function Index({ currentSettings }: SettingsProps) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        post('/admin/settings', {
+        post('/dashboard/admin-settings', {
             onSuccess: () => {
                 toast.success('System settings updated successfully in real-time!');
             },
@@ -349,16 +349,6 @@ export default function Index({ currentSettings }: SettingsProps) {
     );
 }
 
-Index.layout = (page: React.ReactNode) => {
-    // Dynamically retrieve breadcrumbs layout or wrap in standard dashboard
-    const Layout = require('@/components/layout/sidebar/app-sidebar').AppSidebar;
-    return (
-        <div className="flex h-screen overflow-hidden bg-background">
-            {page}
-        </div>
-    );
-};
-
 Index.layout = {
     breadcrumbs: [
         {
@@ -367,7 +357,7 @@ Index.layout = {
         },
         {
             title: 'System Settings',
-            href: '/admin/settings',
+            href: '/dashboard/admin-settings',
         },
     ],
 };

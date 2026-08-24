@@ -1,8 +1,8 @@
-import React from 'react';
 import { usePage, router } from '@inertiajs/react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { BellRing, CheckCircle2, AlertTriangle, Info, XCircle } from 'lucide-react';
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface Notification {
     id: string;
@@ -33,7 +33,9 @@ export default function DashboardNotifications() {
     const { auth } = usePage().props as any;
     const list = (auth?.notifications || []) as Notification[];
 
-    if (list.length === 0) return null; // Hide the widget if no unread notifications
+    if (list.length === 0) {
+return null;
+} // Hide the widget if no unread notifications
 
     const handleNotificationClick = (item: Notification) => {
         router.post(`/notifications/${item.id}/read`, {}, {

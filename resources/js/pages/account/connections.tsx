@@ -1,9 +1,10 @@
 'use client';
 
-import * as React from 'react';
 import { ChevronRight } from 'lucide-react';
-import { generateAvatarFallback } from '@/lib/utils';
+import * as React from 'react';
 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import {
     Card,
     CardAction,
@@ -11,14 +12,13 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { generateAvatarFallback } from '@/lib/utils';
 
 const connections = [
     {

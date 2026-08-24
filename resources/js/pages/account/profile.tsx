@@ -1,12 +1,12 @@
 import { Link, Head } from '@inertiajs/react';
 import { Settings } from 'lucide-react';
-import { CompleteYourProfileCard } from './complete-your-profile';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CardSkills } from './card-skills';
-import { LatestActivity } from './latest-activity';
 import { AboutMe } from './about-me';
+import { CardSkills } from './card-skills';
+import { CompleteYourProfileCard } from './complete-your-profile';
 import { Connections } from './connections';
+import { LatestActivity } from './latest-activity';
 import { ProfileCard } from './profile-card';
 
 export default function ProfilePage() {

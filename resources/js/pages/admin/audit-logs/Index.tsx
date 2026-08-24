@@ -1,11 +1,11 @@
-import React, { useState, useMemo } from 'react';
 import { Head } from '@inertiajs/react';
+import { Search, ShieldAlert, Monitor, Globe, Clock, User } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Search, ShieldAlert, Monitor, Globe, Clock, User } from 'lucide-react';
 
 interface AuditUser {
     id: number;
@@ -35,6 +35,7 @@ export default function AuditLogsIndex({ logs }: Props) {
     // Unique actions list for filter dropdown
     const actionTypes = useMemo(() => {
         const set = new Set(logs.map((log) => log.action));
+
         return ['ALL', ...Array.from(set)];
     }, [logs]);
 
@@ -58,6 +59,7 @@ export default function AuditLogsIndex({ logs }: Props) {
     const formatDateTime = (dateStr: string) => {
         try {
             const d = new Date(dateStr);
+
             return d.toLocaleString('en-US', {
                 year: 'numeric',
                 month: 'short',
@@ -76,12 +78,15 @@ export default function AuditLogsIndex({ logs }: Props) {
         if (action.includes('DELETE') || action.includes('REJECT') || action.includes('REMOVE')) {
             return 'border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500/15';
         }
+
         if (action.includes('CREATE') || action.includes('APPROVE') || action.includes('ASSIGN')) {
             return 'border-emerald-500/20 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/15';
         }
+
         if (action.includes('LOCK')) {
             return 'border-amber-500/20 bg-amber-500/10 text-amber-500 hover:bg-amber-500/15';
         }
+
         return 'border-blue-500/20 bg-blue-500/10 text-blue-500 hover:bg-blue-500/15';
     };
 
@@ -245,7 +250,7 @@ AuditLogsIndex.layout = {
         },
         {
             title: 'System Audit Logs',
-            href: '/admin/audit-logs',
+            href: '/dashboard/audit-logs',
         },
     ],
 };

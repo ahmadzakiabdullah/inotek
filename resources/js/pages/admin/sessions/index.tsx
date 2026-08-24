@@ -1,34 +1,4 @@
-import React, { useState, useMemo } from 'react';
 import { Head, useForm } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import InputError from '@/components/input-error';
-import { Switch } from '@/components/ui/switch';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
 import {
     Calendar,
     Plus,
@@ -41,6 +11,36 @@ import {
     XCircle,
     AlertTriangle,
 } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import InputError from '@/components/input-error';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 
 interface CompetitionSession {
     id: number;
@@ -104,7 +104,7 @@ export default function SessionsIndex({ sessions }: Props) {
 
     const handleCreateSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        createForm.post('/admin/sessions', {
+        createForm.post('/dashboard/sessions', {
             onSuccess: () => {
                 setIsCreateOpen(false);
                 createForm.reset();
@@ -125,9 +125,12 @@ export default function SessionsIndex({ sessions }: Props) {
 
     const handleEditSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedSession) return;
 
-        editForm.put(`/admin/sessions/${selectedSession.id}`, {
+        if (!selectedSession) {
+return;
+}
+
+        editForm.put(`/dashboard/sessions/${selectedSession.id}`, {
             onSuccess: () => {
                 setIsEditOpen(false);
                 setSelectedSession(null);
@@ -142,9 +145,12 @@ export default function SessionsIndex({ sessions }: Props) {
 
     const handleDeleteSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedSession) return;
 
-        deleteForm.delete(`/admin/sessions/${selectedSession.id}`, {
+        if (!selectedSession) {
+return;
+}
+
+        deleteForm.delete(`/dashboard/sessions/${selectedSession.id}`, {
             onSuccess: () => {
                 setIsDeleteOpen(false);
                 setSelectedSession(null);
@@ -613,7 +619,7 @@ SessionsIndex.layout = {
         },
         {
             title: 'Sessions Management',
-            href: '/admin/sessions',
+            href: '/dashboard/sessions',
         },
     ],
 };

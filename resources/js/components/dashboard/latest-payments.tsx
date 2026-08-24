@@ -1,15 +1,15 @@
 'use client';
 
-import * as React from 'react';
 import {
-    type ColumnDef,
+    
     flexRender,
     getCoreRowModel,
     useReactTable,
     getPaginationRowModel,
-    getFilteredRowModel,
-    type RowSelectionState,
+    getFilteredRowModel
+    
 } from '@tanstack/react-table';
+import type {ColumnDef, RowSelectionState} from '@tanstack/react-table';
 import {
     MoreHorizontal,
     ChevronLeft,
@@ -20,25 +20,10 @@ import {
     Tag,
     ChevronDown,
 } from 'lucide-react';
+import * as React from 'react';
 
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
     Card,
     CardAction,
@@ -47,6 +32,22 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 
 interface Payment {
     id: string;
@@ -260,6 +261,7 @@ export function LatestPayments() {
                     const amount = Number.parseFloat(
                         row.original.amount.toString(),
                     );
+
                     return (
                         <div className="font-medium">${amount.toFixed(2)}</div>
                     );

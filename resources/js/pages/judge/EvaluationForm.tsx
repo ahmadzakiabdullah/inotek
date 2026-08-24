@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
+import { ArrowLeft, Award, Lock, ShieldAlert, Sparkles, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
@@ -13,8 +14,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import InputError from '@/components/input-error';
-import { ArrowLeft, Award, Lock, ShieldAlert, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 
 interface RubricItem {
     id: number;
@@ -86,14 +86,17 @@ export default function EvaluationForm({ project, rubric, existingScore, roundNo
 
     const presenters = React.useMemo(() => {
         const list: string[] = [];
+
         if (project.user?.name) {
             list.push(project.user.name);
         }
+
         project.team_members.forEach((member) => {
             if (member.name && !list.includes(member.name)) {
                 list.push(member.name);
             }
         });
+
         return list;
     }, [project.user, project.team_members]);
 
@@ -116,15 +119,20 @@ export default function EvaluationForm({ project, rubric, existingScore, roundNo
             const currentPoints = points[item.id] ?? 0;
             const maxPoints = item.max_points;
             const weight = item.weight;
+
             if (maxPoints > 0) {
                 total += (currentPoints / maxPoints) * weight * 100;
             }
         });
+
         return Math.round(total * 100) / 100;
     }, [points, rubric.items]);
 
     const handleSelectPoint = (itemId: number, point: number) => {
-        if (isLocked) return;
+        if (isLocked) {
+return;
+}
+
         setPoints((prev) => ({
             ...prev,
             [itemId]: point,
@@ -141,11 +149,14 @@ export default function EvaluationForm({ project, rubric, existingScore, roundNo
         const groups: Record<string, RubricItem[]> = {};
         rubric.items.forEach((item) => {
             const sec = item.section || 'General';
+
             if (!groups[sec]) {
                 groups[sec] = [];
             }
+
             groups[sec].push(item);
         });
+
         return groups;
     }, [rubric.items]);
 
@@ -185,6 +196,7 @@ export default function EvaluationForm({ project, rubric, existingScore, roundNo
                     <div className="flex flex-wrap items-center gap-2">
                         {Array.from({ length: item.max_points + 1 }).map((_, p) => {
                             const isSelected = currentPoint === p;
+
                             return (
                                 <Button
                                     key={p}
@@ -232,7 +244,10 @@ export default function EvaluationForm({ project, rubric, existingScore, roundNo
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (isLocked) return;
+
+        if (isLocked) {
+return;
+}
 
         post(`/judge/evaluations/${project.id}`, {
             onSuccess: () => {

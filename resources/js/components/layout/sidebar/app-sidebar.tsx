@@ -1,12 +1,30 @@
 'use client';
 
+import { usePage, Link } from '@inertiajs/react';
+import { PlusIcon } from '@radix-ui/react-icons';
+import { ChevronsUpDown, ShoppingBagIcon, UserCircle2Icon } from 'lucide-react';
 import * as React from 'react';
 import { useEffect } from 'react';
-import { ChevronsUpDown, ShoppingBagIcon, UserCircle2Icon } from 'lucide-react';
-import { PlusIcon } from '@radix-ui/react-icons';
-import { usePage, Link } from '@inertiajs/react';
-import { useIsTablet } from '@/hooks/use-mobile';
-
+import Logo from '@/components/layout/logo';
+import { NavMain } from '@/components/layout/sidebar/nav-main';
+import { NavUser } from '@/components/layout/sidebar/nav-user';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
     Sidebar,
     SidebarContent,
@@ -17,26 +35,8 @@ import {
     SidebarMenuItem,
     useSidebar,
 } from '@/components/ui/sidebar';
-import { NavMain } from '@/components/layout/sidebar/nav-main';
-import { NavUser } from '@/components/layout/sidebar/nav-user';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import Logo from '@/components/layout/logo';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { useIsTablet } from '@/hooks/use-mobile';
+
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const { url: pathname, props: pageProps } = usePage();
@@ -46,7 +46,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const isTablet = useIsTablet();
 
     useEffect(() => {
-        if (isMobile) setOpenMobile(false);
+        if (isMobile) {
+setOpenMobile(false);
+}
     }, [pathname]);
 
     useEffect(() => {

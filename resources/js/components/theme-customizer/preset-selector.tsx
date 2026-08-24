@@ -1,7 +1,7 @@
 'use client';
 
-import { DEFAULT_THEME, THEMES } from '@/lib/themes';
 import { useThemeConfig } from '@/components/active-theme';
+import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
@@ -9,7 +9,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
+import { DEFAULT_THEME, THEMES } from '@/lib/themes';
 
 export function PresetSelector() {
     const { theme, setTheme } = useThemeConfig();

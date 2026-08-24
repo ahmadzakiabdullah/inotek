@@ -1,8 +1,8 @@
-import { Link2Icon, Mail, MapPin, PhoneCall } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { usePage } from '@inertiajs/react';
+import { Link2Icon, Mail, MapPin, PhoneCall } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 
 export function ProfileCard() {
     const { auth } = usePage().props as any;

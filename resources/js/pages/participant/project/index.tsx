@@ -1,27 +1,4 @@
-import React, { useState, useMemo } from 'react';
 import { Head, useForm, router, usePage } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
-import InputError from '@/components/input-error';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-    CardFooter,
-} from '@/components/ui/card';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
     FolderHeart,
     Plus,
@@ -42,6 +19,29 @@ import {
     FileText,
     Award,
 } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import InputError from '@/components/input-error';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+    CardFooter,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 
 interface CompetitionSession {
     id: number;
@@ -79,6 +79,7 @@ interface Project {
     admin_comments: string | null;
     team_members?: TeamMember[];
     category?: Category;
+    award_level?: string | null;
 }
 
 interface Props {
@@ -106,6 +107,7 @@ export default function ProjectIndex({
                 phone: tm.phone || '',
             }));
         }
+
         return [] as { name: string; email: string; phone: string }[];
     }, [project]);
 
@@ -124,10 +126,14 @@ export default function ProjectIndex({
     });
 
     const isTeamAllowed = useMemo(() => {
-        if (!form.data.category_id) return false;
+        if (!form.data.category_id) {
+return false;
+}
+
         const cat = categories.find(
             (c) => c.id.toString() === form.data.category_id,
         );
+
         return cat ? !!cat.allow_team : false;
     }, [form.data.category_id, categories]);
 
@@ -136,6 +142,7 @@ export default function ProjectIndex({
             if (activeTab === 'team') {
                 setActiveTab('details');
             }
+
             if (form.data.team_members && form.data.team_members.length > 0) {
                 form.setData('team_members', []);
             }
@@ -182,7 +189,10 @@ export default function ProjectIndex({
     };
 
     const handleFinalSubmit = () => {
-        if (!project) return;
+        if (!project) {
+return;
+}
+
         if (
             confirm(
                 'Are you sure you want to submit your project? No further edits can be made after submission.',
@@ -193,7 +203,10 @@ export default function ProjectIndex({
     };
 
     const handleDelete = () => {
-        if (!project) return;
+        if (!project) {
+return;
+}
+
         if (
             confirm(
                 'Are you absolutely sure you want to delete this project draft? This cannot be undone.',

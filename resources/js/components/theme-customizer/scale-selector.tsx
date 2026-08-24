@@ -1,9 +1,9 @@
 'use client';
 
-import { Label } from '@/components/ui/label';
-import { useThemeConfig } from '@/components/active-theme';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { BanIcon } from 'lucide-react';
+import { useThemeConfig } from '@/components/active-theme';
+import { Label } from '@/components/ui/label';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 export function ThemeScaleSelector() {
     const { theme, setTheme } = useThemeConfig();

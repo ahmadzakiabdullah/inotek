@@ -22,5 +22,6 @@ export const getInitials = (fullName: string) => {
     const nameParts = fullName.split(' ');
     const firstNameInitial = nameParts[0]?.charAt(0).toUpperCase() || '';
     const lastNameInitial = nameParts[1]?.charAt(0).toUpperCase() || '';
+
     return `${firstNameInitial}${lastNameInitial}`;
 };

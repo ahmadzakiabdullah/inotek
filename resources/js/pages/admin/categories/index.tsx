@@ -1,41 +1,4 @@
-import React, { useState, useMemo } from 'react';
 import { Head, useForm } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import InputError from '@/components/input-error';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import {
     Tag,
     Plus,
@@ -45,6 +8,43 @@ import {
     Calendar,
     AlertTriangle,
 } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import InputError from '@/components/input-error';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 
 interface CompetitionSession {
     id: number;
@@ -127,7 +127,7 @@ export default function CategoriesIndex({ categories, sessions }: Props) {
 
     const handleCreateSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        createForm.post('/admin/categories', {
+        createForm.post('/dashboard/categories', {
             onSuccess: () => {
                 setIsCreateOpen(false);
                 createForm.reset();
@@ -151,9 +151,12 @@ export default function CategoriesIndex({ categories, sessions }: Props) {
 
     const handleEditSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedCategory) return;
 
-        editForm.put(`/admin/categories/${selectedCategory.id}`, {
+        if (!selectedCategory) {
+return;
+}
+
+        editForm.put(`/dashboard/categories/${selectedCategory.id}`, {
             onSuccess: () => {
                 setIsEditOpen(false);
                 setSelectedCategory(null);
@@ -168,9 +171,12 @@ export default function CategoriesIndex({ categories, sessions }: Props) {
 
     const handleDeleteSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedCategory) return;
 
-        deleteForm.delete(`/admin/categories/${selectedCategory.id}`, {
+        if (!selectedCategory) {
+return;
+}
+
+        deleteForm.delete(`/dashboard/categories/${selectedCategory.id}`, {
             onSuccess: () => {
                 setIsDeleteOpen(false);
                 setSelectedCategory(null);
@@ -651,7 +657,7 @@ CategoriesIndex.layout = {
         },
         {
             title: 'Categories Management',
-            href: '/admin/categories',
+            href: '/dashboard/categories',
         },
     ],
 };

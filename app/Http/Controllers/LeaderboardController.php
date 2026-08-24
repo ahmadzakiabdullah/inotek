@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\CompetitionSession;
 use App\Models\Project;
-use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -19,7 +19,7 @@ class LeaderboardController extends Controller
     {
         $activeSession = CompetitionSession::where('is_active', true)->first();
 
-        if (!$activeSession) {
+        if (! $activeSession) {
             if ($request->wantsJson() || $request->input('api') === 'true') {
                 return response()->json([
                     'activeSession' => null,
@@ -28,7 +28,11 @@ class LeaderboardController extends Controller
                 ]);
             }
 
-            return Inertia::render('leaderboard/Index', [
+            $page = $request->routeIs('dashboard.leaderboard')
+                ? 'leaderboard/App'
+                : 'leaderboard/Index';
+
+            return Inertia::render($page, [
                 'activeSession' => null,
                 'categories' => [],
                 'leaderboardData' => [],
@@ -106,7 +110,11 @@ class LeaderboardController extends Controller
             ]);
         }
 
-        return Inertia::render('leaderboard/Index', [
+        $page = $request->routeIs('dashboard.leaderboard')
+            ? 'leaderboard/App'
+            : 'leaderboard/Index';
+
+        return Inertia::render($page, [
             'activeSession' => $activeSession,
             'categories' => $categories,
             'leaderboardData' => $groupedData,

@@ -5,12 +5,12 @@ namespace Tests\Feature;
 use App\Models\Category;
 use App\Models\CategoryRubricMapping;
 use App\Models\CompetitionSession;
-use App\Models\Project;
-use App\Models\User;
 use App\Models\JudgeAssignment;
-use App\Models\Score;
+use App\Models\Project;
 use App\Models\Rubric;
 use App\Models\RubricItem;
+use App\Models\User;
+use App\Notifications\SystemNotification;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -20,10 +20,15 @@ class NotificationSystemTest extends TestCase
     use RefreshDatabase;
 
     protected User $admin;
+
     protected User $judge;
+
     protected User $student;
+
     protected CompetitionSession $session;
+
     protected Category $category;
+
     protected Project $project;
 
     protected function setUp(): void
@@ -69,7 +74,7 @@ class NotificationSystemTest extends TestCase
      */
     public function test_can_notify_user_manually_and_retrieve()
     {
-        $this->student->notify(new \App\Notifications\SystemNotification(
+        $this->student->notify(new SystemNotification(
             'Test Title',
             'Test Message',
             '/test-action',
@@ -93,7 +98,7 @@ class NotificationSystemTest extends TestCase
      */
     public function test_can_mark_notification_as_read()
     {
-        $this->student->notify(new \App\Notifications\SystemNotification(
+        $this->student->notify(new SystemNotification(
             'Test Title',
             'Test Message',
             '/test-action',
@@ -104,7 +109,7 @@ class NotificationSystemTest extends TestCase
         $this->assertNotNull($notification);
 
         $response = $this->actingAs($this->student)
-            ->post("/notifications/{$notification->id}/read");
+            ->post("/dashboard/notifications/{$notification->id}/read");
 
         $response->assertRedirect();
         $this->assertEquals(0, $this->student->unreadNotifications()->count());
@@ -115,13 +120,13 @@ class NotificationSystemTest extends TestCase
      */
     public function test_can_mark_all_notifications_as_read()
     {
-        $this->student->notify(new \App\Notifications\SystemNotification('T1', 'M1'));
-        $this->student->notify(new \App\Notifications\SystemNotification('T2', 'M2'));
+        $this->student->notify(new SystemNotification('T1', 'M1'));
+        $this->student->notify(new SystemNotification('T2', 'M2'));
 
         $this->assertEquals(2, $this->student->unreadNotifications()->count());
 
         $response = $this->actingAs($this->student)
-            ->post("/notifications/read-all");
+            ->post('/dashboard/notifications/read-all');
 
         $response->assertRedirect();
         $this->assertEquals(0, $this->student->unreadNotifications()->count());
@@ -155,7 +160,7 @@ class NotificationSystemTest extends TestCase
 
         $response = $this->actingAs($this->admin)
             ->post(route('admin.approvals.approve'), [
-                'project_ids' => [$this->project->id]
+                'project_ids' => [$this->project->id],
             ]);
 
         $response->assertRedirect();
@@ -178,7 +183,7 @@ class NotificationSystemTest extends TestCase
 
         $response = $this->actingAs($this->admin)
             ->post(route('admin.approvals.reject', $this->project), [
-                'admin_comments' => 'Please correct the abstract.'
+                'admin_comments' => 'Please correct the abstract.',
             ]);
 
         $response->assertRedirect();
@@ -278,7 +283,7 @@ class NotificationSystemTest extends TestCase
     public function test_admin_can_access_announcement_page()
     {
         $response = $this->actingAs($this->admin)
-            ->get('/admin/announcements');
+            ->get('/dashboard/announcements');
 
         $response->assertStatus(200);
     }
@@ -289,7 +294,7 @@ class NotificationSystemTest extends TestCase
     public function test_non_admin_cannot_access_announcement_page()
     {
         $response = $this->actingAs($this->student)
-            ->get('/admin/announcements');
+            ->get('/dashboard/announcements');
 
         $response->assertStatus(403);
     }
@@ -304,7 +309,7 @@ class NotificationSystemTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin)
-            ->post('/admin/announcements', [
+            ->post('/dashboard/announcements', [
                 'title' => 'Broadcast Test Title',
                 'message' => 'Broadcast Test Message',
                 'target_role' => 'judge',
@@ -312,13 +317,13 @@ class NotificationSystemTest extends TestCase
             ]);
 
         $response->assertRedirect();
-        
+
         // Judge should have notification
         $this->assertDatabaseHas('notifications', [
             'notifiable_id' => $this->judge->id,
             'notifiable_type' => User::class,
         ]);
-        
+
         $notification = $this->judge->notifications()->first();
         $this->assertEquals('Broadcast Test Title', $notification->data['title']);
         $this->assertEquals('Broadcast Test Message', $notification->data['message']);

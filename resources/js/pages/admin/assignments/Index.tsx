@@ -1,13 +1,13 @@
-import React, { useState, useMemo } from 'react';
 import { Head, useForm } from '@inertiajs/react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Users, Plus, Trash2, Search, AlertCircle, Calendar, Sparkles, Filter } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { toast } from 'sonner';
+import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import InputError from '@/components/input-error';
-import { Users, Plus, Trash2, Search, AlertCircle, Calendar, Sparkles, Filter } from 'lucide-react';
-import { toast } from 'sonner';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface Category {
     id: number;
@@ -81,8 +81,10 @@ export default function AssignmentsIndex({ projects, judges, assignments, active
 
     const handleAssign = (e: React.FormEvent) => {
         e.preventDefault();
+
         if (!selectedProject || !selectedJudge) {
             toast.error('Please select both Project and Judge.');
+
             return;
         }
 
@@ -94,7 +96,7 @@ export default function AssignmentsIndex({ projects, judges, assignments, active
 
         // Delay submission slightly to allow useForm data state to sync
         setTimeout(() => {
-            form.post('/admin/assignments', {
+            form.post('/dashboard/assignments', {
                 onSuccess: () => {
                     toast.success('Judge assigned successfully!');
                     setSelectedProject('');
@@ -109,9 +111,11 @@ export default function AssignmentsIndex({ projects, judges, assignments, active
     };
 
     const handleDeleteAssignment = (id: number) => {
-        if (!confirm('Are you sure you want to delete this judge assignment?')) return;
+        if (!confirm('Are you sure you want to delete this judge assignment?')) {
+return;
+}
 
-        deleteForm.delete(`/admin/assignments/${id}`, {
+        deleteForm.delete(`/dashboard/assignments/${id}`, {
             onSuccess: () => {
                 toast.success('Judge assignment deleted successfully.');
             },
@@ -355,7 +359,7 @@ AssignmentsIndex.layout = {
         },
         {
             title: 'Judge Assignments',
-            href: '/admin/assignments',
+            href: '/dashboard/assignments',
         },
     ],
 };

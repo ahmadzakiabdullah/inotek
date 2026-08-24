@@ -1,34 +1,4 @@
-import React, { useState, useMemo } from 'react';
 import { Head, useForm } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import InputError from '@/components/input-error';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
 import {
     Shield,
     Plus,
@@ -41,6 +11,36 @@ import {
     ShieldCheck,
     AlertTriangle,
 } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import InputError from '@/components/input-error';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
 
 interface Role {
     id: number;
@@ -106,6 +106,7 @@ export default function RolesIndex({ roles }: Props) {
             (sum, r) => sum + (r.users_count || 0),
             0,
         );
+
         return { total, system, custom, totalUsers };
     }, [roles]);
 
@@ -132,7 +133,7 @@ export default function RolesIndex({ roles }: Props) {
 
     const handleCreateSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        createForm.post('/admin/roles', {
+        createForm.post('/dashboard/roles', {
             onSuccess: () => {
                 setIsCreateOpen(false);
                 createForm.reset();
@@ -153,9 +154,12 @@ export default function RolesIndex({ roles }: Props) {
 
     const handleEditSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedRole) return;
 
-        editForm.put(`/admin/roles/${selectedRole.id}`, {
+        if (!selectedRole) {
+return;
+}
+
+        editForm.put(`/dashboard/roles/${selectedRole.id}`, {
             onSuccess: () => {
                 setIsEditOpen(false);
                 setSelectedRole(null);
@@ -170,9 +174,12 @@ export default function RolesIndex({ roles }: Props) {
 
     const handleDeleteSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedRole) return;
 
-        deleteForm.delete(`/admin/roles/${selectedRole.id}`, {
+        if (!selectedRole) {
+return;
+}
+
+        deleteForm.delete(`/dashboard/roles/${selectedRole.id}`, {
             onSuccess: () => {
                 setIsDeleteOpen(false);
                 setSelectedRole(null);
@@ -331,6 +338,7 @@ export default function RolesIndex({ roles }: Props) {
                                                 protectedRoleIds.includes(
                                                     role.id,
                                                 );
+
                                             return (
                                                 <TableRow
                                                     key={role.id}
@@ -703,7 +711,7 @@ RolesIndex.layout = {
         },
         {
             title: 'Roles Management',
-            href: '/admin/roles',
+            href: '/dashboard/roles',
         },
     ],
 };

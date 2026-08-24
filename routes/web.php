@@ -1,34 +1,38 @@
 <?php
 
+use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CompetitionSessionController;
+use App\Http\Controllers\Admin\JudgeAssignmentController;
+use App\Http\Controllers\Admin\JudgingNudgeController;
 use App\Http\Controllers\Admin\ProjectApprovalController;
 use App\Http\Controllers\Admin\RoleController;
-use App\Http\Controllers\Admin\RubricController;
-use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\Participant\ProjectController;
-use App\Http\Controllers\Judge\JudgeController;
-use App\Http\Controllers\Admin\JudgeAssignmentController;
 use App\Http\Controllers\Admin\Round2Controller;
+use App\Http\Controllers\Admin\RubricController;
+use App\Http\Controllers\Admin\SystemSettingsController;
+use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\CertificateController;
+use App\Http\Controllers\ChangelogController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Judge\JudgeController;
 use App\Http\Controllers\LeaderboardController;
-use App\Http\Controllers\Admin\AuditLogController;
-use App\Http\Controllers\Admin\JudgingNudgeController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\Participant\ProjectController;
+use App\Http\Controllers\WelcomeController;
 use Illuminate\Support\Facades\Route;
 
-Route::inertia('/', 'welcome')->name('home');
+Route::get('/', WelcomeController::class)->name('home');
 
 // Public Verification & Live Leaderboard
 Route::get('verify/certificate/{hash}', [CertificateController::class, 'verify'])->name('certificates.verify');
 Route::get('leaderboard', [LeaderboardController::class, 'index'])->name('leaderboard.index');
 
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::inertia('account/profile', 'account/profile')->name('account.profile');
-    Route::get('changelog', [\App\Http\Controllers\ChangelogController::class, 'index'])->name('changelog');
-    Route::post('changelog/clear-cache', [\App\Http\Controllers\ChangelogController::class, 'clearCache'])->name('changelog.clear-cache');
+Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () {
+    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('leaderboard', [LeaderboardController::class, 'index'])->name('dashboard.leaderboard');
+    Route::inertia('profile', 'account/profile')->name('account.profile');
+    Route::get('changelog', [ChangelogController::class, 'index'])->name('changelog');
+    Route::post('changelog/clear-cache', [ChangelogController::class, 'clearCache'])->name('changelog.clear-cache');
 
     // Participant Project Routes
     Route::resource('projects', ProjectController::class)->except(['create', 'show', 'edit']);
@@ -44,7 +48,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::middleware(['auth', 'verified', 'role:admin'])
-    ->prefix('admin')
+    ->prefix('dashboard')
     ->name('admin.')
     ->group(function () {
         Route::resource('roles', RoleController::class)->except(['create', 'show', 'edit']);
@@ -58,12 +62,12 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         Route::post('announcements', [NotificationController::class, 'sendAnnouncement'])->name('announcements.send');
 
         // System Settings
-        Route::get('settings', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'index'])->name('settings.index');
-        Route::post('settings', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'update'])->name('settings.update');
+        Route::get('admin-settings', [SystemSettingsController::class, 'index'])->name('settings.index');
+        Route::post('admin-settings', [SystemSettingsController::class, 'update'])->name('settings.update');
     });
 
 Route::middleware(['auth', 'verified', 'role:admin,lecturer'])
-    ->prefix('admin')
+    ->prefix('dashboard')
     ->name('admin.')
     ->group(function () {
         // Project Approvals
@@ -76,7 +80,7 @@ Route::middleware(['auth', 'verified', 'role:admin,lecturer'])
     });
 
 Route::middleware(['auth', 'verified', 'role:judge'])
-    ->prefix('judge')
+    ->prefix('dashboard/judge')
     ->name('judge.')
     ->group(function () {
         Route::get('evaluations', [JudgeController::class, 'index'])->name('evaluations.index');
@@ -85,7 +89,7 @@ Route::middleware(['auth', 'verified', 'role:judge'])
     });
 
 Route::middleware(['auth', 'verified', 'role:admin'])
-    ->prefix('admin')
+    ->prefix('dashboard')
     ->name('admin.')
     ->group(function () {
         // Judge Assignments

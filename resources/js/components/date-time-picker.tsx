@@ -1,10 +1,9 @@
 'use client';
 
-import * as React from 'react';
 
 import { CalendarIcon } from '@radix-ui/react-icons';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
+import * as React from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -14,6 +13,7 @@ import {
     PopoverTrigger,
 } from '@/components/ui/popover';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 type Props = {
     date: Date | undefined;
@@ -36,6 +36,7 @@ export function DateTimePicker({ date, setDate }: Props) {
     ) => {
         if (date) {
             const newDate = new Date(date);
+
             if (type === 'hour') {
                 newDate.setHours(
                     (parseInt(value) % 12) +
@@ -49,6 +50,7 @@ export function DateTimePicker({ date, setDate }: Props) {
                     value === 'PM' ? currentHours + 12 : currentHours - 12,
                 );
             }
+
             setDate(newDate);
         }
     };
@@ -77,7 +79,6 @@ export function DateTimePicker({ date, setDate }: Props) {
                         mode="single"
                         selected={date}
                         onSelect={handleDateSelect}
-                        initialFocus
                     />
                     <div className="flex h-[300px] flex-col divide-y border-s sm:flex-row sm:divide-x sm:divide-y-0">
                         <ScrollArea className="w-64 sm:w-auto">

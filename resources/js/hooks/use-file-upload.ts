@@ -1,14 +1,15 @@
 'use client';
 
-import type React from 'react';
 import {
     useCallback,
     useRef,
-    useState,
-    type ChangeEvent,
-    type DragEvent,
-    type InputHTMLAttributes,
+    useState
+    
+    
+    
 } from 'react';
+import type React from 'react';
+import type {ChangeEvent, DragEvent, InputHTMLAttributes} from 'react';
 
 export type FileMetadata = {
     name: string;
@@ -109,10 +110,13 @@ export const useFileUpload = (
                             fileExtension.toLowerCase() === type.toLowerCase()
                         );
                     }
+
                     if (type.endsWith('/*')) {
                         const baseType = type.split('/')[0];
+
                         return fileType.startsWith(`${baseType}/`);
                     }
+
                     return fileType === type;
                 });
 
@@ -131,6 +135,7 @@ export const useFileUpload = (
             if (file instanceof File) {
                 return URL.createObjectURL(file);
             }
+
             return file.url;
         },
         [],
@@ -141,6 +146,7 @@ export const useFileUpload = (
             if (file instanceof File) {
                 return `${file.name}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
             }
+
             return file.id;
         },
         [],
@@ -170,13 +176,16 @@ export const useFileUpload = (
             };
 
             onFilesChange?.(newState.files);
+
             return newState;
         });
     }, [onFilesChange]);
 
     const addFiles = useCallback(
         (newFiles: FileList | File[]) => {
-            if (!newFiles || newFiles.length === 0) return;
+            if (!newFiles || newFiles.length === 0) {
+return;
+}
 
             const newFilesArray = Array.from(newFiles);
             const errors: string[] = [];
@@ -199,6 +208,7 @@ export const useFileUpload = (
                     `You can only upload a maximum of ${maxFiles} files.`,
                 );
                 setState((prev) => ({ ...prev, errors }));
+
                 return;
             }
 
@@ -226,10 +236,12 @@ export const useFileUpload = (
                             ? `Some files exceed the maximum size of ${formatBytes(maxSize)}.`
                             : `File exceeds the maximum size of ${formatBytes(maxSize)}.`,
                     );
+
                     return;
                 }
 
                 const error = validateFile(file);
+
                 if (error) {
                     errors.push(error);
                 } else {
@@ -251,6 +263,7 @@ export const useFileUpload = (
                         ? validFiles
                         : [...prev.files, ...validFiles];
                     onFilesChange?.(newFiles);
+
                     return {
                         ...prev,
                         files: newFiles,
@@ -287,6 +300,7 @@ export const useFileUpload = (
         (id: string) => {
             setState((prev) => {
                 const fileToRemove = prev.files.find((file) => file.id === id);
+
                 if (
                     fileToRemove &&
                     fileToRemove.preview &&
@@ -412,7 +426,9 @@ export const useFileUpload = (
 
 // Helper function to format bytes to human-readable format
 export const formatBytes = (bytes: number, decimals = 2): string => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) {
+return '0 Bytes';
+}
 
     const k = 1024;
     const dm = decimals < 0 ? 0 : decimals;

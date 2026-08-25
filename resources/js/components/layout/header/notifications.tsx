@@ -116,7 +116,7 @@ return;
     }, [user?.id]);
 
     const handleNotificationClick = (item: Notification) => {
-        router.post(`/notifications/${item.id}/read`, {}, {
+        router.post(`/dashboard/notifications/${item.id}/read`, {}, {
             onSuccess: () => {
                 if (item.action_url && item.action_url !== '#') {
                     router.visit(item.action_url);
@@ -127,7 +127,7 @@ return;
 
     const handleMarkAllAsRead = (e: React.MouseEvent) => {
         e.preventDefault();
-        router.post('/notifications/read-all');
+        router.post('/dashboard/notifications/read-all');
     };
 
     return (

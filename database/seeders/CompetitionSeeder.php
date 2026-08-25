@@ -60,6 +60,12 @@ class CompetitionSeeder extends Seeder
             'name' => 'Open Innovation',
         ]);
 
+        $c5 = Category::create([
+            'session_id' => $activeSession->id,
+            'code' => 'C5',
+            'name' => 'Industry Design Project (IDP)',
+        ]);
+
         // 3. Create Rubrics
         $standardRubric = Rubric::create([
             'name' => 'Standard Rubric',
@@ -84,6 +90,45 @@ class CompetitionSeeder extends Seeder
             ]));
         }
 
+        $idpRubric = Rubric::create([
+            'name' => 'IDP Rubric',
+            'description' => 'Specific rubric for Category C5 (IDP). Total weight is 100%.',
+        ]);
+
+        foreach ([
+            ['section' => 'A', 'code' => 'A1', 'criteria_name' => 'Project Design and Functionality', 'description' => 'WP1, WP2'],
+            ['section' => 'A', 'code' => 'A2', 'criteria_name' => 'Project Complexity and Quality', 'description' => 'WP1, WP2'],
+            ['section' => 'A', 'code' => 'A3', 'criteria_name' => 'Social, Health, Safety, Legal and Cultural Issues', 'description' => 'WP2'],
+            ['section' => 'A', 'code' => 'A4', 'criteria_name' => 'Sustainability and Marketability Potential', 'description' => 'WP6'],
+            ['section' => 'B', 'code' => 'B1', 'criteria_name' => 'WP2 - Presentation', 'description' => 'Apply ethical principles and commit to the professional ethics and responsibilities and norms of engineering practices'],
+        ] as $item) {
+            RubricItem::create(array_merge($item, [
+                'rubric_id' => $idpRubric->id,
+                'weight' => 0.20,
+                'max_points' => 5,
+            ]));
+        }
+
+        $diplomaRubric = Rubric::create([
+            'name' => 'Diploma Rubric',
+            'description' => 'Specific rubric for diploma-level projects. Total weight is 100%.',
+        ]);
+
+        foreach ([
+            ['section' => 'A', 'code' => 'A1', 'criteria_name' => 'Product Functionality', 'description' => '[CLO1, PO3] DP1, 3, 4', 'weight' => 0.25],
+            ['section' => 'A', 'code' => 'A2', 'criteria_name' => 'Project Complexity and Quality', 'description' => '[CLO2, PO4] DP1, 3, 4', 'weight' => 0.30],
+            ['section' => 'A', 'code' => 'A3', 'criteria_name' => 'Sustainable Design', 'description' => '[CLO4, PO7] DP1, 3, 4', 'weight' => 0.20],
+            ['section' => 'A', 'code' => 'A4', 'criteria_name' => 'Marketability / Business Opportunity', 'description' => '[CLO8, PO11]', 'weight' => 0.10],
+            ['section' => 'B', 'code' => 'B1', 'criteria_name' => 'Appearance and Readiness', 'description' => '[CLO5, PO8]', 'weight' => 0.05],
+            ['section' => 'B', 'code' => 'B2', 'criteria_name' => 'Presentation Skills Related to Well-Defined Engineering Activities', 'description' => '[CLO7, PO10] NA2, 3', 'weight' => 0.05],
+            ['section' => 'B', 'code' => 'B3', 'criteria_name' => 'Q&A Related to Well-Defined Engineering Activities', 'description' => '[CLO7, PO10] NA2, 3', 'weight' => 0.05],
+        ] as $item) {
+            RubricItem::create(array_merge($item, [
+                'rubric_id' => $diplomaRubric->id,
+                'max_points' => 5,
+            ]));
+        }
+
         // 5. Map Categories to Rubrics
         CategoryRubricMapping::create([
             'category_id' => $c1->id,
@@ -104,6 +149,10 @@ class CompetitionSeeder extends Seeder
         CategoryRubricMapping::create([
             'category_id' => $c6->id,
             'rubric_id' => $standardRubric->id,
+        ]);
+        CategoryRubricMapping::create([
+            'category_id' => $c5->id,
+            'rubric_id' => $idpRubric->id,
         ]);
     }
 }

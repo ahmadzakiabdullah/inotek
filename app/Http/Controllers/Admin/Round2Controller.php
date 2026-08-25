@@ -75,7 +75,9 @@ class Round2Controller extends Controller
         $activeSession->r2_locked = !$activeSession->r2_locked;
         $activeSession->save();
 
-        $action = $activeSession->r2_locked ? 'FINALIZE_ROUND_2' : 'REOPEN_ROUND_2';
+        // Keep the historical action names for audit-log compatibility while
+        // presenting the clearer "Finalize" terminology in the UI.
+        $action = $activeSession->r2_locked ? 'LOCK_ROUND_2' : 'UNLOCK_ROUND_2';
         $description = $activeSession->r2_locked
             ? "Finalized Round 2 judging for session: '{$activeSession->name}'"
             : "Reopened Round 2 judging for session: '{$activeSession->name}'";

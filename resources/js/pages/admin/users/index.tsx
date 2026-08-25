@@ -76,6 +76,7 @@ export default function UsersIndex({ users, roles }: Props) {
     const currentUser = auth?.user;
 
     const [searchTerm, setSearchTerm] = useState('');
+    const [roleFilter, setRoleFilter] = useState('all');
     const [sortBy, setSortBy] = useState<string>('name');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
     const [currentPage, setCurrentPage] = useState(1);
@@ -113,14 +114,16 @@ export default function UsersIndex({ users, roles }: Props) {
             const roleLabel = user.role?.label || 'No Role';
             const term = searchTerm.toLowerCase();
 
-            return (
+            const matchesRole = roleFilter === 'all' || user.role_id.toString() === roleFilter;
+
+            return matchesRole && (
                 user.name.toLowerCase().includes(term) ||
                 user.username.toLowerCase().includes(term) ||
                 user.email.toLowerCase().includes(term) ||
                 roleLabel.toLowerCase().includes(term)
             );
         });
-    }, [users, searchTerm]);
+    }, [users, searchTerm, roleFilter]);
 
     // Client-side Datatable processing: Sorting
     const sortedUsers = useMemo(() => {
@@ -166,7 +169,7 @@ return filteredUsers;
     // Reset page to 1 when search term changes
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, pageSize]);
+    }, [searchTerm, roleFilter, pageSize]);
 
     // Role Stats
     const stats = useMemo(() => {
@@ -402,6 +405,19 @@ return;
                                         className="w-full border-border/50 bg-background/50 pl-9"
                                     />
                                 </div>
+                                <NativeSelect
+                                    value={roleFilter}
+                                    onChange={(e) => setRoleFilter(e.target.value)}
+                                    className="w-full sm:w-40"
+                                    aria-label="Filter users by role"
+                                >
+                                    <NativeSelectOption value="all">All roles</NativeSelectOption>
+                                    {roles.map((role) => (
+                                        <NativeSelectOption key={role.id} value={role.id.toString()}>
+                                            {role.label}
+                                        </NativeSelectOption>
+                                    ))}
+                                </NativeSelect>
                                 <div className="flex h-9 items-center gap-1 rounded-md border border-border/50 bg-background/30 px-2 py-1.5 text-sm text-muted-foreground">
                                     <span>Rows:</span>
                                     <select

@@ -203,7 +203,7 @@ class JudgeController extends Controller
                 $admin->notify(new \App\Notifications\SystemNotification(
                     'Project Evaluation Submitted',
                     "Judge '{$judgeName}' has submitted evaluation for project '{$project->title}' ({$project->pcode}) in Round {$roundNo}.",
-                    '/admin/assignments',
+                    '/dashboard/assignments',
                     'success'
                 ));
             }

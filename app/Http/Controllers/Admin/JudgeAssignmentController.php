@@ -173,7 +173,7 @@ class JudgeAssignmentController extends Controller
                 $user->notify(new \App\Notifications\SystemNotification(
                     'New Judging Assignment',
                     "You have been assigned to evaluate the project '{$project->title}' for Round {$roundNo}.",
-                    '/judge/evaluations',
+                    '/dashboard/judge/evaluations',
                     'info'
                 ));
             } catch (\Exception $e) {

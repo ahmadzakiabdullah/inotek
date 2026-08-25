@@ -235,7 +235,7 @@ class ProjectController extends Controller
                 $admin->notify(new \App\Notifications\SystemNotification(
                     'New Project Approval Request',
                     "Project '{$project->title}' ({$project->pcode}) requires review.",
-                    '/admin/approvals',
+                    '/dashboard/approvals',
                     'info'
                 ));
             }

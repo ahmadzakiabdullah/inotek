@@ -183,7 +183,7 @@ class ProjectApprovalController extends Controller
                             $project->user->notify(new \App\Notifications\SystemNotification(
                                 'Project Approved',
                                 "Your project '{$project->title}' ({$project->pcode}) has been approved.",
-                                '/projects',
+                                '/dashboard/projects',
                                 'success'
                             ));
                         }
@@ -238,7 +238,7 @@ class ProjectApprovalController extends Controller
                 $project->user->notify(new \App\Notifications\SystemNotification(
                     'Project Returned for Editing',
                     "Your project '{$project->title}' has been returned for correction. Reason: {$validated['admin_comments']}",
-                    '/projects',
+                    '/dashboard/projects',
                     'warning'
                 ));
             }

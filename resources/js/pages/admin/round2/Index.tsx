@@ -45,12 +45,17 @@ export default function Round2Index({ shortlist, round2Scores, activeSession, li
 
     const handleLockToggle = (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!activeSession?.r2_locked && !window.confirm('Finalize Round 2 judging? Judges will no longer be able to submit or edit scores, and Round 2 assignments cannot be changed.')) {
+            return;
+        }
+
         lockForm.post('/dashboard/round2/lock', {
             onSuccess: () => {
                 toast.success(
                     activeSession?.r2_locked
-                        ? 'Round 2 evaluations unlocked!'
-                        : 'Round 2 evaluations locked successfully!'
+                        ? 'Round 2 judging reopened.'
+                        : 'Round 2 judging finalized.'
                 );
             },
             onError: () => {
@@ -101,7 +106,7 @@ export default function Round2Index({ shortlist, round2Scores, activeSession, li
                                 </select>
                             </form>
 
-                            {/* Lock Toggle Button */}
+                            {/* Finalize Toggle Button */}
                             <form onSubmit={handleLockToggle}>
                                 <Button
                                     type="submit"
@@ -112,12 +117,12 @@ export default function Round2Index({ shortlist, round2Scores, activeSession, li
                                     {activeSession.r2_locked ? (
                                         <>
                                             <Lock className="h-3.5 w-3.5" />
-                                            Unlock R2
+                                            Reopen R2
                                         </>
                                     ) : (
                                         <>
                                             <Unlock className="h-3.5 w-3.5" />
-                                            Lock R2 Scores
+                                            Finalize R2 Judging
                                         </>
                                     )}
                                 </Button>
@@ -137,7 +142,7 @@ export default function Round2Index({ shortlist, round2Scores, activeSession, li
                             <div className="flex items-center gap-2.5 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-xs text-destructive">
                                 <Lock className="h-4 w-4 shrink-0" />
                                 <div>
-                                    <span className="font-bold">Lock Mode Active:</span> Round 2 evaluation scores are locked. Judges cannot add or modify scores.
+                                <span className="font-bold">Round 2 Finalized:</span> Scores and assignments are final. Judges cannot add or modify scores.
                                 </div>
                             </div>
                         )}

@@ -520,7 +520,7 @@ return;
                             <div className="flex items-center justify-between rounded-lg border border-border/50 bg-muted/20 p-3">
                                 <div className="space-y-0.5">
                                     <Label htmlFor="edit-r2_locked">
-                                        Lock Round 2 Judging
+                                        Finalize Round 2 Judging
                                     </Label>
                                     <p className="text-[10px] text-muted-foreground">
                                         Prevent any further score entry or edits

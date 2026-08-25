@@ -62,7 +62,7 @@ class Round2Controller extends Controller
     }
 
     /**
-     * Toggle the Round 2 locking state.
+     * Finalize or reopen the Round 2 judging state.
      */
     public function lockToggle(): RedirectResponse
     {
@@ -75,16 +75,16 @@ class Round2Controller extends Controller
         $activeSession->r2_locked = !$activeSession->r2_locked;
         $activeSession->save();
 
-        $action = $activeSession->r2_locked ? 'LOCK_ROUND_2' : 'UNLOCK_ROUND_2';
+        $action = $activeSession->r2_locked ? 'FINALIZE_ROUND_2' : 'REOPEN_ROUND_2';
         $description = $activeSession->r2_locked
-            ? "Locked Round 2 evaluations for session: '{$activeSession->name}'"
-            : "Unlocked Round 2 evaluations for session: '{$activeSession->name}'";
+            ? "Finalized Round 2 judging for session: '{$activeSession->name}'"
+            : "Reopened Round 2 judging for session: '{$activeSession->name}'";
 
         \App\Services\AuditLogger::log($action, $description);
 
         $statusMessage = $activeSession->r2_locked
-            ? 'Round 2 evaluation has been locked successfully.'
-            : 'Round 2 evaluation has been unlocked successfully.';
+            ? 'Round 2 judging has been finalized successfully.'
+            : 'Round 2 judging has been reopened successfully.';
 
         return back()->with('success', $statusMessage);
     }

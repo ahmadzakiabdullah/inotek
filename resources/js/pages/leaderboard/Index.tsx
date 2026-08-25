@@ -314,6 +314,12 @@ return null;
                                                                 <TableHead className="w-[120px] text-center font-bold">
                                                                     R2 Avg
                                                                 </TableHead>
+                                                                {isAppLayout && (
+                                                                    <>
+                                                                        <TableHead className="min-w-[210px] font-bold">Judges / Scores</TableHead>
+                                                                        <TableHead className="min-w-[170px] font-bold">Best Presenter</TableHead>
+                                                                    </>
+                                                                )}
                                                                 <TableHead className="w-[150px] text-center font-bold">
                                                                     Final Score
                                                                 </TableHead>
@@ -400,21 +406,6 @@ return null;
                                                                                                 }
                                                                                             </span>
                                                                                         </div>
-                                                                                        {isAppLayout && (
-                                                                                            <div className="mt-2 space-y-1 text-[10px] text-muted-foreground">
-                                                                                                <div className="font-semibold text-foreground">Judges ({proj.judges.length})</div>
-                                                                                                {proj.judges.length > 0 ? proj.judges.map((judge, judgeIndex) => (
-                                                                                                    <div key={`${judge.name}-${judge.round}-${judgeIndex}`}>
-                                                                                                        {judge.name} · R{judge.round}: {judge.score}%
-                                                                                                    </div>
-                                                                                                )) : <div>Pending evaluation</div>}
-                                                                                                {proj.best_presenter && (
-                                                                                                    <div className="pt-1 font-semibold text-amber-600 dark:text-amber-400">
-                                                                                                        Best Presenter: {proj.best_presenter.name} ({proj.best_presenter.votes} vote{proj.best_presenter.votes === 1 ? '' : 's'})
-                                                                                                    </div>
-                                                                                                )}
-                                                                                            </div>
-                                                                                        )}
                                                                                     </div>
                                                                                 </TableCell>
                                                                                 <TableCell className="py-4 text-center align-middle font-mono text-xs text-muted-foreground">
@@ -461,6 +452,25 @@ return null;
                                                                                         </span>
                                                                                     )}
                                                                                 </TableCell>
+                                                                                {isAppLayout && (
+                                                                                    <>
+                                                                                        <TableCell className="align-middle text-xs">
+                                                                                            {proj.judges.length > 0 ? (
+                                                                                                <div className="space-y-1.5">
+                                                                                                    {proj.judges.map((judge, judgeIndex) => (
+                                                                                                        <div key={`${judge.name}-${judge.round}-${judgeIndex}`} className="flex items-center justify-between gap-3">
+                                                                                                            <span className="max-w-[130px] truncate" title={judge.name}>{judge.name}</span>
+                                                                                                            <Badge variant="outline" className="shrink-0 font-mono text-[10px]">R{judge.round} · {judge.score}%</Badge>
+                                                                                                        </div>
+                                                                                                    ))}
+                                                                                                </div>
+                                                                                            ) : <span className="text-muted-foreground italic">No scores submitted</span>}
+                                                                                        </TableCell>
+                                                                                        <TableCell className="align-middle text-xs">
+                                                                                            {proj.best_presenter ? <><div className="font-semibold text-amber-600 dark:text-amber-400">{proj.best_presenter.name}</div><div className="text-muted-foreground">{proj.best_presenter.votes} vote{proj.best_presenter.votes === 1 ? '' : 's'}</div></> : <span className="text-muted-foreground italic">Not nominated</span>}
+                                                                                        </TableCell>
+                                                                                    </>
+                                                                                )}
                                                                                 <TableCell className="py-4 text-center align-middle">
                                                                                     <Badge
                                                                                         variant="outline"
@@ -484,9 +494,7 @@ return null;
                                                             ) : (
                                                                 <TableRow>
                                                                     <TableCell
-                                                                        colSpan={
-                                                                            7
-                                                                        }
+                                                                            colSpan={isAppLayout ? 9 : 7}
                                                                         className="py-12 text-center text-sm text-muted-foreground italic"
                                                                     >
                                                                         No

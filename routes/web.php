@@ -98,6 +98,15 @@ Route::middleware(['auth', 'verified', 'role:judge'])
         Route::post('evaluations/{project}', [JudgeController::class, 'store'])->name('evaluations.store');
     });
 
+// Backward-compatible aliases for cached frontend bundles using the old path.
+Route::middleware(['auth', 'verified', 'role:judge'])
+    ->prefix('judge')
+    ->group(function () {
+        Route::get('evaluations', [JudgeController::class, 'index']);
+        Route::get('evaluations/{project}', [JudgeController::class, 'show']);
+        Route::post('evaluations/{project}', [JudgeController::class, 'store']);
+    });
+
 Route::middleware(['auth', 'verified', 'role:admin'])
     ->prefix('dashboard')
     ->name('admin.')

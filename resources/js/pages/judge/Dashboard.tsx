@@ -276,7 +276,7 @@ export default function JudgeDashboard({ assignments, activeSession, error }: Pr
                                                 </TableCell>
                                                 <TableCell className="pr-6 text-right">
                                                     <Link 
-                                                        href={`/judge/evaluations/${assignment.id}?round=${assignment.round_no}`}
+                                                        href={`/dashboard/judge/evaluations/${assignment.id}?round=${assignment.round_no}`}
                                                     >
                                                         <Button 
                                                             variant={assignment.is_evaluated ? "outline" : "default"}
@@ -322,7 +322,7 @@ JudgeDashboard.layout = {
     breadcrumbs: [
         {
             title: 'Judge Dashboard',
-            href: '/judge/evaluations',
+                                    href: '/dashboard/judge/evaluations',
         },
     ],
 };

@@ -249,7 +249,7 @@ return;
 return;
 }
 
-        post(`/judge/evaluations/${project.id}`, {
+        post(`/dashboard/judge/evaluations/${project.id}`, {
             onSuccess: () => {
                 // Success redirect handled by Inertia response
             },
@@ -264,7 +264,7 @@ return;
                 {/* Navigation Back */}
                 <div>
                     <Link 
-                        href="/judge/evaluations"
+                        href="/dashboard/judge/evaluations"
                         className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                     >
                         <ArrowLeft className="h-4 w-4" />
@@ -519,7 +519,7 @@ EvaluationForm.layout = {
     breadcrumbs: [
         {
             title: 'Judge Dashboard',
-            href: '/judge/evaluations',
+            href: '/dashboard/judge/evaluations',
         },
         {
             title: 'Criteria Evaluation',

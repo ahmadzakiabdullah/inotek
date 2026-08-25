@@ -68,7 +68,7 @@ class LeaderboardController extends Controller
         $scoreDetails = DB::table('scores')
             ->join('users', 'users.id', '=', 'scores.judge_id')
             ->where('scores.session_id', $activeSession->id)
-            ->select('scores.project_id', 'scores.round_no', 'scores.total', 'scores.best_presenter', 'users.name as judge_name')
+            ->select('scores.project_id', 'scores.round_no', 'scores.total', 'scores.best_presenter', 'scores.comments', 'scores.created_at', 'users.name as judge_name')
             ->orderBy('scores.round_no')
             ->get()
             ->groupBy('project_id');

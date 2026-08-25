@@ -89,6 +89,8 @@ class LeaderboardController extends Controller
                 'name' => $score->judge_name,
                 'round' => (int) $score->round_no,
                 'score' => round((float) $score->total, 2),
+                'comments' => $score->comments,
+                'submitted_at' => $score->created_at,
             ])->values()->all() : [];
 
             $presenterVotes = $isAuthenticatedLeaderboard ? $scoreDetails->get($project->id, collect())

@@ -47,7 +47,7 @@ interface LeaderboardProject {
     avg_r2: number;
     judges_r2: number;
     final_score: number;
-    judges: { name: string; round: number; score: number }[];
+    judges: { name: string; round: number; score: number; comments: string | null; submitted_at: string }[];
     best_presenter: { name: string; votes: number } | null;
 }
 
@@ -406,6 +406,19 @@ return null;
                                                                                                 }
                                                                                             </span>
                                                                                         </div>
+                                                                                        {isAppLayout && proj.judges.length > 0 && (
+                                                                                            <details className="mt-2 rounded-md border border-border/50 bg-muted/20 p-2 text-[10px]">
+                                                                                                <summary className="cursor-pointer font-semibold text-primary">View evaluation details</summary>
+                                                                                                <div className="mt-2 space-y-3">
+                                                                                                    {proj.judges.map((judge, judgeIndex) => (
+                                                                                                        <div key={`detail-${judge.name}-${judge.round}-${judgeIndex}`} className="space-y-1 border-t border-border/40 pt-2 first:border-0 first:pt-0">
+                                                                                                            <div className="flex justify-between font-semibold"><span>{judge.name} · Round {judge.round}</span><span>{judge.score}%</span></div>
+                                                                                                            <p className="text-muted-foreground">{judge.comments || 'No comments provided.'}</p>
+                                                                                                        </div>
+                                                                                                    ))}
+                                                                                                </div>
+                                                                                            </details>
+                                                                                        )}
                                                                                     </div>
                                                                                 </TableCell>
                                                                                 <TableCell className="py-4 text-center align-middle font-mono text-xs text-muted-foreground">

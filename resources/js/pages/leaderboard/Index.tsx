@@ -47,6 +47,8 @@ interface LeaderboardProject {
     avg_r2: number;
     judges_r2: number;
     final_score: number;
+    judges: { name: string; round: number; score: number }[];
+    best_presenter: { name: string; votes: number } | null;
 }
 
 interface Props {
@@ -398,6 +400,21 @@ return null;
                                                                                                 }
                                                                                             </span>
                                                                                         </div>
+                                                                                        {isAppLayout && (
+                                                                                            <div className="mt-2 space-y-1 text-[10px] text-muted-foreground">
+                                                                                                <div className="font-semibold text-foreground">Judges ({proj.judges.length})</div>
+                                                                                                {proj.judges.length > 0 ? proj.judges.map((judge, judgeIndex) => (
+                                                                                                    <div key={`${judge.name}-${judge.round}-${judgeIndex}`}>
+                                                                                                        {judge.name} · R{judge.round}: {judge.score}%
+                                                                                                    </div>
+                                                                                                )) : <div>Pending evaluation</div>}
+                                                                                                {proj.best_presenter && (
+                                                                                                    <div className="pt-1 font-semibold text-amber-600 dark:text-amber-400">
+                                                                                                        Best Presenter: {proj.best_presenter.name} ({proj.best_presenter.votes} vote{proj.best_presenter.votes === 1 ? '' : 's'})
+                                                                                                    </div>
+                                                                                                )}
+                                                                                            </div>
+                                                                                        )}
                                                                                     </div>
                                                                                 </TableCell>
                                                                                 <TableCell className="py-4 text-center align-middle font-mono text-xs text-muted-foreground">

@@ -65,7 +65,17 @@ class LeaderboardController extends Controller
             ->get()
             ->keyBy('project_id');
 
-        $leaderboardData = $projects->map(function ($project) use ($r1Averages, $r2Averages) {
+        $scoreDetails = DB::table('scores')
+            ->join('users', 'users.id', '=', 'scores.judge_id')
+            ->where('scores.session_id', $activeSession->id)
+            ->select('scores.project_id', 'scores.round_no', 'scores.total', 'scores.best_presenter', 'users.name as judge_name')
+            ->orderBy('scores.round_no')
+            ->get()
+            ->groupBy('project_id');
+
+        $isAuthenticatedLeaderboard = $request->routeIs('dashboard.leaderboard');
+
+        $leaderboardData = $projects->map(function ($project) use ($r1Averages, $r2Averages, $scoreDetails, $isAuthenticatedLeaderboard) {
             $r1 = $r1Averages->get($project->id);
             $r2 = $r2Averages->get($project->id);
 
@@ -74,6 +84,18 @@ class LeaderboardController extends Controller
 
             // Final score priority: Round 2 if evaluated, else Round 1
             $finalScore = $avgR2 > 0 ? $avgR2 : $avgR1;
+
+            $judges = $isAuthenticatedLeaderboard ? $scoreDetails->get($project->id, collect())->map(fn ($score) => [
+                'name' => $score->judge_name,
+                'round' => (int) $score->round_no,
+                'score' => round((float) $score->total, 2),
+            ])->values()->all() : [];
+
+            $presenterVotes = $isAuthenticatedLeaderboard ? $scoreDetails->get($project->id, collect())
+                ->filter(fn ($score) => filled($score->best_presenter))
+                ->groupBy('best_presenter')
+                ->map(fn ($votes, $name) => ['name' => $name, 'votes' => $votes->count()])
+                ->sortByDesc('votes')->values()->first() : null;
 
             return [
                 'id' => $project->id,
@@ -88,6 +110,8 @@ class LeaderboardController extends Controller
                 'avg_r2' => $avgR2,
                 'judges_r2' => $r2 ? $r2->judges_r2 : 0,
                 'final_score' => $finalScore,
+                'judges' => $judges,
+                'best_presenter' => $presenterVotes,
             ];
         });
 

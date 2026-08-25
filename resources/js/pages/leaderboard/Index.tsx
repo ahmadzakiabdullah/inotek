@@ -77,7 +77,7 @@ export default function LeaderboardIndex({
     // Fetch updated score rankings
     const fetchRankings = () => {
         setIsRefreshing(true);
-        fetch('/leaderboard?api=true')
+        fetch(`${isAppLayout ? '/dashboard/leaderboard' : '/leaderboard'}?api=true`)
             .then((res) => res.json())
             .then((data) => {
                 setLocalLeaderboardData(data.leaderboardData);

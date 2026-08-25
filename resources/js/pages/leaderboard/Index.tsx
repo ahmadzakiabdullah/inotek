@@ -187,8 +187,8 @@ return null;
             >
                 <div
                     className={
-                        isAppLayout
-                            ? 'mx-auto max-w-6xl space-y-6'
+                    isAppLayout
+                        ? 'w-full space-y-6'
                             : 'mx-auto max-w-6xl space-y-8'
                     }
                 >

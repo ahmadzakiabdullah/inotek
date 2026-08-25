@@ -173,14 +173,14 @@ return false;
 
         if (project) {
             // Update mode
-            form.put(`/projects/${project.id}`, {
+            form.put(`/dashboard/projects/${project.id}`, {
                 onSuccess: () => {
                     setIsEditing(false);
                 },
             });
         } else {
             // Create mode
-            form.post('/projects', {
+            form.post('/dashboard/projects', {
                 onSuccess: () => {
                     setIsEditing(false);
                 },
@@ -198,7 +198,7 @@ return;
                 'Are you sure you want to submit your project? No further edits can be made after submission.',
             )
         ) {
-            router.post(`/projects/${project.id}/submit`);
+            router.post(`/dashboard/projects/${project.id}/submit`);
         }
     };
 
@@ -212,7 +212,7 @@ return;
                 'Are you absolutely sure you want to delete this project draft? This cannot be undone.',
             )
         ) {
-            router.delete(`/projects/${project.id}`);
+            router.delete(`/dashboard/projects/${project.id}`);
         }
     };
 
@@ -335,7 +335,7 @@ return;
                                                     className="h-9 border-primary/30 text-primary hover:bg-primary/5"
                                                 >
                                                     <a
-                                                        href={`/projects/${project.id}/certificate/participation`}
+                                                        href={`/dashboard/projects/${project.id}/certificate/participation`}
                                                         target="_blank"
                                                         rel="noreferrer"
                                                     >
@@ -351,7 +351,7 @@ return;
                                                         className="h-9 bg-amber-600 hover:bg-amber-700 text-white border-amber-600"
                                                     >
                                                         <a
-                                                            href={`/projects/${project.id}/certificate/achievement`}
+                                                            href={`/dashboard/projects/${project.id}/certificate/achievement`}
                                                             target="_blank"
                                                             rel="noreferrer"
                                                         >
@@ -1113,7 +1113,7 @@ ProjectIndex.layout = {
         },
         {
             title: 'My Project',
-            href: '/projects',
+            href: '/dashboard/projects',
         },
     ],
 };

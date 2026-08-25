@@ -37,15 +37,19 @@ npm run build
 
 ## 2. Real-Time Services (WebSockets & Queues)
 
-INOTEK relies on background queue processing and WebSockets for real-time leaderboards.
+INOTEK supports background queue processing and Laravel broadcasting. The default
+`.env.example` configuration logs broadcast events locally; real-time WebSocket
+delivery requires installing and configuring Laravel Reverb first.
 
-### 2.1 WebSocket Server (Laravel Reverb)
-Start the WebSocket server to broadcast real-time scoring updates:
+### 2.1 Optional WebSocket Server (Laravel Reverb)
+Reverb is not currently included in the project dependencies. After installing
+and configuring it for the target environment, start the WebSocket server with:
 ```bash
 php artisan reverb:start
 ```
 > [!NOTE]
-> In production environments, manage this process using a supervisor configuration to automatically restart the service if it crashes.
+> Until Reverb is configured, use `BROADCAST_CONNECTION=log` for local development.
+> In production, manage the Reverb process using a supervisor configuration.
 
 ### 2.2 Queue Workers (Background Tasks)
 Tasks like sending email notifications, audit processing, and certificate generations run asynchronously:

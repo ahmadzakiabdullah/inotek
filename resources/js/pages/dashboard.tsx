@@ -845,6 +845,39 @@ const UserDashboard = ({
                             </p>
                         </div>
 
+                        {(project.poster_url || project.video_url || project.admin_comments) && (
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                {project.poster_url && (
+                                    <a
+                                        href={project.poster_url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="rounded-lg border border-border/40 bg-background/20 p-3 text-sm font-medium text-primary transition-colors hover:bg-muted/40"
+                                    >
+                                        View project poster
+                                    </a>
+                                )}
+                                {project.video_url && (
+                                    <a
+                                        href={project.video_url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="rounded-lg border border-border/40 bg-background/20 p-3 text-sm font-medium text-primary transition-colors hover:bg-muted/40"
+                                    >
+                                        Watch project video
+                                    </a>
+                                )}
+                                {project.admin_comments && (
+                                    <div className="space-y-1 rounded-lg border border-orange-200/60 bg-orange-50/50 p-3 text-sm dark:border-orange-900/50 dark:bg-orange-950/20 sm:col-span-2">
+                                        <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                                            Administrator feedback
+                                        </span>
+                                        <p>{project.admin_comments}</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         {/* Badges / Attributes Grid */}
                         <div className="grid gap-4 sm:grid-cols-2">
                             <div className="space-y-1 rounded-lg border border-border/40 bg-background/20 p-3.5">

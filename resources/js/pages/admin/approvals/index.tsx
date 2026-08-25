@@ -122,6 +122,7 @@ export default function ApprovalsIndex({ projects, sessions, categories, student
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedSessionFilter, setSelectedSessionFilter] = useState('all');
     const [selectedStatusFilter, setSelectedStatusFilter] = useState('all');
+    const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
 
     const [selectedProjectIds, setSelectedProjectIds] = useState<number[]>([]);
     const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
@@ -261,9 +262,13 @@ return students;
                 selectedStatusFilter === 'all' ||
                 project.status.toString() === selectedStatusFilter;
 
-            return matchesSearch && matchesSession && matchesStatus;
+            const matchesCategory =
+                selectedCategoryFilter === 'all' ||
+                project.category_id.toString() === selectedCategoryFilter;
+
+            return matchesSearch && matchesSession && matchesStatus && matchesCategory;
         });
-    }, [projects, searchQuery, selectedSessionFilter, selectedStatusFilter]);
+    }, [projects, searchQuery, selectedSessionFilter, selectedStatusFilter, selectedCategoryFilter]);
 
     // Stats
     const stats = useMemo(() => {
@@ -505,8 +510,8 @@ return;
 
                 {/* Filters Board */}
                 <Card className="border border-border/50 bg-card/25 backdrop-blur-sm">
-                    <CardContent className="grid gap-4 p-4 sm:grid-cols-4">
-                        <div className="relative">
+                    <CardContent className="grid w-full gap-2.5 p-3 md:grid-cols-[minmax(220px,1fr)_170px_210px_155px_auto] md:items-center">
+                        <div className="relative min-w-0">
                             <Search className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
                             <Input
                                 placeholder="Search title, code, owner..."
@@ -516,7 +521,7 @@ return;
                             />
                         </div>
 
-                        <div>
+                        <div className="w-full min-w-0">
                             <Select
                                 value={selectedSessionFilter}
                                 onValueChange={setSelectedSessionFilter}
@@ -541,7 +546,31 @@ return;
                             </Select>
                         </div>
 
-                        <div>
+                        <div className="w-full min-w-0">
+                            <Select
+                                value={selectedCategoryFilter}
+                                onValueChange={setSelectedCategoryFilter}
+                            >
+                                <SelectTrigger className="h-9 bg-background/50">
+                                    <SelectValue placeholder="All Categories" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">
+                                        All Categories
+                                    </SelectItem>
+                                    {categories.map((category) => (
+                                        <SelectItem
+                                            key={category.id}
+                                            value={category.id.toString()}
+                                        >
+                                            {category.code} - {category.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="w-full min-w-0">
                             <Select
                                 value={selectedStatusFilter}
                                 onValueChange={setSelectedStatusFilter}
@@ -569,11 +598,11 @@ return;
                         </div>
 
                         {/* Bulk Action Controls */}
-                        <div className="flex justify-end gap-2 sm:col-span-1">
+                        <div className="flex w-full min-w-max gap-2 md:w-auto">
                             <Button
                                 onClick={handleBulkApprove}
                                 disabled={selectedProjectIds.length === 0}
-                                className="h-9 flex-1 gap-1 bg-emerald-600 px-3 text-xs text-white hover:bg-emerald-700"
+                                className="h-9 shrink-0 gap-1 px-3 text-xs text-white"
                             >
                                 <CheckCheck className="h-3.5 w-3.5" />
                                 Approve ({selectedProjectIds.length})
@@ -582,7 +611,7 @@ return;
                                 onClick={handleBulkCancel}
                                 disabled={selectedProjectIds.length === 0}
                                 variant="destructive"
-                                className="h-9 flex-1 gap-1 px-3 text-xs"
+                                className="h-9 shrink-0 gap-1 px-3 text-xs"
                             >
                                 <XOctagon className="h-3.5 w-3.5" />
                                 Cancel ({selectedProjectIds.length})
@@ -669,7 +698,7 @@ return;
                                                                     {
                                                                         project.pcode
                                                                     }
-                                                                    <Button
+                                                                    {project.status !== 1 && <Button
                                                                         variant="ghost"
                                                                         size="icon"
                                                                         onClick={() =>
@@ -681,7 +710,7 @@ return;
                                                                         title="Override project code"
                                                                     >
                                                                         <Edit3 className="h-3 w-3" />
-                                                                    </Button>
+                                                                    </Button>}
                                                                 </span>
                                                             ) : (
                                                                 <span className="text-muted-foreground/50 italic">

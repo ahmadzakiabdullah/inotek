@@ -1,6 +1,6 @@
 # INOTEK
 
-INOTEK is a next-generation web application designed to manage innovation and technology competitions at Universiti Teknikal Malaysia Melaka (UTeM). Built on **Laravel 12**, **Inertia.js**, and **React**, it features a premium dashboard user interface powered by **Shadcn UI** and styled with **Tailwind CSS v4**.
+INOTEK is a next-generation web application designed to manage innovation and technology competitions at Universiti Teknikal Malaysia Melaka (UTeM). Built on **Laravel 13**, **Inertia.js**, and **React**, it features a premium dashboard user interface powered by **Shadcn UI** and styled with **Tailwind CSS v4**.
 
 > [!NOTE]
 > This repository represents the modernized core codebase, consolidating the legacy procedural PHP system into a secure, single-page application framework.
@@ -20,7 +20,7 @@ INOTEK is a next-generation web application designed to manage innovation and te
 
 ## 💻 Tech Stack
 
-* **Backend**: Laravel 12, PHP 8.4+
+* **Backend**: Laravel 13, PHP 8.4+
 * **Frontend**: React 19, Inertia.js (React), Vite
 * **Database**: MySQL 8.0 / MariaDB
 * **Design & Styling**: Tailwind CSS v4, Shadcn/UI (React components), Lucide Icons
@@ -78,5 +78,5 @@ For detailed technical specifications and developer handbooks, refer to the docu
 
 * 📋 **[Product Requirements Document (PRD)](docs/prd.md)**: Details the functional requirements, user roles, state machines, and business rules.
 * 🗄️ **[Database Schema Reference](docs/database.md)**: Entity Relationship Diagram (ERD) and detailed table definitions.
-* 🛠️ **[Developer & API Reference Guide](docs/development.md)**: Coding standards, testing instructions, Reverb WebSocket commands, and API endpoints.
+* 🛠️ **[Developer & API Reference Guide](docs/development.md)**: Coding standards, testing instructions, optional WebSocket setup, and API endpoints.
 * 🗺️ **[Development Roadmap (TODOS)](docs/todos.md)**: Active task checklist and implementation gantt phases.

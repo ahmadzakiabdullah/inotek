@@ -61,7 +61,7 @@ Select Top 3 or Top 5 projects per category for a second evaluation round, ensur
 - [x] Build user-facing download routes for "Participation" and "Achievement" certificates.
 
 ### 8. Real-Time Leaderboard & Audit Log
-- [x] Set up **Laravel Reverb** (WebSocket) to stream live score changes to the public leaderboard.
+- [ ] Set up **Laravel Reverb** (WebSocket) to stream live score changes to the public leaderboard.
 - [x] Set up automatic event listeners to log critical admin actions (resets, status changes, rubric edits) to the `audit_logs` table.
 
 ---

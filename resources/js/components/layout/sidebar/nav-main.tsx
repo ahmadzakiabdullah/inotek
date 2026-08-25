@@ -105,11 +105,13 @@ export function getNavItems(userRole: string | null | undefined): NavGroup[] {
                             : '/dashboard',
                     icon: ChartPieIcon,
                 },
-                {
-                    title: 'Live Leaderboard',
-                    href: '/dashboard/leaderboard',
-                    icon: Trophy,
-                },
+                ...(userRole !== 'user'
+                    ? [{
+                        title: 'Live Leaderboard',
+                        href: '/dashboard/leaderboard',
+                        icon: Trophy,
+                    }]
+                    : []),
             ],
         },
     ];
@@ -247,11 +249,13 @@ export function getNavItems(userRole: string | null | undefined): NavGroup[] {
                 href: '/dashboard/profile',
                 icon: UserIcon,
             },
-            {
-                title: 'System Updates',
-                href: '/dashboard/changelog',
-                icon: ActivityIcon,
-            },
+            ...(userRole === 'admin'
+                ? [{
+                    title: 'System Updates',
+                    href: '/dashboard/changelog',
+                    icon: ActivityIcon,
+                }]
+                : []),
             {
                 title: 'Settings',
                 href: '/dashboard/settings/profile',

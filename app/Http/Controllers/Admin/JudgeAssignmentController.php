@@ -7,6 +7,7 @@ use App\Models\CompetitionSession;
 use App\Models\Project;
 use App\Models\User;
 use App\Models\JudgeAssignment;
+use App\Models\Score;
 use App\Services\ScoreCalculator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -35,6 +36,7 @@ class JudgeAssignmentController extends Controller
                 'judges' => [],
                 'assignments' => [],
                 'activeSession' => null,
+                'roundOneComplete' => false,
             ]);
         }
 
@@ -53,11 +55,22 @@ class JudgeAssignmentController extends Controller
             ->where('session_id', $activeSession->id)
             ->get();
 
+        $roundOneAssignments = JudgeAssignment::where('session_id', $activeSession->id)
+            ->where('round_no', 1)
+            ->get(['project_id', 'judge_id']);
+        $roundOneComplete = $roundOneAssignments->isNotEmpty()
+            && $roundOneAssignments->every(fn ($assignment) => Score::where('project_id', $assignment->project_id)
+                ->where('judge_id', $assignment->judge_id)
+                ->where('session_id', $activeSession->id)
+                ->where('round_no', 1)
+                ->exists());
+
         return Inertia::render('admin/assignments/Index', [
             'projects' => $projects,
             'judges' => $judges,
             'assignments' => $assignments,
             'activeSession' => $activeSession,
+            'roundOneComplete' => $roundOneComplete,
         ]);
     }
 
@@ -98,6 +111,38 @@ class JudgeAssignmentController extends Controller
             return back()->with('error', 'Project not found or not approved.');
         }
 
+        // Check conflicts before the session-wide Round 1 completion gate so
+        // the administrator receives the specific eligibility explanation.
+        if ($roundNo === 2 && !$this->calculator->isJudgeEligibleForRound2($projectId, $judgeId, $activeSession->id)) {
+            return back()->with('error', 'This judge is not eligible for Round 2 because they evaluated this project in Round 1.');
+        }
+
+        if ($roundNo === 2) {
+            $roundOneAssignments = JudgeAssignment::where('session_id', $activeSession->id)
+                ->where('round_no', 1)
+                ->get(['project_id', 'judge_id']);
+            $roundOneComplete = $roundOneAssignments->isNotEmpty()
+                && $roundOneAssignments->every(fn ($assignment) => Score::where('project_id', $assignment->project_id)
+                    ->where('judge_id', $assignment->judge_id)
+                    ->where('session_id', $activeSession->id)
+                    ->where('round_no', 1)
+                    ->exists());
+
+            if ($roundOneAssignments->isNotEmpty() && !$roundOneComplete) {
+                return back()->with('error', 'Round 2 assignments are unavailable until all Round 1 evaluations are completed.');
+            }
+        }
+
+        $alreadyAssigned = JudgeAssignment::where('project_id', $projectId)
+            ->where('judge_id', $judgeId)
+            ->where('session_id', $activeSession->id)
+            ->where('round_no', $roundNo)
+            ->exists();
+
+        if ($alreadyAssigned) {
+            return back()->with('error', 'This judge is already assigned to the selected project for this round.');
+        }
+
         // Check Round 2 assignment eligibility (conflict check)
         if ($roundNo === 2) {
             if ($activeSession->r2_locked) {
@@ -111,14 +156,12 @@ class JudgeAssignmentController extends Controller
 
         // Create assignment
         try {
-            JudgeAssignment::updateOrCreate(
-                [
-                    'project_id' => $projectId,
-                    'judge_id' => $judgeId,
-                    'session_id' => $activeSession->id,
-                    'round_no' => $roundNo,
-                ]
-            );
+            JudgeAssignment::create([
+                'project_id' => $projectId,
+                'judge_id' => $judgeId,
+                'session_id' => $activeSession->id,
+                'round_no' => $roundNo,
+            ]);
 
             \App\Services\AuditLogger::log(
                 'ASSIGN_JUDGE',

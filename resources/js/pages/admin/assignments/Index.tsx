@@ -62,9 +62,10 @@ interface Props {
     judges: Judge[];
     assignments: Assignment[];
     activeSession: CompetitionSession | null;
+    roundOneComplete: boolean;
 }
 
-export default function AssignmentsIndex({ projects, judges, assignments, activeSession }: Props) {
+export default function AssignmentsIndex({ projects, judges, assignments, activeSession, roundOneComplete }: Props) {
     const [searchTerm, setSearchTerm] = useState('');
     const [roundFilter, setRoundFilter] = useState<'all' | '1' | '2'>('all');
     const [selectedProject, setSelectedProject] = useState<string>('');
@@ -78,6 +79,24 @@ export default function AssignmentsIndex({ projects, judges, assignments, active
     });
 
     const deleteForm = useForm({});
+
+    const availableJudges = useMemo(() => {
+        if (!selectedProject) {
+            return judges;
+        }
+
+        const assignedJudgeIds = new Set(
+            assignments
+                .filter(
+                    (assignment) =>
+                        assignment.project_id.toString() === selectedProject &&
+                        assignment.round_no.toString() === selectedRound,
+                )
+                .map((assignment) => assignment.judge_id),
+        );
+
+        return judges.filter((judge) => !assignedJudgeIds.has(judge.id));
+    }, [assignments, judges, selectedProject, selectedRound]);
 
     const handleAssign = (e: React.FormEvent) => {
         e.preventDefault();
@@ -207,7 +226,7 @@ return;
                                                 required
                                             >
                                                 <option value="">-- Select Judge --</option>
-                                                {judges.map((judge) => (
+                                                {availableJudges.map((judge) => (
                                                     <option key={judge.id} value={judge.id}>
                                                         {judge.name} ({judge.email})
                                                     </option>
@@ -226,7 +245,7 @@ return;
                                                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                                             >
                                                 <option value="1">Round 1 (Preliminary Round)</option>
-                                                <option value="2">Round 2 (Final / Qualified Shortlist)</option>
+                                                <option value="2" disabled={!roundOneComplete}>Round 2 (Final / Qualified Shortlist)</option>
                                             </select>
                                             <InputError message={form.errors.round_no} />
                                         </div>
@@ -237,13 +256,13 @@ return;
                                                 <p className="font-bold flex items-center gap-1">
                                                     <Sparkles className="h-3.5 w-3.5" /> Round 2 Guard Limit:
                                                 </p>
-                                                <p>The system blocks assignment if the selected judge already evaluated this project in Round 1.</p>
-                                            </div>
-                                        )}
+                                            <p>{roundOneComplete ? 'The system blocks assignment if the selected judge already evaluated this project in Round 1.' : 'Round 2 is unavailable until every Round 1 evaluation is complete.'}</p>
+                                        </div>
+                                    )}
 
                                         <Button
                                             type="submit"
-                                            disabled={form.processing}
+                                            disabled={form.processing || (selectedRound === '2' && !roundOneComplete)}
                                             className="w-full mt-2"
                                         >
                                             {form.processing ? 'Processing...' : 'Assign Judge'}

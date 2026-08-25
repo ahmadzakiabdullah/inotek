@@ -147,7 +147,8 @@ class ProjectApprovalController extends Controller
         $user = auth()->user();
 
         DB::transaction(function () use ($validated, $user) {
-            $query = Project::whereIn('id', $validated['project_ids']);
+            $query = Project::whereIn('id', $validated['project_ids'])
+                ->where('status', Project::STATUS_SUBMITTED);
             if ($user->hasRole('lecturer')) {
                 $query->where('supervisor_email', $user->email);
             }
@@ -217,6 +218,10 @@ class ProjectApprovalController extends Controller
             'admin_comments' => ['required', 'string', 'max:1000'],
         ]);
 
+        if ($project->status !== Project::STATUS_SUBMITTED) {
+            abort(403, __('Only submitted projects can be rejected.'));
+        }
+
         $project->update([
             'status' => Project::STATUS_EDIT,
             'admin_comments' => $validated['admin_comments'],
@@ -262,7 +267,8 @@ class ProjectApprovalController extends Controller
         ]);
 
         $user = auth()->user();
-        $query = Project::whereIn('id', $validated['project_ids']);
+        $query = Project::whereIn('id', $validated['project_ids'])
+            ->where('status', Project::STATUS_SUBMITTED);
         if ($user->hasRole('lecturer')) {
             $query->where('supervisor_email', $user->email);
         }
@@ -294,6 +300,10 @@ class ProjectApprovalController extends Controller
      */
     public function updateCode(Request $request, Project $project): RedirectResponse
     {
+        if ($project->status === Project::STATUS_NEW) {
+            abort(403, __('New projects are view-only until submitted.'));
+        }
+
         $user = auth()->user();
         if ($user->hasRole('lecturer') && $project->supervisor_email !== $user->email) {
             abort(403, __('Unauthorized action.'));

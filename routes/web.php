@@ -29,10 +29,7 @@ Route::get('leaderboard', [LeaderboardController::class, 'index'])->name('leader
 
 Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('leaderboard', [LeaderboardController::class, 'index'])->name('dashboard.leaderboard');
     Route::inertia('profile', 'account/profile')->name('account.profile');
-    Route::get('changelog', [ChangelogController::class, 'index'])->name('changelog');
-    Route::post('changelog/clear-cache', [ChangelogController::class, 'clearCache'])->name('changelog.clear-cache');
 
     // Participant Project Routes
     Route::resource('projects', ProjectController::class)->except(['create', 'show', 'edit']);
@@ -46,6 +43,19 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
     Route::post('notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
 });
+
+Route::middleware(['auth', 'verified', 'role:admin,lecturer,judge'])
+    ->prefix('dashboard')
+    ->group(function () {
+        Route::get('leaderboard', [LeaderboardController::class, 'index'])->name('dashboard.leaderboard');
+    });
+
+Route::middleware(['auth', 'verified', 'role:admin'])
+    ->prefix('dashboard')
+    ->group(function () {
+        Route::get('changelog', [ChangelogController::class, 'index'])->name('changelog');
+        Route::post('changelog/clear-cache', [ChangelogController::class, 'clearCache'])->name('changelog.clear-cache');
+    });
 
 Route::middleware(['auth', 'verified', 'role:admin'])
     ->prefix('dashboard')

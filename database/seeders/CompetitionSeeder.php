@@ -16,6 +16,10 @@ class CompetitionSeeder extends Seeder
      */
     public function run(): void
     {
+        if (Rubric::whereIn('name', ['Standard Rubric', 'IDP Rubric', 'Diploma Rubric'])->exists()) {
+            return;
+        }
+
         // 1. Create Sessions
         $activeSession = CompetitionSession::create([
             'name' => 'Semester 1 2026/2027',

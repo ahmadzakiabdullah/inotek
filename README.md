@@ -31,6 +31,8 @@ INOTEK is a next-generation web application designed to manage innovation and te
 
 Follow these steps to configure your local environment (e.g., Laragon):
 
+For production deployment and CI checks, see the [developer guide](docs/development.md).
+
 ### 1. Clone & Dependencies
 Clone the codebase and install backend and frontend packages:
 ```bash

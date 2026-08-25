@@ -42,8 +42,15 @@ INOTEK supports background queue processing and Laravel broadcasting. The defaul
 delivery requires installing and configuring Laravel Reverb first.
 
 ### 2.1 Optional WebSocket Server (Laravel Reverb)
-Reverb is not currently included in the project dependencies. After installing
-and configuring it for the target environment, start the WebSocket server with:
+Reverb is currently documented but not enabled in the application dependency set.
+The current Reverb release needs compatibility validation with Laravel 13 before
+it can be enabled safely. Once that compatibility issue is resolved, install it:
+```bash
+composer require laravel/reverb
+php artisan reverb:install
+```
+Then set `BROADCAST_CONNECTION=reverb` and the `REVERB_*` variables in `.env`.
+Start the WebSocket server with:
 ```bash
 php artisan reverb:start
 ```
@@ -51,7 +58,17 @@ php artisan reverb:start
 > Until Reverb is configured, use `BROADCAST_CONNECTION=log` for local development.
 > In production, manage the Reverb process using a supervisor configuration.
 
-### 2.2 Queue Workers (Background Tasks)
+### 2.2 Production checklist
+
+Before deployment, confirm:
+
+- `APP_ENV=production`, `APP_DEBUG=false`, a generated `APP_KEY`, and HTTPS.
+- Database credentials, `SESSION_SECURE_COOKIE=true`, and a non-local mail transport.
+- `php artisan storage:link`, migrations, and a continuously running queue worker.
+- Scheduled tasks, failed-job monitoring, database backups, and log rotation.
+- Reverb credentials and a supervised `php artisan reverb:start` process if enabled.
+
+### 2.3 Queue Workers (Background Tasks)
 Tasks like sending email notifications, audit processing, and certificate generations run asynchronously:
 ```bash
 php artisan queue:work --queue=default,emails

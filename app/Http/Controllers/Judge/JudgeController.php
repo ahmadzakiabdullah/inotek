@@ -188,6 +188,11 @@ class JudgeController extends Controller
             ]
         );
 
+        \App\Services\AuditLogger::log(
+            'SUBMIT_SCORE',
+            "Judge '{$judgeId}' saved an evaluation for project '{$project->title}' in Round {$roundNo}."
+        );
+
         event(new \App\Events\ScoreUpdated($project));
 
         // Notify Admins

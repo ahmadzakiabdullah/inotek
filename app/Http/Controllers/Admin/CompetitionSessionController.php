@@ -65,6 +65,15 @@ class CompetitionSessionController extends Controller
             'r2_locked' => ['required', 'boolean'],
         ]);
 
+        $anotherActiveSessionExists = CompetitionSession::where('id', '!=', $session->id)
+            ->where('is_active', true)
+            ->exists();
+
+        if ($session->is_active && !$validated['is_active'] && !$anotherActiveSessionExists) {
+            return redirect()->route('admin.sessions.index')
+                ->with('error', 'At least one competition session must remain active. Activate another session first.');
+        }
+
         $session->update($validated);
 
         if ($session->is_active) {

@@ -101,6 +101,29 @@ class CompetitionSessionTest extends TestCase
         ]);
     }
 
+    public function test_admin_cannot_deactivate_the_last_active_session(): void
+    {
+        $admin = User::factory()->create(['role_id' => 1]);
+        $session = CompetitionSession::create([
+            'name' => 'Session 1',
+            'is_active' => true,
+            'r2_locked' => false,
+        ]);
+
+        $response = $this->actingAs($admin)->put(route('admin.sessions.update', $session), [
+            'name' => $session->name,
+            'is_active' => false,
+            'r2_locked' => false,
+        ]);
+
+        $response->assertRedirect(route('admin.sessions.index'));
+        $response->assertSessionHas('error');
+        $this->assertDatabaseHas('competition_sessions', [
+            'id' => $session->id,
+            'is_active' => true,
+        ]);
+    }
+
     public function test_admin_can_delete_inactive_session(): void
     {
         $admin = User::factory()->create(['role_id' => 1]);

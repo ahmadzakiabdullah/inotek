@@ -54,80 +54,56 @@ class CompetitionSeeder extends Seeder
             'name' => 'Creative Digital & Media',
         ]);
 
+        $c6 = Category::create([
+            'session_id' => $activeSession->id,
+            'code' => 'C6',
+            'name' => 'Open Innovation',
+        ]);
+
         // 3. Create Rubrics
-        $engRubric = Rubric::create([
-            'name' => 'Standard Engineering Rubric',
-            'description' => 'Used for assessing technical complexity, hardware designs, and eco-innovation solutions.',
+        $standardRubric = Rubric::create([
+            'name' => 'Standard Rubric',
+            'description' => 'Official standard rubric for categories C1, C2, C3, C4, and C6. Total weight is intentionally 105%.',
         ]);
 
-        $mediaRubric = Rubric::create([
-            'name' => 'Digital Media Rubric',
-            'description' => 'Focused on user experience, frontend/multimedia aesthetics, and creative design.',
-        ]);
+        $officialItems = [
+            ['section' => 'A', 'code' => 'A1', 'criteria_name' => 'Project Functionality', 'description' => 'Grading Scale: [LO2, PO3]', 'weight' => 0.30, 'scale_descriptions' => [0 => 'No effort to show functionality at all', 1 => 'Not functioning but showed video recording', 2 => 'Demonstrated but not functioning properly', 3 => 'Demonstrated the functionality but not as expected', 4 => 'Demonstrated the functionality up to the expectation', 5 => 'Demonstrated the functionality beyond the expectation']],
+            ['section' => 'A', 'code' => 'A2', 'criteria_name' => 'Project Innovation and Quality', 'description' => 'Grading Scale: [LO8, PO10] EA2', 'weight' => 0.30, 'scale_descriptions' => [0 => 'Poor/No innovation', 1 => 'Very basic innovation', 2 => 'Moderate quality and innovation', 3 => 'Good innovation with room for improvement', 4 => 'High quality innovation', 5 => 'Outstanding and highly advanced innovation']],
+            ['section' => 'A', 'code' => 'A3', 'criteria_name' => 'Sustainability, Social and Environmental Impact', 'description' => 'Grading Scale: [LO6, PO7] EA4', 'weight' => 0.10],
+            ['section' => 'A', 'code' => 'A4', 'criteria_name' => 'Ability to Address Social Design Criteria', 'description' => 'Grading Scale: [LO5, PO6]', 'weight' => 0.10],
+            ['section' => 'A', 'code' => 'A5', 'criteria_name' => 'Potential Application', 'description' => 'Grading Scale: [LO6, PO7]', 'weight' => 0.05],
+            ['section' => 'B', 'code' => 'B1', 'criteria_name' => 'Pitching Skill', 'description' => 'Presenter Appearance & Professionalism', 'weight' => 0.10],
+            ['section' => 'B', 'code' => 'B2', 'criteria_name' => 'Project Poster / Material', 'description' => 'Evaluate the quality and clarity of the project poster/materials.', 'weight' => 0.05],
+            ['section' => 'C', 'code' => 'C1', 'criteria_name' => 'Bonus', 'description' => 'Marketability or Ready to Be Commercialized', 'weight' => 0.05],
+        ];
 
-        // 4. Create Rubric Items
-        // Standard Engineering Rubric Items
-        RubricItem::create([
-            'rubric_id' => $engRubric->id,
-            'criteria_name' => 'Novelty & Innovation',
-            'weight' => 0.30,
-            'max_points' => 5,
-        ]);
-        RubricItem::create([
-            'rubric_id' => $engRubric->id,
-            'criteria_name' => 'Technical Complexity',
-            'weight' => 0.30,
-            'max_points' => 5,
-        ]);
-        RubricItem::create([
-            'rubric_id' => $engRubric->id,
-            'criteria_name' => 'Impact & Commercial Viability',
-            'weight' => 0.20,
-            'max_points' => 5,
-        ]);
-        RubricItem::create([
-            'rubric_id' => $engRubric->id,
-            'criteria_name' => 'Presentation & Demo',
-            'weight' => 0.20,
-            'max_points' => 5,
-        ]);
-
-        // Digital Media Rubric Items
-        RubricItem::create([
-            'rubric_id' => $mediaRubric->id,
-            'criteria_name' => 'Creative Expression',
-            'weight' => 0.40,
-            'max_points' => 5,
-        ]);
-        RubricItem::create([
-            'rubric_id' => $mediaRubric->id,
-            'criteria_name' => 'Technical Execution',
-            'weight' => 0.30,
-            'max_points' => 5,
-        ]);
-        RubricItem::create([
-            'rubric_id' => $mediaRubric->id,
-            'criteria_name' => 'User Experience',
-            'weight' => 0.30,
-            'max_points' => 5,
-        ]);
+        foreach ($officialItems as $item) {
+            RubricItem::create(array_merge($item, [
+                'rubric_id' => $standardRubric->id,
+                'max_points' => 5,
+            ]));
+        }
 
         // 5. Map Categories to Rubrics
         CategoryRubricMapping::create([
             'category_id' => $c1->id,
-            'rubric_id' => $engRubric->id,
+            'rubric_id' => $standardRubric->id,
         ]);
         CategoryRubricMapping::create([
             'category_id' => $c2->id,
-            'rubric_id' => $engRubric->id,
+            'rubric_id' => $standardRubric->id,
         ]);
         CategoryRubricMapping::create([
             'category_id' => $c3->id,
-            'rubric_id' => $engRubric->id,
+            'rubric_id' => $standardRubric->id,
         ]);
         CategoryRubricMapping::create([
             'category_id' => $c4->id,
-            'rubric_id' => $mediaRubric->id,
+            'rubric_id' => $standardRubric->id,
+        ]);
+        CategoryRubricMapping::create([
+            'category_id' => $c6->id,
+            'rubric_id' => $standardRubric->id,
         ]);
     }
 }

@@ -2,14 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class RubricItem extends Model
 {
-    use HasFactory;
-
     protected $table = 'rubric_items';
 
     protected $fillable = [
@@ -32,6 +29,7 @@ class RubricItem extends Model
     /**
      * Get the rubric that owns the item.
      */
+    /** @return BelongsTo<Rubric, $this> */
     public function rubric(): BelongsTo
     {
         return $this->belongsTo(Rubric::class, 'rubric_id');

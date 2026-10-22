@@ -4,11 +4,10 @@ import { usePage, router } from '@inertiajs/react';
 import { DotsVerticalIcon } from '@radix-ui/react-icons';
 import {
     BellIcon,
-    CreditCardIcon,
     LogOutIcon,
     UserCircle2Icon,
 } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -32,7 +31,6 @@ export function NavUser() {
     const user = auth?.user;
     const name = user?.name || 'Toby Belhome';
     const email = user?.email || 'hello@tobybelhome.com';
-    const avatar = user?.avatar || '/images/avatars/01.png';
 
     const initials =
         name
@@ -57,7 +55,6 @@ export function NavUser() {
                             className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                         >
                             <Avatar className="rounded-full">
-                                <AvatarImage src={avatar} alt={name} />
                                 <AvatarFallback className="rounded-lg">
                                     {initials}
                                 </AvatarFallback>
@@ -82,7 +79,6 @@ export function NavUser() {
                         <DropdownMenuLabel className="p-0 font-normal">
                             <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                                 <Avatar className="h-8 w-8 rounded-lg">
-                                    <AvatarImage src={avatar} alt={name} />
                                     <AvatarFallback className="rounded-lg">
                                         {initials}
                                     </AvatarFallback>
@@ -102,10 +98,6 @@ export function NavUser() {
                             <DropdownMenuItem>
                                 <UserCircle2Icon />
                                 Account
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                                <CreditCardIcon />
-                                Billing
                             </DropdownMenuItem>
                             <DropdownMenuItem>
                                 <BellIcon />

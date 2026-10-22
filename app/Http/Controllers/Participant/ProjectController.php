@@ -7,11 +7,15 @@ use App\Models\Category;
 use App\Models\CompetitionSession;
 use App\Models\Project;
 use App\Models\TeamMember;
+use App\Models\User;
+use App\Notifications\SystemNotification;
+use App\Services\ProjectCodeGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -65,7 +69,7 @@ class ProjectController extends Controller
         }
 
         $validated = $request->validate([
-            'category_id' => ['required', 'exists:categories,id'],
+            'category_id' => ['required', Rule::exists('categories', 'id')->where('session_id', $activeSession->id)],
             'title' => ['required', 'string', 'max:255'],
             'abstract' => ['required', 'string'],
             'institution_type' => ['required', 'string', 'in:utem,ipt'],
@@ -80,7 +84,7 @@ class ProjectController extends Controller
             'team_members.*.phone' => ['nullable', 'string', 'max:100'],
         ]);
 
-        $category = Category::findOrFail($validated['category_id']);
+        $category = Category::where('session_id', $activeSession->id)->whereKey($validated['category_id'])->firstOrFail();
         if (! $category->allow_team && ! empty($validated['team_members'])) {
             return back()->withErrors(['team_members' => __('Team members are not allowed for this category.')]);
         }
@@ -139,7 +143,7 @@ class ProjectController extends Controller
         }
 
         $validated = $request->validate([
-            'category_id' => ['required', 'exists:categories,id'],
+            'category_id' => ['required', Rule::exists('categories', 'id')->where('session_id', $project->session_id)],
             'title' => ['required', 'string', 'max:255'],
             'abstract' => ['required', 'string'],
             'institution_type' => ['required', 'string', 'in:utem,ipt'],
@@ -154,7 +158,7 @@ class ProjectController extends Controller
             'team_members.*.phone' => ['nullable', 'string', 'max:100'],
         ]);
 
-        $category = Category::findOrFail($validated['category_id']);
+        $category = Category::where('session_id', $project->session_id)->whereKey($validated['category_id'])->firstOrFail();
         if (! $category->allow_team && ! empty($validated['team_members'])) {
             return back()->withErrors(['team_members' => __('Team members are not allowed for this category.')]);
         }
@@ -199,7 +203,7 @@ class ProjectController extends Controller
     /**
      * Submit the project to the Admin for verification.
      */
-    public function submit(Project $project): RedirectResponse
+    public function submit(Project $project, ProjectCodeGenerator $codeGenerator): RedirectResponse
     {
         if ($project->user_id !== Auth::id()) {
             abort(403, __('Unauthorized action.'));
@@ -209,19 +213,10 @@ class ProjectController extends Controller
             return back()->withErrors(['status' => __('Only draft projects can be submitted.')]);
         }
 
-        DB::transaction(function () use ($project) {
+        DB::transaction(function () use ($project, $codeGenerator) {
             // Generate Project Code (pcode) if not set
             if (! $project->pcode) {
-                $category = Category::findOrFail($project->category_id);
-
-                // Count projects in this category & session that have a project code assigned
-                $count = Project::where('session_id', $project->session_id)
-                    ->where('category_id', $project->category_id)
-                    ->whereNotNull('pcode')
-                    ->count();
-
-                $nextNum = str_pad($count + 1, 2, '0', STR_PAD_LEFT);
-                $project->pcode = "{$category->code}-{$nextNum}";
+                $project->pcode = $codeGenerator->next($project->session_id, $project->category_id);
             }
 
             $project->status = Project::STATUS_SUBMITTED;
@@ -230,9 +225,9 @@ class ProjectController extends Controller
 
         // Notify Admins
         try {
-            $admins = \App\Models\User::where('role_id', 1)->get();
+            $admins = User::withRole('admin')->get();
             foreach ($admins as $admin) {
-                $admin->notify(new \App\Notifications\SystemNotification(
+                $admin->notify(new SystemNotification(
                     'New Project Approval Request',
                     "Project '{$project->title}' ({$project->pcode}) requires review.",
                     '/dashboard/approvals',

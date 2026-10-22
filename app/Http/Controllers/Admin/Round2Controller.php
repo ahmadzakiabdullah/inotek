@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\CompetitionSession;
+use App\Models\JudgeAssignment;
 use App\Models\Project;
+use App\Services\AuditLogger;
 use App\Services\ScoreCalculator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,11 +25,11 @@ class Round2Controller extends Controller
     /**
      * Display Round 2 shortlisted projects and settings.
      */
-    public function index(Request $request): Response
+    public function index(): Response
     {
         $activeSession = CompetitionSession::where('is_active', true)->first();
 
-        if (!$activeSession) {
+        if (! $activeSession) {
             return Inertia::render('admin/round2/Index', [
                 'categories' => [],
                 'shortlist' => [],
@@ -36,10 +38,7 @@ class Round2Controller extends Controller
             ]);
         }
 
-        $limit = (int) $request->input('limit', 3);
-        if ($limit < 1 || $limit > 10) {
-            $limit = 3;
-        }
+        $limit = $activeSession->round2_shortlist_limit ?: 3;
 
         // Get Round 1 average score results and shortlist Top N projects per category
         $shortlist = $this->calculator->getRound1Shortlist($activeSession->id, $limit);
@@ -61,6 +60,38 @@ class Round2Controller extends Controller
         ]);
     }
 
+    public function updateShortlistLimit(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'limit' => ['required', 'integer', 'in:3,5,10'],
+        ]);
+        $activeSession = CompetitionSession::where('is_active', true)->first();
+
+        if (! $activeSession) {
+            return back()->with('error', 'No active competition session.');
+        }
+
+        $shortlistedProjectIds = $this->calculator->getRound1Shortlist(
+            $activeSession->id,
+            $validated['limit'],
+        )->flatten()->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $existingRoundTwoProjectIds = JudgeAssignment::where('session_id', $activeSession->id)
+            ->where('round_no', 2)
+            ->distinct()
+            ->pluck('project_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        if (array_diff($existingRoundTwoProjectIds, $shortlistedProjectIds) !== []) {
+            return back()->with('error', 'Remove Round 2 assignments outside the new shortlist before changing its size.');
+        }
+
+        $activeSession->round2_shortlist_limit = $validated['limit'];
+        $activeSession->save();
+
+        return back()->with('success', 'Round 2 shortlist size updated.');
+    }
+
     /**
      * Finalize or reopen the Round 2 judging state.
      */
@@ -68,11 +99,11 @@ class Round2Controller extends Controller
     {
         $activeSession = CompetitionSession::where('is_active', true)->first();
 
-        if (!$activeSession) {
+        if (! $activeSession) {
             return back()->with('error', 'No active competition session.');
         }
 
-        $activeSession->r2_locked = !$activeSession->r2_locked;
+        $activeSession->r2_locked = ! $activeSession->r2_locked;
         $activeSession->save();
 
         // Keep the historical action names for audit-log compatibility while
@@ -82,7 +113,7 @@ class Round2Controller extends Controller
             ? "Finalized Round 2 judging for session: '{$activeSession->name}'"
             : "Reopened Round 2 judging for session: '{$activeSession->name}'";
 
-        \App\Services\AuditLogger::log($action, $description);
+        AuditLogger::log($action, $description);
 
         $statusMessage = $activeSession->r2_locked
             ? 'Round 2 judging has been finalized successfully.'
@@ -97,17 +128,38 @@ class Round2Controller extends Controller
     public function assignAward(Request $request, Project $project): RedirectResponse
     {
         $validated = $request->validate([
-            'award_level' => ['nullable', 'string', 'in:Gold,Silver,Bronze,None'],
+            'award_level' => ['required', 'string', 'in:Gold,Silver,Bronze,None'],
         ]);
+
+        $activeSession = CompetitionSession::where('is_active', true)->first();
+        if (! $activeSession || $project->session_id !== $activeSession->id || $project->status !== Project::STATUS_APPROVED) {
+            abort(404);
+        }
+
+        $shortlistedProjectIds = $this->calculator->getRound1Shortlist(
+            $activeSession->id,
+            $activeSession->round2_shortlist_limit ?: 3,
+        )->flatten()->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        if (! in_array($project->id, $shortlistedProjectIds, true)) {
+            return back()->with('error', 'Awards can only be assigned to projects shortlisted for Round 2.');
+        }
+
+        if ($validated['award_level'] !== 'None' && ! $project->scores()
+            ->where('session_id', $activeSession->id)
+            ->where('round_no', 2)
+            ->exists()) {
+            return back()->with('error', 'An award can only be assigned after the project has a Round 2 evaluation.');
+        }
 
         $award = $validated['award_level'] === 'None' ? null : $validated['award_level'];
         $project->update([
             'award_level' => $award,
         ]);
 
-        \App\Services\AuditLogger::log(
+        AuditLogger::log(
             'ASSIGN_AWARD',
-            "Assigned award '" . ($award ?? 'None') . "' to project '{$project->title}'"
+            "Assigned award '".($award ?? 'None')."' to project '{$project->title}'"
         );
 
         return back()->with('success', 'Award assigned successfully.');

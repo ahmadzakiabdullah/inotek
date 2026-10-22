@@ -2,13 +2,10 @@ import { Link, usePage, router } from '@inertiajs/react';
 import {
     BadgeCheck,
     Bell,
-    ChevronRightIcon,
-    CreditCard,
     LogOut,
-    Sparkles,
 } from 'lucide-react';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -18,7 +15,6 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Progress } from '@/components/ui/progress';
 
 export default function UserMenu() {
     const { auth } = usePage().props as any;
@@ -26,7 +22,6 @@ export default function UserMenu() {
 
     const name = user?.name || 'Toby Belhome';
     const email = user?.email || 'hello@tobybelhome.com';
-    const avatar = user?.avatar || '/images/avatars/01.png';
 
     const initials =
         name
@@ -45,7 +40,6 @@ export default function UserMenu() {
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Avatar className="cursor-pointer">
-                    <AvatarImage src={avatar} alt={name} />
                     <AvatarFallback className="rounded-lg">
                         {initials}
                     </AvatarFallback>
@@ -58,7 +52,6 @@ export default function UserMenu() {
                 <DropdownMenuLabel className="p-0">
                     <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                         <Avatar>
-                            <AvatarImage src={avatar} alt={name} />
                             <AvatarFallback className="rounded-lg">
                                 {initials}
                             </AvatarFallback>
@@ -76,25 +69,10 @@ export default function UserMenu() {
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
                     <DropdownMenuItem asChild>
-                        <a
-                            href="https://shadcnuikit.com/pricing"
-                            target="_blank"
-                            rel="noreferrer"
-                        >
-                            <Sparkles /> Upgrade to Pro
-                        </a>
-                    </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuGroup>
-                    <DropdownMenuItem asChild>
                         <Link href="/account/profile">
                             <BadgeCheck />
                             Account
                         </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                        <CreditCard />
-                        Billing
                     </DropdownMenuItem>
                     <DropdownMenuItem>
                         <Bell />
@@ -109,21 +87,6 @@ export default function UserMenu() {
                     <LogOut />
                     Log out
                 </DropdownMenuItem>
-                <div className="mt-1.5 rounded-md border bg-muted">
-                    <div className="space-y-3 p-3">
-                        <div className="flex items-center justify-between">
-                            <h4 className="text-sm font-medium">Credits</h4>
-                            <div className="flex cursor-pointer items-center text-sm text-muted-foreground">
-                                <span>5 left</span>
-                                <ChevronRightIcon className="ml-1 h-4 w-4" />
-                            </div>
-                        </div>
-                        <Progress value={40} indicatorColor="bg-primary" />
-                        <div className="flex items-center text-sm text-muted-foreground">
-                            Daily credits used first
-                        </div>
-                    </div>
-                </div>
             </DropdownMenuContent>
         </DropdownMenu>
     );

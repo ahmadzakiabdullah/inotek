@@ -2,40 +2,48 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
+use App\Notifications\SystemNotification;
+use App\Services\AuditLogger;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class NotificationController extends Controller
 {
     /**
      * Mark a specific notification as read.
      */
-    public function markAsRead($id)
+    public function markAsRead(string $id): RedirectResponse
     {
         auth()->user()->unreadNotifications()->where('id', $id)->update(['read_at' => now()]);
+
         return back();
     }
 
     /**
      * Mark all unread notifications as read.
      */
-    public function markAllAsRead()
+    public function markAllAsRead(): RedirectResponse
     {
         auth()->user()->unreadNotifications()->update(['read_at' => now()]);
+
         return back();
     }
 
     /**
      * Display the announcement composer interface.
      */
-    public function createAnnouncement()
+    public function createAnnouncement(): Response
     {
-        return \Inertia\Inertia::render('admin/announcements/Index');
+        return Inertia::render('admin/announcements/Index');
     }
 
     /**
      * Send broadcasted announcement to target roles.
      */
-    public function sendAnnouncement(Request $request)
+    public function sendAnnouncement(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'title' => 'required|string|max:150',
@@ -44,16 +52,10 @@ class NotificationController extends Controller
             'type' => 'required|string|in:info,success,warning,error',
         ]);
 
-        $query = \App\Models\User::query();
+        $query = User::query();
 
         if ($validated['target_role'] !== 'all') {
-            $roleMap = [
-                'admin' => 1,
-                'lecturer' => 2,
-                'judge' => 3,
-                'user' => 4,
-            ];
-            $query->where('role_id', $roleMap[$validated['target_role']]);
+            $query->withRole($validated['target_role']);
         }
 
         $users = $query->get();
@@ -61,7 +63,7 @@ class NotificationController extends Controller
 
         foreach ($users as $user) {
             try {
-                $user->notify(new \App\Notifications\SystemNotification(
+                $user->notify(new SystemNotification(
                     $validated['title'],
                     $validated['message'],
                     '#',
@@ -72,7 +74,7 @@ class NotificationController extends Controller
             }
         }
 
-        \App\Services\AuditLogger::log(
+        AuditLogger::log(
             'BROADCAST_ANNOUNCEMENT',
             "Admin '{$senderName}' broadcasted announcement: '{$validated['title']}' to target '{$validated['target_role']}'"
         );

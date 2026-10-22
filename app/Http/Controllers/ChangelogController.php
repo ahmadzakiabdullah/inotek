@@ -2,50 +2,59 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Support\Facades\File;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\File;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class ChangelogController extends Controller
 {
     /**
      * Display the system updates timeline.
      */
-    public function index()
+    public function index(): Response
     {
         // Remember cached version for 1 hour to maximize read performance
         $changelog = Cache::remember('system.changelog', 3600, function () {
             $path = base_path('docs/changelog.md');
-            if (!File::exists($path)) {
+            if (! File::exists($path)) {
                 return [];
             }
 
             $content = File::get($path);
+
             return $this->parseChangelog($content);
         });
 
         return Inertia::render('changelog/Index', [
-            'timeline' => $changelog
+            'timeline' => $changelog,
         ]);
     }
 
     /**
      * Clear the cached changelog to force reload.
      */
-    public function clearCache()
+    public function clearCache(): RedirectResponse
     {
         Cache::forget('system.changelog');
+
         return back()->with('success', 'Changelog cache cleared successfully!');
     }
 
     /**
      * Parser logic converting SemVer markdown to timeline structure.
      */
+    /**
+     * @return list<array{version: string, date: string, badge: string|null, changes: array<string, list<string>>}>
+     */
     private function parseChangelog(string $content): array
     {
         $lines = explode("\n", $content);
         $timeline = [];
+        /** @var array{version: string, date: string, badge: string|null, changes: array<string, list<string>>}|null $currentVersion */
         $currentVersion = null;
+        /** @var list<array{version: string, date: string, badge: string|null, changes: array<string, list<string>>}> $timeline */
         $currentGroup = null;
 
         foreach ($lines as $line) {
@@ -64,9 +73,10 @@ class ChangelogController extends Controller
                     'version' => $matches[1],
                     'date' => $matches[2],
                     'badge' => $matches[3] ?? null,
-                    'changes' => []
+                    'changes' => [],
                 ];
                 $currentGroup = null;
+
                 continue;
             }
 
@@ -74,6 +84,7 @@ class ChangelogController extends Controller
             if (preg_match('/^####\s+(Added|Changed|Fixed|Deprecated|Removed)/i', $line, $matches) && $currentVersion) {
                 $currentGroup = strtolower($matches[1]);
                 $currentVersion['changes'][$currentGroup] = [];
+
                 continue;
             }
 

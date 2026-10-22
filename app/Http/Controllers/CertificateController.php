@@ -3,18 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Models\Project;
-use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
-use Barryvdh\DomPDF\Facade\Pdf;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class CertificateController extends Controller
 {
     /**
      * Download the certificate of participation for an approved project.
      */
-    public function downloadParticipation(Project $project)
+    public function downloadParticipation(Project $project): SymfonyResponse
     {
         // Enforce access control: only project user or admin can download
         $user = Auth::user();
@@ -28,7 +28,7 @@ class CertificateController extends Controller
         }
 
         // Generate certificate hash if empty
-        if (!$project->certificate_hash) {
+        if (! $project->certificate_hash) {
             $project->certificate_hash = bin2hex(random_bytes(16));
             $project->save();
         }
@@ -36,16 +36,16 @@ class CertificateController extends Controller
         $project->load(['user', 'category', 'session', 'teamMembers']);
 
         $verifyUrl = route('certificates.verify', ['hash' => $project->certificate_hash]);
-        $qrCodeUrl = "https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=" . urlencode($verifyUrl);
+        $qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data='.urlencode($verifyUrl);
 
         $qrCodeData = null;
         try {
             // Fetch QR Code data and convert to base64 for reliable DomPDF embedding
             $opts = [
-                "http" => [
-                    "method" => "GET",
-                    "header" => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)\r\n"
-                ]
+                'http' => [
+                    'method' => 'GET',
+                    'header' => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)\r\n",
+                ],
             ];
             $context = stream_context_create($opts);
             $img = file_get_contents($qrCodeUrl, false, $context);
@@ -69,7 +69,7 @@ class CertificateController extends Controller
     /**
      * Download the certificate of achievement for an approved project.
      */
-    public function downloadAchievement(Project $project)
+    public function downloadAchievement(Project $project): SymfonyResponse
     {
         // Enforce access: project owner or admin
         $user = Auth::user();
@@ -82,12 +82,12 @@ class CertificateController extends Controller
             return back()->withErrors(['status' => 'Certificates are only available for approved projects.']);
         }
 
-        if (!$project->award_level) {
+        if (! $project->award_level) {
             return back()->withErrors(['award' => 'This project has not been assigned an achievement award level.']);
         }
 
         // Generate certificate hash if empty
-        if (!$project->certificate_hash) {
+        if (! $project->certificate_hash) {
             $project->certificate_hash = bin2hex(random_bytes(16));
             $project->save();
         }
@@ -95,15 +95,15 @@ class CertificateController extends Controller
         $project->load(['user', 'category', 'session', 'teamMembers']);
 
         $verifyUrl = route('certificates.verify', ['hash' => $project->certificate_hash]);
-        $qrCodeUrl = "https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=" . urlencode($verifyUrl);
+        $qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data='.urlencode($verifyUrl);
 
         $qrCodeData = null;
         try {
             $opts = [
-                "http" => [
-                    "method" => "GET",
-                    "header" => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)\r\n"
-                ]
+                'http' => [
+                    'method' => 'GET',
+                    'header' => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)\r\n",
+                ],
             ];
             $context = stream_context_create($opts);
             $img = file_get_contents($qrCodeUrl, false, $context);
@@ -136,7 +136,7 @@ class CertificateController extends Controller
 
         return Inertia::render('certificate/Verify', [
             'project' => $project,
-            'verified' => !is_null($project),
+            'verified' => ! is_null($project),
             'hash' => $hash,
         ]);
     }

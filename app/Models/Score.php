@@ -2,14 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Score extends Model
 {
-    use HasFactory;
-
     protected $table = 'scores';
 
     protected $fillable = [
@@ -32,6 +29,7 @@ class Score extends Model
     /**
      * Get the project evaluated by this score.
      */
+    /** @return BelongsTo<Project, $this> */
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class, 'project_id');
@@ -40,6 +38,7 @@ class Score extends Model
     /**
      * Get the judge who evaluated this score.
      */
+    /** @return BelongsTo<User, $this> */
     public function judge(): BelongsTo
     {
         return $this->belongsTo(User::class, 'judge_id');
@@ -48,6 +47,7 @@ class Score extends Model
     /**
      * Get the competition session for this score.
      */
+    /** @return BelongsTo<CompetitionSession, $this> */
     public function session(): BelongsTo
     {
         return $this->belongsTo(CompetitionSession::class, 'session_id');

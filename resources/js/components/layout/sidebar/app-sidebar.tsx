@@ -1,8 +1,7 @@
 'use client';
 
 import { usePage, Link } from '@inertiajs/react';
-import { PlusIcon } from '@radix-ui/react-icons';
-import { ChevronsUpDown, ShoppingBagIcon, UserCircle2Icon } from 'lucide-react';
+import { ChevronsUpDown } from 'lucide-react';
 import * as React from 'react';
 import { useEffect } from 'react';
 import Logo from '@/components/layout/logo';
@@ -16,14 +15,6 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
     Sidebar,
@@ -60,57 +51,13 @@ setOpenMobile(false);
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <SidebarMenuButton className="h-10 group-data-[collapsible=icon]:px-0! hover:bg-[var(--primary)]/5 hover:text-foreground">
-                                    <Logo />
-                                    <span className="font-semibold text-foreground">
-                                        {systemName}
-                                    </span>
-                                    <ChevronsUpDown className="ml-auto group-data-[collapsible=icon]:hidden" />
-                                </SidebarMenuButton>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                                className="mt-4 w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-                                side={isMobile ? 'bottom' : 'right'}
-                                align="end"
-                                sideOffset={4}
-                            >
-                                <DropdownMenuLabel>Projects</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem className="flex items-center gap-3">
-                                    <div className="flex size-8 items-center justify-center rounded-md border">
-                                        <ShoppingBagIcon className="size-4 text-muted-foreground" />
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-sm font-medium">
-                                            E-commerce
-                                        </span>
-                                        <span className="text-xs text-green-700">
-                                            Active
-                                        </span>
-                                    </div>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="flex items-center gap-3">
-                                    <div className="flex size-8 items-center justify-center rounded-md border">
-                                        <UserCircle2Icon className="size-4 text-muted-foreground" />
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-sm font-medium">
-                                            Blog Platform
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">
-                                            Inactive
-                                        </span>
-                                    </div>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <Button className="w-full">
-                                    <PlusIcon />
-                                    New Project
-                                </Button>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        <SidebarMenuButton className="h-10 group-data-[collapsible=icon]:px-0! hover:bg-[var(--primary)]/5 hover:text-foreground">
+                            <Logo />
+                            <span className="font-semibold text-foreground">
+                                {systemName}
+                            </span>
+                            <ChevronsUpDown className="ml-auto group-data-[collapsible=icon]:hidden" />
+                        </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
             </SidebarHeader>

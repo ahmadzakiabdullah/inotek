@@ -68,6 +68,58 @@ class ProjectRegistrationTest extends TestCase
         ]);
     }
 
+    public function test_user_cannot_register_project_in_active_session_using_another_sessions_category(): void
+    {
+        $user = User::factory()->create(['role_id' => 4]);
+        $activeSession = CompetitionSession::create(['name' => 'Active', 'is_active' => true]);
+        $otherSession = CompetitionSession::create(['name' => 'Other', 'is_active' => false]);
+        $category = Category::create(['session_id' => $otherSession->id, 'code' => 'C2', 'name' => 'Other Category']);
+
+        $response = $this->actingAs($user)->post(route('projects.store'), [
+            'category_id' => $category->id,
+            'title' => 'Mismatched project',
+            'abstract' => 'Project abstract',
+            'institution_type' => 'utem',
+            'supervisor_name' => 'Dr. Supervisor',
+            'supervisor_email' => 'supervisor@utem.edu.my',
+        ]);
+
+        $response->assertSessionHasErrors('category_id');
+        $this->assertDatabaseMissing('projects', ['user_id' => $user->id, 'session_id' => $activeSession->id]);
+    }
+
+    public function test_user_cannot_change_project_to_category_from_another_session(): void
+    {
+        $user = User::factory()->create(['role_id' => 4]);
+        $session = CompetitionSession::create(['name' => 'Session 1', 'is_active' => true]);
+        $otherSession = CompetitionSession::create(['name' => 'Session 2', 'is_active' => false]);
+        $category = Category::create(['session_id' => $session->id, 'code' => 'C1', 'name' => 'Tech']);
+        $otherCategory = Category::create(['session_id' => $otherSession->id, 'code' => 'C2', 'name' => 'Other']);
+        $project = Project::create([
+            'session_id' => $session->id,
+            'category_id' => $category->id,
+            'user_id' => $user->id,
+            'title' => 'Project 1',
+            'abstract' => 'Sample',
+            'institution_type' => 'utem',
+            'status' => Project::STATUS_NEW,
+            'supervisor_name' => 'Super',
+            'supervisor_email' => 's@test.com',
+        ]);
+
+        $response = $this->actingAs($user)->put(route('projects.update', $project), [
+            'category_id' => $otherCategory->id,
+            'title' => 'Changed project',
+            'abstract' => 'Changed abstract',
+            'institution_type' => 'utem',
+            'supervisor_name' => 'Super',
+            'supervisor_email' => 's@test.com',
+        ]);
+
+        $response->assertSessionHasErrors('category_id');
+        $this->assertDatabaseHas('projects', ['id' => $project->id, 'category_id' => $category->id, 'title' => 'Project 1']);
+    }
+
     public function test_user_cannot_save_team_members_if_category_disallows_team(): void
     {
         $user = User::factory()->create(['role_id' => 4]);
@@ -156,6 +208,42 @@ class ProjectRegistrationTest extends TestCase
             'status' => Project::STATUS_SUBMITTED,
             'pcode' => 'C1-01',
         ]);
+    }
+
+    public function test_user_submission_generates_an_unused_project_code_when_sequence_has_a_gap(): void
+    {
+        $user = User::factory()->create(['role_id' => 4]);
+        $anotherUser = User::factory()->create(['role_id' => 4]);
+        $session = CompetitionSession::create(['name' => 'Session 1', 'is_active' => true]);
+        $category = Category::create(['session_id' => $session->id, 'code' => 'C1', 'name' => 'Tech']);
+        Project::create([
+            'session_id' => $session->id,
+            'category_id' => $category->id,
+            'user_id' => $anotherUser->id,
+            'pcode' => 'C1-02',
+            'title' => 'Existing project',
+            'abstract' => 'Sample',
+            'institution_type' => 'utem',
+            'status' => Project::STATUS_APPROVED,
+            'supervisor_name' => 'Super',
+            'supervisor_email' => 's@test.com',
+        ]);
+        $project = Project::create([
+            'session_id' => $session->id,
+            'category_id' => $category->id,
+            'user_id' => $user->id,
+            'title' => 'New project',
+            'abstract' => 'Sample',
+            'institution_type' => 'utem',
+            'status' => Project::STATUS_NEW,
+            'supervisor_name' => 'Super',
+            'supervisor_email' => 's@test.com',
+        ]);
+
+        $response = $this->actingAs($user)->post(route('projects.submit', $project));
+
+        $response->assertRedirect(route('projects.index'));
+        $this->assertDatabaseHas('projects', ['id' => $project->id, 'pcode' => 'C1-01']);
     }
 
     public function test_user_cannot_edit_project_after_final_submission(): void

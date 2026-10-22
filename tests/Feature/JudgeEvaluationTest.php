@@ -5,12 +5,13 @@ namespace Tests\Feature;
 use App\Models\Category;
 use App\Models\CategoryRubricMapping;
 use App\Models\CompetitionSession;
+use App\Models\JudgeAssignment;
 use App\Models\Project;
+use App\Models\Role;
 use App\Models\Rubric;
 use App\Models\RubricItem;
-use App\Models\User;
-use App\Models\JudgeAssignment;
 use App\Models\Score;
+use App\Models\User;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -20,14 +21,23 @@ class JudgeEvaluationTest extends TestCase
     use RefreshDatabase;
 
     protected User $admin;
+
     protected User $judge;
+
     protected User $judge2;
+
     protected User $student;
+
     protected CompetitionSession $session;
+
     protected Category $category;
+
     protected Project $project;
+
     protected Rubric $rubric;
+
     protected RubricItem $item1;
+
     protected RubricItem $item2;
 
     protected function setUp(): void
@@ -148,7 +158,7 @@ class JudgeEvaluationTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->judge)
-            ->get(route('judge.evaluations.show', $this->project) . '?round=1');
+            ->get(route('judge.evaluations.show', $this->project).'?round=1');
 
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page
@@ -189,6 +199,85 @@ class JudgeEvaluationTest extends TestCase
         ]);
     }
 
+    public function test_judge_cannot_submit_scores_above_rubric_item_maximum(): void
+    {
+        JudgeAssignment::create([
+            'project_id' => $this->project->id,
+            'judge_id' => $this->judge->id,
+            'session_id' => $this->session->id,
+            'round_no' => 1,
+        ]);
+
+        $response = $this->actingAs($this->judge)->post(route('judge.evaluations.store', $this->project), [
+            'scores' => [$this->item1->id => 6, $this->item2->id => 3],
+            'round_no' => 1,
+        ]);
+
+        $response->assertSessionHasErrors('scores');
+        $this->assertDatabaseMissing('scores', ['project_id' => $this->project->id, 'judge_id' => $this->judge->id]);
+    }
+
+    public function test_judge_cannot_submit_scores_for_criteria_outside_the_category_rubric(): void
+    {
+        $otherRubric = Rubric::create(['name' => 'Other Rubric']);
+        $foreignItem = RubricItem::create([
+            'rubric_id' => $otherRubric->id,
+            'criteria_name' => 'Foreign criterion',
+            'weight' => 1.00,
+            'max_points' => 5,
+        ]);
+        JudgeAssignment::create([
+            'project_id' => $this->project->id,
+            'judge_id' => $this->judge->id,
+            'session_id' => $this->session->id,
+            'round_no' => 1,
+        ]);
+
+        $response = $this->actingAs($this->judge)->post(route('judge.evaluations.store', $this->project), [
+            'scores' => [$this->item1->id => 4, $this->item2->id => 3, $foreignItem->id => 5],
+            'round_no' => 1,
+        ]);
+
+        $response->assertSessionHasErrors('scores');
+        $this->assertDatabaseMissing('scores', ['project_id' => $this->project->id, 'judge_id' => $this->judge->id]);
+    }
+
+    public function test_judge_must_submit_exactly_round_one_or_two(): void
+    {
+        JudgeAssignment::create([
+            'project_id' => $this->project->id,
+            'judge_id' => $this->judge->id,
+            'session_id' => $this->session->id,
+            'round_no' => 1,
+        ]);
+
+        $response = $this->actingAs($this->judge)->post(route('judge.evaluations.store', $this->project), [
+            'scores' => [$this->item1->id => 4, $this->item2->id => 3],
+            'round_no' => 3,
+        ]);
+
+        $response->assertSessionHasErrors('round_no');
+        $this->assertDatabaseMissing('scores', ['project_id' => $this->project->id, 'judge_id' => $this->judge->id]);
+    }
+
+    public function test_judge_must_submit_a_value_for_every_rubric_item(): void
+    {
+        JudgeAssignment::create([
+            'project_id' => $this->project->id,
+            'judge_id' => $this->judge->id,
+            'session_id' => $this->session->id,
+            'round_no' => 1,
+        ]);
+
+        $response = $this->actingAs($this->judge)->post(route('judge.evaluations.store', $this->project), [
+            'scores' => [$this->item1->id => 4],
+            'round_no' => 1,
+        ]);
+
+        $response->assertSessionHasErrors('scores');
+        $this->assertDatabaseMissing('scores', ['project_id' => $this->project->id, 'judge_id' => $this->judge->id]);
+    }
+
     public function test_admin_can_assign_judge_in_round_1()
     {
         $response = $this->actingAs($this->admin)->post(route('admin.assignments.store'), [
@@ -201,6 +290,30 @@ class JudgeEvaluationTest extends TestCase
         $this->assertDatabaseHas('judge_assignments', [
             'project_id' => $this->project->id,
             'judge_id' => $this->judge->id,
+            'round_no' => 1,
+        ]);
+    }
+
+    public function test_admin_can_assign_judge_when_judge_role_id_is_not_the_seeded_id(): void
+    {
+        Role::where('name', 'judge')->delete();
+        $customJudgeRole = Role::create([
+            'name' => 'judge',
+            'label' => 'Judge',
+            'description' => 'Judge with a nonstandard role ID.',
+        ]);
+        $judge = User::factory()->create(['role_id' => $customJudgeRole->id]);
+
+        $response = $this->actingAs($this->admin)->post(route('admin.assignments.store'), [
+            'project_id' => $this->project->id,
+            'judge_id' => $judge->id,
+            'round_no' => 1,
+        ]);
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('judge_assignments', [
+            'project_id' => $this->project->id,
+            'judge_id' => $judge->id,
             'round_no' => 1,
         ]);
     }
@@ -244,6 +357,187 @@ class JudgeEvaluationTest extends TestCase
             'judge_id' => $this->judge2->id,
             'round_no' => 2,
         ]);
+    }
+
+    public function test_admin_cannot_assign_round_2_to_project_outside_round_1_shortlist(): void
+    {
+        $outsideProject = Project::create([
+            'session_id' => $this->session->id,
+            'category_id' => $this->category->id,
+            'user_id' => User::factory()->create(['role_id' => 4])->id,
+            'title' => 'Outside Shortlist',
+            'abstract' => 'Abstract',
+            'institution_type' => 'utem',
+            'status' => Project::STATUS_APPROVED,
+            'supervisor_name' => 'Supervisor',
+            'supervisor_email' => 'supervisor@example.com',
+        ]);
+        Score::create([
+            'project_id' => $outsideProject->id,
+            'judge_id' => $this->judge->id,
+            'session_id' => $this->session->id,
+            'round_no' => 1,
+            'total' => 50,
+            'score_details' => [],
+        ]);
+        for ($index = 1; $index <= 3; $index++) {
+            $project = Project::create([
+                'session_id' => $this->session->id,
+                'category_id' => $this->category->id,
+                'user_id' => User::factory()->create(['role_id' => 4])->id,
+                'title' => "Shortlisted {$index}",
+                'abstract' => 'Abstract',
+                'institution_type' => 'utem',
+                'status' => Project::STATUS_APPROVED,
+                'supervisor_name' => 'Supervisor',
+                'supervisor_email' => 'supervisor@example.com',
+            ]);
+            Score::create([
+                'project_id' => $project->id,
+                'judge_id' => $this->judge->id,
+                'session_id' => $this->session->id,
+                'round_no' => 1,
+                'total' => 90 - $index,
+                'score_details' => [],
+            ]);
+        }
+
+        $response = $this->actingAs($this->admin)->post(route('admin.assignments.store'), [
+            'project_id' => $outsideProject->id,
+            'judge_id' => $this->judge2->id,
+            'round_no' => 2,
+        ]);
+
+        $response->assertSessionHas('error', 'Round 2 assignments are limited to projects shortlisted from Round 1.');
+        $this->assertDatabaseMissing('judge_assignments', [
+            'project_id' => $outsideProject->id,
+            'judge_id' => $this->judge2->id,
+            'round_no' => 2,
+        ]);
+    }
+
+    public function test_admin_can_change_round_2_shortlist_limit_for_active_session(): void
+    {
+        $response = $this->actingAs($this->admin)->post(route('admin.round2.shortlistLimit'), ['limit' => 5]);
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('competition_sessions', [
+            'id' => $this->session->id,
+            'round2_shortlist_limit' => 5,
+        ]);
+    }
+
+    public function test_admin_cannot_set_round_2_shortlist_limit_to_unsupported_value(): void
+    {
+        $response = $this->actingAs($this->admin)->post(route('admin.round2.shortlistLimit'), ['limit' => 7]);
+
+        $response->assertSessionHasErrors('limit');
+        $this->assertSame(3, $this->session->fresh()->round2_shortlist_limit);
+    }
+
+    public function test_admin_cannot_reduce_shortlist_below_projects_with_existing_round_2_assignments(): void
+    {
+        $this->session->round2_shortlist_limit = 5;
+        $this->session->save();
+
+        $roundOneScores = [];
+        for ($index = 0; $index < 4; $index++) {
+            $project = Project::create([
+                'session_id' => $this->session->id,
+                'category_id' => $this->category->id,
+                'user_id' => User::factory()->create(['role_id' => 4])->id,
+                'title' => "Higher score {$index}",
+                'abstract' => 'Abstract',
+                'institution_type' => 'utem',
+                'status' => Project::STATUS_APPROVED,
+                'supervisor_name' => 'Supervisor',
+                'supervisor_email' => 'supervisor@example.com',
+            ]);
+            $roundOneScores[] = $project;
+            Score::create([
+                'project_id' => $project->id,
+                'judge_id' => $this->judge->id,
+                'session_id' => $this->session->id,
+                'round_no' => 1,
+                'total' => 100 - $index,
+                'score_details' => [],
+            ]);
+        }
+        Score::create([
+            'project_id' => $this->project->id,
+            'judge_id' => $this->judge->id,
+            'session_id' => $this->session->id,
+            'round_no' => 1,
+            'total' => 50,
+            'score_details' => [],
+        ]);
+        JudgeAssignment::create([
+            'project_id' => $this->project->id,
+            'judge_id' => $this->judge2->id,
+            'session_id' => $this->session->id,
+            'round_no' => 2,
+        ]);
+
+        $response = $this->actingAs($this->admin)->post(route('admin.round2.shortlistLimit'), ['limit' => 3]);
+
+        $response->assertSessionHas('error', 'Remove Round 2 assignments outside the new shortlist before changing its size.');
+        $this->assertSame(5, $this->session->fresh()->round2_shortlist_limit);
+    }
+
+    public function test_admin_cannot_assign_award_to_project_outside_shortlist(): void
+    {
+        $response = $this->actingAs($this->admin)->post(route('admin.round2.assignAward', $this->project), [
+            'award_level' => 'Gold',
+        ]);
+
+        $response->assertSessionHas('error', 'Awards can only be assigned to projects shortlisted for Round 2.');
+        $this->assertDatabaseMissing('projects', ['id' => $this->project->id, 'award_level' => 'Gold']);
+    }
+
+    public function test_admin_cannot_assign_award_until_shortlisted_project_has_round_2_score(): void
+    {
+        Score::create([
+            'project_id' => $this->project->id,
+            'judge_id' => $this->judge->id,
+            'session_id' => $this->session->id,
+            'round_no' => 1,
+            'total' => 90,
+            'score_details' => [$this->item1->id => 5, $this->item2->id => 4],
+        ]);
+
+        $response = $this->actingAs($this->admin)->post(route('admin.round2.assignAward', $this->project), [
+            'award_level' => 'Gold',
+        ]);
+
+        $response->assertSessionHas('error', 'An award can only be assigned after the project has a Round 2 evaluation.');
+        $this->assertDatabaseMissing('projects', ['id' => $this->project->id, 'award_level' => 'Gold']);
+    }
+
+    public function test_admin_can_assign_award_to_shortlisted_project_with_round_2_score(): void
+    {
+        Score::create([
+            'project_id' => $this->project->id,
+            'judge_id' => $this->judge->id,
+            'session_id' => $this->session->id,
+            'round_no' => 1,
+            'total' => 90,
+            'score_details' => [$this->item1->id => 5, $this->item2->id => 4],
+        ]);
+        Score::create([
+            'project_id' => $this->project->id,
+            'judge_id' => $this->judge2->id,
+            'session_id' => $this->session->id,
+            'round_no' => 2,
+            'total' => 95,
+            'score_details' => [$this->item1->id => 5, $this->item2->id => 5],
+        ]);
+
+        $response = $this->actingAs($this->admin)->post(route('admin.round2.assignAward', $this->project), [
+            'award_level' => 'Gold',
+        ]);
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('projects', ['id' => $this->project->id, 'award_level' => 'Gold']);
     }
 
     public function test_judge_cannot_evaluate_if_round_2_is_locked()

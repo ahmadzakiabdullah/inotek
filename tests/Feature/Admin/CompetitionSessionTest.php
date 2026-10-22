@@ -101,7 +101,7 @@ class CompetitionSessionTest extends TestCase
         ]);
     }
 
-    public function test_admin_cannot_deactivate_the_last_active_session(): void
+    public function test_admin_can_deactivate_the_last_active_session(): void
     {
         $admin = User::factory()->create(['role_id' => 1]);
         $session = CompetitionSession::create([
@@ -117,11 +117,45 @@ class CompetitionSessionTest extends TestCase
         ]);
 
         $response->assertRedirect(route('admin.sessions.index'));
-        $response->assertSessionHas('error');
+        $response->assertSessionMissing('error');
         $this->assertDatabaseHas('competition_sessions', [
             'id' => $session->id,
-            'is_active' => true,
+            'is_active' => false,
         ]);
+    }
+
+    public function test_activating_a_session_keeps_only_that_session_active(): void
+    {
+        $admin = User::factory()->create(['role_id' => 1]);
+        $session1 = CompetitionSession::create(['name' => 'Session 1', 'is_active' => true]);
+        $session2 = CompetitionSession::create(['name' => 'Session 2', 'is_active' => false]);
+
+        $response = $this->actingAs($admin)->put(route('admin.sessions.update', $session2), [
+            'name' => $session2->name,
+            'is_active' => true,
+            'r2_locked' => false,
+        ]);
+
+        $response->assertRedirect(route('admin.sessions.index'));
+        $this->assertDatabaseHas('competition_sessions', ['id' => $session1->id, 'is_active' => false]);
+        $this->assertDatabaseHas('competition_sessions', ['id' => $session2->id, 'is_active' => true]);
+        $this->assertSame(1, CompetitionSession::where('is_active', true)->count());
+    }
+
+    public function test_creating_inactive_session_preserves_existing_active_session(): void
+    {
+        $admin = User::factory()->create(['role_id' => 1]);
+        $activeSession = CompetitionSession::create(['name' => 'Active Session', 'is_active' => true]);
+
+        $response = $this->actingAs($admin)->post(route('admin.sessions.store'), [
+            'name' => 'Inactive Session',
+            'is_active' => false,
+            'r2_locked' => false,
+        ]);
+
+        $response->assertRedirect(route('admin.sessions.index'));
+        $this->assertDatabaseHas('competition_sessions', ['id' => $activeSession->id, 'is_active' => true]);
+        $this->assertDatabaseHas('competition_sessions', ['name' => 'Inactive Session', 'is_active' => false]);
     }
 
     public function test_admin_can_delete_inactive_session(): void

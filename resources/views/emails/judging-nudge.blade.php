@@ -15,7 +15,7 @@
             <td style="padding: 30px;">
                 <p style="margin-top: 0; font-size: 16px;">Dear <strong>{{ $judge->name }}</strong>,</p>
                 <p>This is a friendly reminder from the INOTEK Committee regarding the evaluations assigned to you for the current active session.</p>
-                <p>According to our records, you still have <strong>{{ $pendingProjects->count() }}</strong> project(s) pending your score evaluation. Please complete your appraisals at your earliest convenience to help us finalize the competition results.</p>
+                <p>According to our records, you still have <strong>{{ count($pendingProjects) }}</strong> project(s) pending your score evaluation. Please complete your appraisals at your earliest convenience to help us finalize the competition results.</p>
                 
                 <h3 style="color: #0d9488; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; margin-top: 25px;">Pending Appraisals Checklist:</h3>
                 <ul style="padding-left: 20px; margin-bottom: 25px;">

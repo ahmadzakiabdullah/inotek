@@ -6,10 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\CompetitionSession;
 use App\Models\Project;
+use App\Models\TeamMember;
+use App\Models\User;
+use App\Notifications\SystemNotification;
+use App\Services\AuditLogger;
+use App\Services\ProjectCodeGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -31,27 +37,28 @@ class ProjectApprovalController extends Controller
             'projects' => $query->get(),
             'sessions' => CompetitionSession::orderByDesc('id')->get(),
             'categories' => Category::orderBy('name')->get(['id', 'name', 'session_id']),
-            'students' => \App\Models\User::where('role_id', 4)->orderBy('name')->get(['id', 'name', 'email']),
+            'students' => User::withRole('user')->orderBy('name')
+                ->get(['id', 'name', 'email']),
         ]);
     }
 
     /**
      * Store a new project registered by Admin.
      */
-    public function storeProject(Request $request): RedirectResponse
+    public function storeProject(Request $request, ProjectCodeGenerator $codeGenerator): RedirectResponse
     {
-        if (!auth()->user()->hasRole('admin')) {
+        if (! auth()->user()->hasRole('admin')) {
             abort(403, 'Unauthorized action.');
         }
 
         $activeSession = CompetitionSession::where('is_active', true)->first();
-        if (!$activeSession) {
+        if (! $activeSession) {
             return back()->with('error', 'No active competition session found.');
         }
 
         $validated = $request->validate([
             'user_id' => ['required', 'exists:users,id'],
-            'category_id' => ['required', 'exists:categories,id'],
+            'category_id' => ['required', Rule::exists('categories', 'id')->where('session_id', $activeSession->id)],
             'title' => ['required', 'string', 'max:255'],
             'abstract' => ['required', 'string'],
             'institution_type' => ['required', 'string', 'in:utem,ipt'],
@@ -77,19 +84,20 @@ class ProjectApprovalController extends Controller
             } else {
                 session()->flash('toast', ['type' => 'error', 'message' => $msg]);
             }
+
             return back()->withErrors(['user_id' => $msg]);
         }
 
-        DB::transaction(function () use ($validated, $activeSession) {
-            $category = Category::findOrFail($validated['category_id']);
-            
-            // Auto-generate project code (pcode)
-            $count = Project::where('session_id', $activeSession->id)
-                ->where('category_id', $validated['category_id'])
-                ->whereNotNull('pcode')
-                ->count();
-            $nextNum = str_pad($count + 1, 2, '0', STR_PAD_LEFT);
-            $pcode = "{$category->code}-{$nextNum}";
+        DB::transaction(function () use ($validated, $activeSession, $codeGenerator) {
+            $category = Category::where('session_id', $activeSession->id)->whereKey($validated['category_id'])->firstOrFail();
+
+            if (! $category->allow_team && ! empty($validated['team_members'])) {
+                throw ValidationException::withMessages([
+                    'team_members' => __('Team members are not allowed for this category.'),
+                ]);
+            }
+
+            $pcode = $codeGenerator->next($activeSession->id, $category->id);
 
             $project = Project::create([
                 'session_id' => $activeSession->id,
@@ -107,9 +115,9 @@ class ProjectApprovalController extends Controller
                 'poster_url' => $validated['poster_url'] ?? null,
             ]);
 
-            if (!empty($validated['team_members'])) {
+            if (! empty($validated['team_members'])) {
                 foreach ($validated['team_members'] as $member) {
-                    \App\Models\TeamMember::create([
+                    TeamMember::create([
                         'project_id' => $project->id,
                         'name' => $member['name'],
                         'email' => $member['email'] ?? null,
@@ -118,7 +126,7 @@ class ProjectApprovalController extends Controller
                 }
             }
 
-            \App\Services\AuditLogger::log(
+            AuditLogger::log(
                 'CREATE_PROJECT_ADMIN',
                 "Admin registered project: '{$project->title}' (Code: {$project->pcode}) for student ID: {$project->user_id}"
             );
@@ -137,7 +145,7 @@ class ProjectApprovalController extends Controller
     /**
      * Bulk approve the selected projects.
      */
-    public function approve(Request $request): RedirectResponse
+    public function approve(Request $request, ProjectCodeGenerator $codeGenerator): RedirectResponse
     {
         $validated = $request->validate([
             'project_ids' => ['required', 'array', 'min:1'],
@@ -146,7 +154,7 @@ class ProjectApprovalController extends Controller
 
         $user = auth()->user();
 
-        DB::transaction(function () use ($validated, $user) {
+        DB::transaction(function () use ($validated, $user, $codeGenerator) {
             $query = Project::whereIn('id', $validated['project_ids'])
                 ->where('status', Project::STATUS_SUBMITTED);
             if ($user->hasRole('lecturer')) {
@@ -158,21 +166,14 @@ class ProjectApprovalController extends Controller
                 if ($project->status !== Project::STATUS_APPROVED) {
                     // Auto-generate project code (pcode) if not set
                     if (! $project->pcode) {
-                        $category = Category::findOrFail($project->category_id);
-                        $count = Project::where('session_id', $project->session_id)
-                            ->where('category_id', $project->category_id)
-                            ->whereNotNull('pcode')
-                            ->count();
-
-                        $nextNum = str_pad($count + 1, 2, '0', STR_PAD_LEFT);
-                        $project->pcode = "{$category->code}-{$nextNum}";
+                        $project->pcode = $codeGenerator->next($project->session_id, $project->category_id);
                     }
 
                     $project->status = Project::STATUS_APPROVED;
                     $project->admin_comments = null; // Clear comments upon approval
                     $project->save();
 
-                    \App\Services\AuditLogger::log(
+                    AuditLogger::log(
                         'APPROVE_PROJECT',
                         "Approved project: '{$project->title}' (Code: {$project->pcode})"
                     );
@@ -180,7 +181,7 @@ class ProjectApprovalController extends Controller
                     // Notify Student
                     try {
                         if ($project->user) {
-                            $project->user->notify(new \App\Notifications\SystemNotification(
+                            $project->user->notify(new SystemNotification(
                                 'Project Approved',
                                 "Your project '{$project->title}' ({$project->pcode}) has been approved.",
                                 '/dashboard/projects',
@@ -227,7 +228,7 @@ class ProjectApprovalController extends Controller
             'admin_comments' => $validated['admin_comments'],
         ]);
 
-        \App\Services\AuditLogger::log(
+        AuditLogger::log(
             'REJECT_PROJECT',
             "Rejected project: '{$project->title}' (Reason: {$validated['admin_comments']})"
         );
@@ -235,7 +236,7 @@ class ProjectApprovalController extends Controller
         // Notify Student
         try {
             if ($project->user) {
-                $project->user->notify(new \App\Notifications\SystemNotification(
+                $project->user->notify(new SystemNotification(
                     'Project Returned for Editing',
                     "Your project '{$project->title}' has been returned for correction. Reason: {$validated['admin_comments']}",
                     '/dashboard/projects',
@@ -279,7 +280,7 @@ class ProjectApprovalController extends Controller
         ]);
 
         foreach ($projects as $project) {
-            \App\Services\AuditLogger::log(
+            AuditLogger::log(
                 'CANCEL_PROJECT',
                 "Cancelled project: '{$project->title}'"
             );
@@ -325,7 +326,7 @@ class ProjectApprovalController extends Controller
             'pcode' => $validated['pcode'],
         ]);
 
-        \App\Services\AuditLogger::log(
+        AuditLogger::log(
             'UPDATE_PROJECT_CODE',
             "Updated project code for '{$project->title}' from '{$oldCode}' to '{$validated['pcode']}'"
         );

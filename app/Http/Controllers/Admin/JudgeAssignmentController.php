@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\CompetitionSession;
-use App\Models\Project;
-use App\Models\User;
 use App\Models\JudgeAssignment;
+use App\Models\Project;
 use App\Models\Score;
+use App\Models\User;
+use App\Notifications\SystemNotification;
+use App\Services\AuditLogger;
 use App\Services\ScoreCalculator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,7 +32,7 @@ class JudgeAssignmentController extends Controller
     {
         $activeSession = CompetitionSession::where('is_active', true)->first();
 
-        if (!$activeSession) {
+        if (! $activeSession) {
             return Inertia::render('admin/assignments/Index', [
                 'projects' => [],
                 'judges' => [],
@@ -41,7 +43,8 @@ class JudgeAssignmentController extends Controller
         }
 
         // Fetch judges
-        $judges = User::where('role_id', 3)->orderBy('name')->get(['id', 'name', 'email']);
+        $judges = User::withRole('judge')->orderBy('name')
+            ->get(['id', 'name', 'email']);
 
         // Fetch approved projects in active session
         $projects = Project::where('session_id', $activeSession->id)
@@ -81,7 +84,7 @@ class JudgeAssignmentController extends Controller
     {
         $activeSession = CompetitionSession::where('is_active', true)->first();
 
-        if (!$activeSession) {
+        if (! $activeSession) {
             return back()->with('error', 'No active competition session.');
         }
 
@@ -97,7 +100,7 @@ class JudgeAssignmentController extends Controller
 
         // Verify user is a judge
         $user = User::find($judgeId);
-        if (!$user || $user->role_id !== 3) {
+        if (! $user || ! $user->hasRole('judge')) {
             return back()->with('error', 'The selected user is not a Judge.');
         }
 
@@ -107,17 +110,27 @@ class JudgeAssignmentController extends Controller
             ->where('status', Project::STATUS_APPROVED)
             ->first();
 
-        if (!$project) {
+        if (! $project) {
             return back()->with('error', 'Project not found or not approved.');
         }
 
         // Check conflicts before the session-wide Round 1 completion gate so
         // the administrator receives the specific eligibility explanation.
-        if ($roundNo === 2 && !$this->calculator->isJudgeEligibleForRound2($projectId, $judgeId, $activeSession->id)) {
+        if ($roundNo === 2 && ! $this->calculator->isJudgeEligibleForRound2($projectId, $judgeId, $activeSession->id)) {
             return back()->with('error', 'This judge is not eligible for Round 2 because they evaluated this project in Round 1.');
         }
 
         if ($roundNo === 2) {
+            $shortlist = $this->calculator->getRound1Shortlist(
+                $activeSession->id,
+                $activeSession->round2_shortlist_limit ?: 3,
+            );
+            $shortlistedProjectIds = $shortlist->flatten()->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+            if (! in_array($projectId, $shortlistedProjectIds, true)) {
+                return back()->with('error', 'Round 2 assignments are limited to projects shortlisted from Round 1.');
+            }
+
             $roundOneAssignments = JudgeAssignment::where('session_id', $activeSession->id)
                 ->where('round_no', 1)
                 ->get(['project_id', 'judge_id']);
@@ -128,7 +141,7 @@ class JudgeAssignmentController extends Controller
                     ->where('round_no', 1)
                     ->exists());
 
-            if ($roundOneAssignments->isNotEmpty() && !$roundOneComplete) {
+            if ($roundOneAssignments->isNotEmpty() && ! $roundOneComplete) {
                 return back()->with('error', 'Round 2 assignments are unavailable until all Round 1 evaluations are completed.');
             }
         }
@@ -149,7 +162,7 @@ class JudgeAssignmentController extends Controller
                 return back()->with('error', 'Round 2 assignment is locked because Round 2 session has been closed.');
             }
 
-            if (!$this->calculator->isJudgeEligibleForRound2($projectId, $judgeId, $activeSession->id)) {
+            if (! $this->calculator->isJudgeEligibleForRound2($projectId, $judgeId, $activeSession->id)) {
                 return back()->with('error', 'This judge is not eligible for Round 2 because they evaluated this project in Round 1.');
             }
         }
@@ -163,14 +176,14 @@ class JudgeAssignmentController extends Controller
                 'round_no' => $roundNo,
             ]);
 
-            \App\Services\AuditLogger::log(
+            AuditLogger::log(
                 'ASSIGN_JUDGE',
                 "Assigned judge '{$user->name}' to project '{$project->title}' for Round {$roundNo}"
             );
 
             // Notify Judge
             try {
-                $user->notify(new \App\Notifications\SystemNotification(
+                $user->notify(new SystemNotification(
                     'New Judging Assignment',
                     "You have been assigned to evaluate the project '{$project->title}' for Round {$roundNo}.",
                     '/dashboard/judge/evaluations',
@@ -180,7 +193,7 @@ class JudgeAssignmentController extends Controller
                 // Keep resilient
             }
         } catch (\Exception $e) {
-            return back()->with('error', 'Error while assigning judge: ' . $e->getMessage());
+            return back()->with('error', 'Error while assigning judge: '.$e->getMessage());
         }
 
         return back()->with('success', 'Judge has been assigned successfully.');
@@ -193,7 +206,7 @@ class JudgeAssignmentController extends Controller
     {
         $activeSession = CompetitionSession::where('is_active', true)->first();
 
-        if (!$activeSession || $assignment->session_id !== $activeSession->id) {
+        if (! $activeSession || $assignment->session_id !== $activeSession->id) {
             return back()->with('error', 'Operation not allowed.');
         }
 
@@ -208,7 +221,7 @@ class JudgeAssignmentController extends Controller
 
         $assignment->delete();
 
-        \App\Services\AuditLogger::log(
+        AuditLogger::log(
             'REMOVE_JUDGE_ASSIGNMENT',
             "Removed judge assignment: '{$judgeName}' from project '{$projectTitle}' (Round {$roundNo})"
         );

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CompetitionSession;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -33,11 +34,15 @@ class CompetitionSessionController extends Controller
             'r2_locked' => ['nullable', 'boolean'],
         ]);
 
-        $session = CompetitionSession::create($validated);
+        DB::transaction(function () use ($validated): void {
+            if ((bool) ($validated['is_active'] ?? false)) {
+                CompetitionSession::query()->lockForUpdate()->get();
+                CompetitionSession::query()->update(['is_active' => false]);
+                $validated['is_active'] = true;
+            }
 
-        if ($session->is_active) {
-            CompetitionSession::where('id', '!=', $session->id)->update(['is_active' => false]);
-        }
+            CompetitionSession::create($validated);
+        });
 
         $msg = __('Session created successfully.');
         if (class_exists(Inertia::class) && method_exists(Inertia::class, 'flash')) {
@@ -65,20 +70,15 @@ class CompetitionSessionController extends Controller
             'r2_locked' => ['required', 'boolean'],
         ]);
 
-        $anotherActiveSessionExists = CompetitionSession::where('id', '!=', $session->id)
-            ->where('is_active', true)
-            ->exists();
+        DB::transaction(function () use ($session, $validated): void {
+            CompetitionSession::query()->lockForUpdate()->get();
 
-        if ($session->is_active && !$validated['is_active'] && !$anotherActiveSessionExists) {
-            return redirect()->route('admin.sessions.index')
-                ->with('error', 'At least one competition session must remain active. Activate another session first.');
-        }
+            if ($validated['is_active']) {
+                CompetitionSession::where('id', '!=', $session->id)->update(['is_active' => false]);
+            }
 
-        $session->update($validated);
-
-        if ($session->is_active) {
-            CompetitionSession::where('id', '!=', $session->id)->update(['is_active' => false]);
-        }
+            $session->update($validated);
+        });
 
         $msg = __('Session updated successfully.');
         if (class_exists(Inertia::class) && method_exists(Inertia::class, 'flash')) {

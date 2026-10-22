@@ -1,4 +1,4 @@
-import { Head, useForm, Link } from '@inertiajs/react';
+import { Head, useForm, Link, router } from '@inertiajs/react';
 import { Sliders, Lock, Unlock, ClipboardList, CheckSquare, Sparkles, Trophy, MessageSquare } from 'lucide-react';
 import React, { useState } from 'react';
 import { toast } from 'sonner';
@@ -95,8 +95,9 @@ export default function Round2Index({ shortlist, round2Scores, activeSession, li
                                     name="limit"
                                     value={currentLimit}
                                     onChange={(e) => {
-                                        setCurrentLimit(Number(e.target.value));
-                                        e.target.form?.submit();
+                                        const limit = Number(e.target.value);
+                                        setCurrentLimit(limit);
+                                        router.post('/dashboard/round2/shortlist-limit', { limit }, { preserveScroll: true });
                                     }}
                                     className="rounded-md border border-border bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
                                 >

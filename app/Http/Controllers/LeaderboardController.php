@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\CompetitionSession;
 use App\Models\Project;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -15,7 +16,7 @@ class LeaderboardController extends Controller
     /**
      * Display the public leaderboard.
      */
-    public function index(Request $request)
+    public function index(Request $request): Response|JsonResponse
     {
         $activeSession = CompetitionSession::where('is_active', true)->first();
 
@@ -36,6 +37,7 @@ class LeaderboardController extends Controller
                 'activeSession' => null,
                 'categories' => [],
                 'leaderboardData' => [],
+                'resultsPublished' => false,
             ]);
         }
 
@@ -47,35 +49,42 @@ class LeaderboardController extends Controller
             ->with(['user', 'category'])
             ->get();
 
-        // Query average scores for Round 1
-        $r1Averages = DB::table('scores')
-            ->where('session_id', $activeSession->id)
-            ->where('round_no', 1)
-            ->select('project_id', DB::raw('AVG(total) as avg_r1'), DB::raw('COUNT(id) as judges_r1'))
-            ->groupBy('project_id')
-            ->get()
-            ->keyBy('project_id');
-
-        // Query average scores for Round 2
-        $r2Averages = DB::table('scores')
-            ->where('session_id', $activeSession->id)
-            ->where('round_no', 2)
-            ->select('project_id', DB::raw('AVG(total) as avg_r2'), DB::raw('COUNT(id) as judges_r2'))
-            ->groupBy('project_id')
-            ->get()
-            ->keyBy('project_id');
-
-        $scoreDetails = DB::table('scores')
-            ->join('users', 'users.id', '=', 'scores.judge_id')
-            ->where('scores.session_id', $activeSession->id)
-            ->select('scores.project_id', 'scores.round_no', 'scores.total', 'scores.best_presenter', 'scores.comments', 'scores.created_at', 'users.name as judge_name')
-            ->orderBy('scores.round_no')
-            ->get()
-            ->groupBy('project_id');
-
         $isAuthenticatedLeaderboard = $request->routeIs('dashboard.leaderboard');
+        $isPublicResultsPublished = $activeSession->r2_locked;
 
-        $leaderboardData = $projects->map(function ($project) use ($r1Averages, $r2Averages, $scoreDetails, $isAuthenticatedLeaderboard) {
+        // Keep judging details restricted to the authenticated staff leaderboard.
+        $r1Averages = collect();
+        $r2Averages = collect();
+        $scoreDetails = collect();
+        if ($isAuthenticatedLeaderboard || $isPublicResultsPublished) {
+            $r1Averages = DB::table('scores')
+                ->where('session_id', $activeSession->id)
+                ->where('round_no', 1)
+                ->select('project_id', DB::raw('AVG(total) as avg_r1'), DB::raw('COUNT(id) as judges_r1'))
+                ->groupBy('project_id')
+                ->get()
+                ->keyBy('project_id');
+
+            $r2Averages = DB::table('scores')
+                ->where('session_id', $activeSession->id)
+                ->where('round_no', 2)
+                ->select('project_id', DB::raw('AVG(total) as avg_r2'), DB::raw('COUNT(id) as judges_r2'))
+                ->groupBy('project_id')
+                ->get()
+                ->keyBy('project_id');
+        }
+
+        if ($isAuthenticatedLeaderboard) {
+            $scoreDetails = DB::table('scores')
+                ->join('users', 'users.id', '=', 'scores.judge_id')
+                ->where('scores.session_id', $activeSession->id)
+                ->select('scores.project_id', 'scores.round_no', 'scores.total', 'scores.best_presenter', 'scores.comments', 'scores.created_at', 'users.name as judge_name')
+                ->orderBy('scores.round_no')
+                ->get()
+                ->groupBy('project_id');
+        }
+
+        $leaderboardData = $projects->map(function ($project) use ($r1Averages, $r2Averages, $scoreDetails, $isAuthenticatedLeaderboard, $isPublicResultsPublished) {
             $r1 = $r1Averages->get($project->id);
             $r2 = $r2Averages->get($project->id);
 
@@ -83,7 +92,7 @@ class LeaderboardController extends Controller
             $avgR2 = $r2 ? round($r2->avg_r2, 2) : 0.0;
 
             // Final score priority: Round 2 if evaluated, else Round 1
-            $finalScore = $avgR2 > 0 ? $avgR2 : $avgR1;
+            $finalScore = $avgR2 !== 0.0 ? $avgR2 : $avgR1;
 
             $judges = $isAuthenticatedLeaderboard ? $scoreDetails->get($project->id, collect())->map(fn ($score) => [
                 'name' => $score->judge_name,
@@ -104,16 +113,20 @@ class LeaderboardController extends Controller
                 'title' => $project->title,
                 'pcode' => $project->pcode,
                 'category_id' => $project->category_id,
-                'category_name' => $project->category?->name ?? 'N/A',
-                'username' => $project->user->name,
+                'category_name' => $project->category->name ?? 'N/A',
+                ...($isAuthenticatedLeaderboard ? ['username' => $project->user?->name] : []),
                 'award_level' => $project->award_level,
-                'avg_r1' => $avgR1,
-                'judges_r1' => $r1 ? $r1->judges_r1 : 0,
-                'avg_r2' => $avgR2,
-                'judges_r2' => $r2 ? $r2->judges_r2 : 0,
-                'final_score' => $finalScore,
-                'judges' => $judges,
-                'best_presenter' => $presenterVotes,
+                ...(($isAuthenticatedLeaderboard || $isPublicResultsPublished) ? [
+                    'avg_r1' => $avgR1,
+                    'judges_r1' => $r1 ? $r1->judges_r1 : 0,
+                    'avg_r2' => $avgR2,
+                    'judges_r2' => $r2 ? $r2->judges_r2 : 0,
+                    'final_score' => $finalScore,
+                ] : []),
+                ...($isAuthenticatedLeaderboard ? [
+                    'judges' => $judges,
+                    'best_presenter' => $presenterVotes,
+                ] : []),
             ];
         });
 
@@ -122,9 +135,13 @@ class LeaderboardController extends Controller
         foreach ($categories as $cat) {
             $catProjects = $leaderboardData->filter(function ($item) use ($cat) {
                 return $item['category_id'] === $cat->id;
-            })->sortByDesc('final_score')->values()->all();
-
-            $groupedData[$cat->id] = $catProjects;
+            });
+            if ($isAuthenticatedLeaderboard || $isPublicResultsPublished) {
+                $catProjects = $catProjects->sortByDesc('final_score');
+            } else {
+                $catProjects = $catProjects->sortBy('pcode');
+            }
+            $groupedData[$cat->id] = $catProjects->values()->all();
         }
 
         // Return API response if request wants JSON (for real-time polling fallback)
@@ -144,6 +161,7 @@ class LeaderboardController extends Controller
             'activeSession' => $activeSession,
             'categories' => $categories,
             'leaderboardData' => $groupedData,
+            'resultsPublished' => $isAuthenticatedLeaderboard || $isPublicResultsPublished,
         ]);
     }
 }

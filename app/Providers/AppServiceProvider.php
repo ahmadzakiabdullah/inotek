@@ -2,15 +2,16 @@
 
 namespace App\Providers;
 
+use App\Models\User;
+use App\Services\AuditLogger;
 use Carbon\CarbonImmutable;
-use Illuminate\Support\Facades\Date;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\ServiceProvider;
-use Illuminate\Validation\Rules\Password;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
-use App\Services\AuditLogger;
+use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\ServiceProvider;
+use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -31,6 +32,10 @@ class AppServiceProvider extends ServiceProvider
 
         // Listen for successful login events to log to audit logs
         Event::listen(Login::class, function (Login $event) {
+            if (! $event->user instanceof User) {
+                return;
+            }
+
             AuditLogger::log(
                 'LOGIN',
                 "User '{$event->user->name}' (Email: {$event->user->email}) successfully logged in.",
@@ -40,7 +45,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Listen for logout events to log to audit logs
         Event::listen(Logout::class, function (Logout $event) {
-            if ($event->user) {
+            if ($event->user instanceof User) {
                 AuditLogger::log(
                     'LOGOUT',
                     "User '{$event->user->name}' (Email: {$event->user->email}) logged out.",

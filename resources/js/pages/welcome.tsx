@@ -19,7 +19,7 @@ interface Showcase {
     submissions: number;
     categories: number;
     progress: number;
-    rankings: { name: string; score: number }[];
+    rankings: { name: string }[];
 }
 
 export default function Welcome() {
@@ -206,7 +206,7 @@ export default function Welcome() {
                                     </div>
                                     <div className="mt-5 space-y-3">
                                         {showcase.rankings.length > 0 ? showcase.rankings.map((rank, index) => (
-                                            <Rank key={`${rank.name}-${index}`} name={rank.name} place={String(index + 1).padStart(2, '0')} score={rank.score.toString()} />
+                                            <Rank key={`${rank.name}-${index}`} name={rank.name} place={String(index + 1).padStart(2, '0')} />
                                         )) : <p className="text-sm text-muted-foreground">No approved projects yet.</p>}
                                     </div>
                                 </div>
@@ -305,11 +305,9 @@ function Stat({ label, value }: { label: string; value: string }) {
 function Rank({
     name,
     place,
-    score,
 }: {
     name: string;
     place: string;
-    score: string;
 }) {
     return (
         <div className="flex items-center gap-3 text-sm">
@@ -317,12 +315,6 @@ function Rank({
                 {place}
             </span>
             <span className="flex-1 font-medium">{name}</span>
-            <span className="font-semibold">
-                {score}
-                <span className="ml-1 text-xs font-normal text-muted-foreground">
-                    pts
-                </span>
-            </span>
         </div>
     );
 }

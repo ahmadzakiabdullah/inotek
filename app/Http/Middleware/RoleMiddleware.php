@@ -19,7 +19,7 @@ class RoleMiddleware
             abort(401, 'Unauthenticated.');
         }
 
-        if (! $request->user()->hasRole($roles)) {
+        if (! $request->user()->hasRole(array_values($roles))) {
             abort(403, 'Unauthorized action.');
         }
 

@@ -157,8 +157,8 @@ class JudgingMonitorTest extends TestCase
         Mail::assertSent(JudgeNudgeMail::class, function ($mail) {
             return $mail->hasTo($this->judge->email) &&
                    $mail->judge->id === $this->judge->id &&
-                   $mail->pendingProjects->count() === 1 &&
-                   $mail->pendingProjects->first()['pcode'] === 'C1-01';
+                   count($mail->pendingProjects) === 1 &&
+                   $mail->pendingProjects[0]['pcode'] === 'C1-01';
         });
 
         // Assert audit log exists

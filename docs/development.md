@@ -37,7 +37,7 @@ npm run build
 
 ## 2. Real-Time Services (WebSockets & Queues)
 
-INOTEK supports background queue processing and Laravel broadcasting. The default
+INOTEK supports queued system notifications and Laravel broadcasting. The default
 `.env.example` configuration logs broadcast events locally; real-time WebSocket
 delivery requires installing and configuring Laravel Reverb first.
 
@@ -68,13 +68,16 @@ Before deployment, confirm:
 - Scheduled tasks, failed-job monitoring, database backups, and log rotation.
 - Reverb credentials and a supervised `php artisan reverb:start` process if enabled.
 
-### 2.3 Queue Workers (Background Tasks)
-Tasks like sending email notifications, audit processing, and certificate generations run asynchronously:
+### 2.3 Queue Workers
+System notifications are queued for database and broadcast delivery. Audit log writes
+and certificate PDF generation run during the request, and judging reminder emails are
+sent synchronously by the admin action. Run a worker to deliver queued notifications:
 ```bash
-php artisan queue:work --queue=default,emails
+php artisan queue:work --queue=default
 ```
 > [!IMPORTANT]
-> Ensure the `QUEUE_CONNECTION` environment variable is set to `database` in your `.env` file for these tasks to execute.
+> Ensure `QUEUE_CONNECTION=database` (or another configured queue connection) and that
+> the queue tables have been migrated. Monitor failed jobs in production.
 
 ---
 
@@ -101,32 +104,25 @@ Maintain clean code structures. Run these tools prior to committing modification
 
 The following endpoints are public or used for external system integrations:
 
-### 4.1 Get Live Leaderboard Scores
-Retrieves the real-time rankings of projects sorted by overall weighted score.
-- **Endpoint**: `GET /api/leaderboard`
-- **Response Format**: `application/json`
+### 4.1 Get Live Leaderboard Data
+The public leaderboard route returns an Inertia page by default. Request JSON using
+`Accept: application/json`, or append `?api=true` for the polling response.
+- **Endpoint**: `GET /leaderboard`
+- **Response Format**: `application/json` when requested
 - **Example Response**:
 ```json
 {
-  "session": "Semester 1 2026/2027",
-  "leaderboard": [
-    {
-      "rank": 1,
-      "project_code": "C1-002",
-      "title": "Smart Solar Grids",
-      "category": "Green Technology",
-      "average_score": 94.20
-    },
-    {
-      "rank": 2,
-      "project_code": "C3-005",
-      "title": "AI Autonomous Drone Patrol",
-      "category": "Emerging Technology",
-      "average_score": 89.50
-    }
-  ]
+  "activeSession": { "id": 1, "name": "Semester 1 2026/2027" },
+  "categories": [{ "id": 1, "code": "C1", "name": "Green Technology" }],
+  "leaderboardData": {
+    "1": [{ "id": 12, "title": "Smart Solar Grids", "pcode": "C1-02", "category_id": 1, "category_name": "Green Technology", "award_level": null }]
+  }
 }
 ```
+Before Round 2 is finalized, the public response omits scores and ranks projects by
+project code. After finalization, it includes final scores and ranks by score. Judge
+identities, individual scores, comments, participant names, and presenter votes are
+only returned by the authenticated staff leaderboard.
 
 ### 4.2 Verify Certificate Authenticity
 Public verification endpoint mapped to certificate QR codes.

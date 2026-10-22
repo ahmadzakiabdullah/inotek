@@ -90,6 +90,70 @@ class ProjectVerificationTest extends TestCase
         ]);
     }
 
+    public function test_admin_approval_generates_an_unused_code_when_existing_codes_have_a_gap(): void
+    {
+        $admin = User::factory()->create(['role_id' => 1]);
+        $student = User::factory()->create(['role_id' => 4]);
+        $session = CompetitionSession::create(['name' => 'Session 1', 'is_active' => true]);
+        $category = Category::create(['session_id' => $session->id, 'code' => 'C1', 'name' => 'Tech']);
+        Project::create([
+            'session_id' => $session->id,
+            'category_id' => $category->id,
+            'user_id' => $student->id,
+            'pcode' => 'C1-02',
+            'title' => 'Existing project',
+            'abstract' => 'Sample',
+            'institution_type' => 'utem',
+            'status' => Project::STATUS_APPROVED,
+            'supervisor_name' => 'Super',
+            'supervisor_email' => 's@test.com',
+        ]);
+        $draft = Project::create([
+            'session_id' => $session->id,
+            'category_id' => $category->id,
+            'user_id' => User::factory()->create(['role_id' => 4])->id,
+            'title' => 'Draft project',
+            'abstract' => 'Sample',
+            'institution_type' => 'utem',
+            'status' => Project::STATUS_SUBMITTED,
+            'supervisor_name' => 'Super',
+            'supervisor_email' => 's@test.com',
+        ]);
+
+        $response = $this->actingAs($admin)->post(route('admin.approvals.approve'), [
+            'project_ids' => [$draft->id],
+        ]);
+
+        $response->assertRedirect(route('admin.approvals.index'));
+        $this->assertDatabaseHas('projects', [
+            'id' => $draft->id,
+            'status' => Project::STATUS_APPROVED,
+            'pcode' => 'C1-01',
+        ]);
+    }
+
+    public function test_admin_cannot_register_project_in_active_session_using_another_sessions_category(): void
+    {
+        $admin = User::factory()->create(['role_id' => 1]);
+        $activeSession = CompetitionSession::create(['name' => 'Active', 'is_active' => true]);
+        $otherSession = CompetitionSession::create(['name' => 'Other', 'is_active' => false]);
+        $category = Category::create(['session_id' => $otherSession->id, 'code' => 'C2', 'name' => 'Other Category']);
+        $student = User::factory()->create(['role_id' => 4]);
+
+        $response = $this->actingAs($admin)->post(route('admin.approvals.storeProject'), [
+            'user_id' => $student->id,
+            'category_id' => $category->id,
+            'title' => 'Mismatched project',
+            'abstract' => 'Project abstract',
+            'institution_type' => 'utem',
+            'supervisor_name' => 'Dr. Supervisor',
+            'supervisor_email' => 'supervisor@utem.edu.my',
+        ]);
+
+        $response->assertSessionHasErrors('category_id');
+        $this->assertDatabaseMissing('projects', ['session_id' => $activeSession->id, 'user_id' => $student->id]);
+    }
+
     public function test_admin_can_reject_project_with_comments(): void
     {
         $admin = User::factory()->create(['role_id' => 1]);

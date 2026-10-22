@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -43,7 +44,7 @@ class UserController extends Controller
 
         $newUser = User::create($validated);
 
-        \App\Services\AuditLogger::log(
+        AuditLogger::log(
             'CREATE_USER',
             "Created user: '{$newUser->name}' (Email: {$newUser->email}, Role ID: {$newUser->role_id})"
         );
@@ -96,7 +97,7 @@ class UserController extends Controller
         }
 
         // Prevent self-demotion from admin
-        if ($user->id === $request->user()->id && (int) $validated['role_id'] !== 1) {
+        if ($user->id === $request->user()->id && ! Role::whereKey($validated['role_id'])->where('name', 'admin')->exists()) {
             $msg = __('You cannot change your own admin role.');
             if (class_exists(Inertia::class) && method_exists(Inertia::class, 'flash')) {
                 Inertia::flash('toast', ['type' => 'error', 'message' => $msg]);
@@ -109,7 +110,7 @@ class UserController extends Controller
 
         $user->update($validated);
 
-        \App\Services\AuditLogger::log(
+        AuditLogger::log(
             'UPDATE_USER',
             "Updated user: '{$user->name}' (Email: {$user->email}, Role ID: {$user->role_id})"
         );
@@ -145,7 +146,7 @@ class UserController extends Controller
         $email = $user->email;
         $user->delete();
 
-        \App\Services\AuditLogger::log(
+        AuditLogger::log(
             'DELETE_USER',
             "Deleted user: '{$name}' (Email: {$email})"
         );

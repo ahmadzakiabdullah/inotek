@@ -25,14 +25,14 @@ class CreateNewUser implements CreatesNewUsers
             'password' => $this->passwordRules(),
         ])->validate();
 
-        $defaultRoleExists = Role::where('id', 4)->exists();
+        $defaultRoleId = Role::where('name', 'user')->value('id');
 
         return User::create([
             'name' => $input['name'],
             'username' => $input['username'],
             'email' => $input['email'],
             'password' => $input['password'],
-            'role_id' => $defaultRoleExists ? 4 : null,
+            'role_id' => $defaultRoleId,
         ]);
     }
 }

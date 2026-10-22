@@ -2,15 +2,31 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property int $id
+ * @property int $session_id
+ * @property int $category_id
+ * @property int $user_id
+ * @property string|null $pcode
+ * @property string $title
+ * @property string $abstract
+ * @property int $status
+ * @property string|null $award_level
+ * @property float|null $round_one_score
+ * @property float|null $round_two_score
+ * @property-read Category|null $category
+ * @property-read User|null $user
+ * @property-read Collection<int, TeamMember> $teamMembers
+ */
 class Project extends Model
 {
-    use HasFactory, SoftDeletes;
+    use SoftDeletes;
 
     protected $table = 'projects';
 
@@ -51,6 +67,7 @@ class Project extends Model
     /**
      * Get the session that owns the project.
      */
+    /** @return BelongsTo<CompetitionSession, $this> */
     public function session(): BelongsTo
     {
         return $this->belongsTo(CompetitionSession::class, 'session_id');
@@ -59,6 +76,7 @@ class Project extends Model
     /**
      * Get the category that owns the project.
      */
+    /** @return BelongsTo<Category, $this> */
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class, 'category_id');
@@ -67,6 +85,7 @@ class Project extends Model
     /**
      * Get the user/participant who owns/registered the project.
      */
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
@@ -75,6 +94,7 @@ class Project extends Model
     /**
      * Get the team members for the project.
      */
+    /** @return HasMany<TeamMember, $this> */
     public function teamMembers(): HasMany
     {
         return $this->hasMany(TeamMember::class, 'project_id');
@@ -83,6 +103,7 @@ class Project extends Model
     /**
      * Get the scores/evaluations for the project.
      */
+    /** @return HasMany<Score, $this> */
     public function scores(): HasMany
     {
         return $this->hasMany(Score::class, 'project_id');
@@ -91,6 +112,7 @@ class Project extends Model
     /**
      * Get the judge assignments for this project.
      */
+    /** @return HasMany<JudgeAssignment, $this> */
     public function judgeAssignments(): HasMany
     {
         return $this->hasMany(JudgeAssignment::class, 'project_id');

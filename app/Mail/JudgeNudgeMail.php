@@ -5,22 +5,25 @@ namespace App\Mail;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Collection;
 
 class JudgeNudgeMail extends Mailable
 {
     use Queueable, SerializesModels;
 
     public User $judge;
-    public Collection $pendingProjects;
+
+    /** @var list<array{pcode: string|null, title: string, category_name: string, round_no: int}> */
+    public array $pendingProjects;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(User $judge, Collection $pendingProjects)
+    /** @param list<array{pcode: string|null, title: string, category_name: string, round_no: int}> $pendingProjects */
+    public function __construct(User $judge, array $pendingProjects)
     {
         $this->judge = $judge;
         $this->pendingProjects = $pendingProjects;
@@ -49,6 +52,7 @@ class JudgeNudgeMail extends Mailable
     /**
      * Get the attachments for the message.
      */
+    /** @return list<Attachment> */
     public function attachments(): array
     {
         return [];

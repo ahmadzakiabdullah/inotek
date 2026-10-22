@@ -2,9 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\Category;
 use App\Models\Project;
 use App\Models\Score;
-use App\Models\Category;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class ScoreCalculator
@@ -12,20 +13,18 @@ class ScoreCalculator
     /**
      * Calculate the total score out of 100 based on rubric items and raw points.
      *
-     * @param Project $project
-     * @param array $scoreDetails Key-value mapping of rubric_item_id => points (0-5)
-     * @return float
+     * @param  array<int|string, int|float>  $scoreDetails  Key-value mapping of rubric_item_id => points within that item's maximum
      */
     public function calculateTotal(Project $project, array $scoreDetails): float
     {
         $category = $project->category;
-        if (!$category) {
+        if (! $category) {
             return 0.0;
         }
 
         // Find mapped rubric
         $rubric = $category->rubrics->first();
-        if (!$rubric) {
+        if (! $rubric) {
             return 0.0;
         }
 
@@ -38,7 +37,7 @@ class ScoreCalculator
 
         foreach ($rubricItems as $item) {
             $itemId = $item->id;
-            $points = isset($scoreDetails[$itemId]) ? (float) $scoreDetails[$itemId] : 0.0;
+            $points = (float) $scoreDetails[$itemId];
             $maxPoints = (float) $item->max_points;
             $weight = (float) $item->weight;
 
@@ -56,9 +55,8 @@ class ScoreCalculator
      * Get the Round 1 qualified projects for Round 2.
      * Selects Top N projects per category, ordered by average score.
      *
-     * @param int $sessionId
-     * @param int $limit Top N projects to select per category (e.g. 3 or 5)
-     * @return \Illuminate\Support\Collection
+     * @param  int  $limit  Top N projects to select per category (e.g. 3 or 5)
+     * @return Collection<int, Collection<int, Project>>
      */
     public function getRound1Shortlist(int $sessionId, int $limit = 3)
     {
@@ -88,11 +86,6 @@ class ScoreCalculator
     /**
      * Validate if a judge is allowed to be assigned to evaluate a project in Round 2.
      * Returns true if they DID NOT evaluate the same project in Round 1.
-     *
-     * @param int $projectId
-     * @param int $judgeId
-     * @param int $sessionId
-     * @return bool
      */
     public function isJudgeEligibleForRound2(int $projectId, int $judgeId, int $sessionId): bool
     {
@@ -103,6 +96,6 @@ class ScoreCalculator
             ->where('round_no', 1)
             ->exists();
 
-        return !$existsInRound1;
+        return ! $existsInRound1;
     }
 }

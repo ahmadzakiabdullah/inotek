@@ -4,15 +4,18 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Services\AuditLogger;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class SystemSettingsController extends Controller
 {
     /**
      * Display the settings management panel.
      */
-    public function index()
+    public function index(): Response
     {
         return Inertia::render('admin/settings/Index', [
             'currentSettings' => [
@@ -21,14 +24,14 @@ class SystemSettingsController extends Controller
                 'primary_color' => Setting::get('primary_color', '#4f46e5'),
                 'date_format' => Setting::get('date_format', 'd/m/Y'),
                 'timezone' => Setting::get('timezone', 'Asia/Kuala_Lumpur'),
-            ]
+            ],
         ]);
     }
 
     /**
      * Update the global system settings.
      */
-    public function update(Request $request)
+    public function update(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'system_name' => 'required|string|max:100',
@@ -46,7 +49,7 @@ class SystemSettingsController extends Controller
 
         // Log the change in system logs
         $adminName = auth()->user()->name;
-        \App\Services\AuditLogger::log(
+        AuditLogger::log(
             'UPDATE_SETTINGS',
             "Admin '{$adminName}' updated system settings: Name='{$validated['system_name']}', Font='{$validated['global_font']}', Color='{$validated['primary_color']}', Timezone='{$validated['timezone']}'"
         );

@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\JudgeNudgeMail;
 use App\Models\CompetitionSession;
 use App\Models\JudgeAssignment;
 use App\Models\Score;
-use App\Models\User;
-use App\Mail\JudgeNudgeMail;
 use App\Services\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,7 +21,7 @@ class JudgingNudgeController extends Controller
     {
         $activeSession = CompetitionSession::where('is_active', true)->first();
 
-        if (!$activeSession) {
+        if (! $activeSession) {
             return back()->withErrors(['session' => 'No active competition session found.']);
         }
 
@@ -35,29 +34,29 @@ class JudgingNudgeController extends Controller
         $scores = Score::where('session_id', $activeSession->id)
             ->get()
             ->groupBy(function ($score) {
-                return $score->project_id . '-' . $score->judge_id . '-' . $score->round_no;
+                return $score->project_id.'-'.$score->judge_id.'-'.$score->round_no;
             });
 
         // Group pending evaluations by judge
         $pendingGrouped = [];
 
         foreach ($assignments as $assignment) {
-            $key = $assignment->project_id . '-' . $assignment->judge_id . '-' . $assignment->round_no;
-            if (!$scores->has($key)) {
+            $key = $assignment->project_id.'-'.$assignment->judge_id.'-'.$assignment->round_no;
+            if (! $scores->has($key)) {
                 $judgeId = $assignment->judge_id;
-                if (!isset($pendingGrouped[$judgeId])) {
+                if (! isset($pendingGrouped[$judgeId])) {
                     $pendingGrouped[$judgeId] = [
                         'user' => $assignment->judge,
-                        'projects' => collect(),
+                        'projects' => [],
                     ];
                 }
 
-                $pendingGrouped[$judgeId]['projects']->push([
+                $pendingGrouped[$judgeId]['projects'][] = [
                     'pcode' => $assignment->project->pcode,
                     'title' => $assignment->project->title,
                     'category_name' => $assignment->project->category->name ?? 'N/A',
                     'round_no' => $assignment->round_no,
-                ]);
+                ];
             }
         }
 
@@ -81,7 +80,7 @@ class JudgingNudgeController extends Controller
         }
 
         $msg = __("Successfully sent evaluation reminders to {$nudgeCount} pending judges.");
-        
+
         return back()->with('success', $msg);
     }
 }

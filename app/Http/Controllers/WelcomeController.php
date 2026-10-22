@@ -7,10 +7,11 @@ use App\Models\CompetitionSession;
 use App\Models\Project;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class WelcomeController extends Controller
 {
-    public function __invoke()
+    public function __invoke(): Response
     {
         $session = CompetitionSession::where('is_active', true)->first();
 
@@ -27,10 +28,10 @@ class WelcomeController extends Controller
             ->withAvg(['scores as round_two_score' => fn ($query) => $query->where('round_no', 2)], 'total')
             ->get();
 
-        $rankings = $projects->map(fn (Project $project) => [
+        $rankings = $projects->sortByDesc(fn (Project $project) => $project->round_two_score ?: $project->round_one_score ?: 0
+        )->take(3)->map(fn (Project $project) => [
             'name' => $project->title,
-            'score' => round($project->round_two_score ?: $project->round_one_score ?: 0, 2),
-        ])->sortByDesc('score')->take(3)->values()->all();
+        ])->values()->all();
 
         $assignments = DB::table('judge_assignments')->where('session_id', $session->id)->count();
         $scores = DB::table('scores')->where('session_id', $session->id)->count();
@@ -45,6 +46,7 @@ class WelcomeController extends Controller
         ]);
     }
 
+    /** @return array{submissions: int, categories: int, progress: int, rankings: list<array{name: string}>} */
     private function emptyShowcase(): array
     {
         return ['submissions' => 0, 'categories' => 0, 'progress' => 0, 'rankings' => []];

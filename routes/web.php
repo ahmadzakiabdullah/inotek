@@ -118,6 +118,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])
 
         // Round 2 Shortlisting & Scoring
         Route::get('round2', [Round2Controller::class, 'index'])->name('round2.index');
+        Route::post('round2/shortlist-limit', [Round2Controller::class, 'updateShortlistLimit'])->name('round2.shortlistLimit');
         Route::post('round2/lock', [Round2Controller::class, 'lockToggle'])->name('round2.lockToggle');
         Route::post('round2/{project}/award', [Round2Controller::class, 'assignAward'])->name('round2.assignAward');
 

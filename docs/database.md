@@ -25,6 +25,11 @@ erDiagram
         string name
         boolean is_active
         boolean r2_locked
+        date session_starts_at
+        date session_ends_at
+        date registration_opens_at
+        date registration_closes_at
+        string registration_mode
         timestamp created_at
     }
 
@@ -32,7 +37,7 @@ erDiagram
         bigint id PK
         string code
         string name
-        bigint session_id FK
+        boolean allow_team
     }
 
     roles {
@@ -110,23 +115,30 @@ erDiagram
 ## 2. Table Specifications
 
 ### 2.1 Table: `sessions`
-Defines competition semesters or sessions.
+Defines competition semesters or sessions. Projects, approvals, judge assignments,
+and scores are scoped to a session. The active session is the default context for
+operational dashboards; session and registration dates control the registration
+window. Administrators see concise dates rather than raw UTC timestamps.
 | Column | Type | Nullable | Constraints & Description |
 | :--- | :--- | :--- | :--- |
 | `id` | BigInt | No | Primary Key, Auto-increment. |
-| `name` | Varchar(255) | No | Session display name (e.g. "Semester 1 2026/2027"). |
+| `name` | Varchar(255) | No | Session display name (e.g. "Sesi 1/2026"). |
 | `is_active` | Boolean | No | Default: `false`. Scopes active operations. |
 | `r2_locked` | Boolean | No | Default: `false`. Locks Round 2 scores. |
+| `session_starts_at` / `session_ends_at` | Date | Yes | Overall session period. |
+| `registration_mode` | Varchar(16) | No | `open`, `closed`, or `scheduled`. Scheduled mode requires the registration dates. |
+| `registration_opens_at` / `registration_closes_at` | Date | Yes | Registration period; registration is available only within this window when `registration_mode` is `scheduled`. |
 | `created_at` / `updated_at` | Timestamp | Yes | Standard record timestamps. |
 
 ### 2.2 Table: `categories`
-Managed dynamic categories per session.
+Global category catalog reused by every competition session. A category is created
+once and its same code/name is available in future sessions. Projects still carry
+their own `session_id`, so sharing categories does not combine project records.
 | Column | Type | Nullable | Constraints & Description |
 | :--- | :--- | :--- | :--- |
 | `id` | BigInt | No | Primary Key, Auto-increment. |
 | `code` | Varchar(50) | No | e.g. "C1", "C2" |
 | `name` | Varchar(255) | No | e.g. "Emerging Technology" |
-| `session_id` | BigInt | Yes | Foreign Key referencing `sessions.id`. |
 | `allow_team` | Boolean | No | Default: `false`. True if team registrations are allowed (group projects). |
 
 ### 2.3 Table: `roles`
@@ -143,7 +155,7 @@ Accounts list.
 | Column | Type | Nullable | Constraints & Description |
 | :--- | :--- | :--- | :--- |
 | `id` | BigInt | No | Primary Key, Auto-increment. |
-| `role_id` | BigInt | Yes | Foreign Key referencing `roles.id`. Set to Null on Role delete. |
+| `role_id` | BigInt | Yes | Foreign Key referencing `roles.id`. New accounts receive the `user` role. Legacy user records do not necessarily have Laravel `created_at`/`updated_at` columns; the User model does not write those timestamps. |
 | `name` | Varchar(255) | No | Full name. |
 | `username` | Varchar(255) | No | Unique username identifier. |
 | `email` | Varchar(255) | No | Unique email address. |
@@ -172,7 +184,7 @@ Project details submitted by participants.
 | `deleted_at` | Timestamp | Yes | Soft delete support. |
 
 > [!NOTE]
-> **Unique Constraint**: The combination of `[session_id, pcode]` must be unique.
+> **Unique Constraint**: The combination of `[session_id, pcode]` must be unique. Project code numbering starts again for each session; codes do not form one continuous sequence across sessions.
 
 ### 2.6 Table: `team_members`
 Dynamic team list associated with projects.

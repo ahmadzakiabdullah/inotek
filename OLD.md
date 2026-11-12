@@ -2,6 +2,13 @@
 
 Semakan terakhir: 16 Jun 2026.
 
+> [!WARNING]
+> Dokumen ini ialah snapshot arkib keadaan sistem pada 16 Jun 2026, termasuk portal
+> PHP legacy dan andaian migrasi ketika itu. Ia bukan rujukan operasi semasa bagi
+> aplikasi Laravel. Rujuk [README](README.md), [PRD](docs/prd.md),
+> [rujukan pangkalan data](docs/database.md), dan [changelog](docs/changelog.md)
+> untuk keadaan terkini (23 Oktober 2026).
+
 ## 1. Gambaran Umum
 
 INOTEK ialah sistem web untuk mengurus pertandingan inovasi dan teknologi UTeM. Sistem ini menyokong kitaran penuh pertandingan bermula daripada pendaftaran akaun, pendaftaran projek, semakan dan kelulusan pentadbir, penugasan juri, pemarkahan pusingan pertama dan kedua, laporan, pembayaran, sijil, tetapan sistem, serta log audit.

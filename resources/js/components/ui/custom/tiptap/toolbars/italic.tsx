@@ -1,12 +1,11 @@
 "use client";
-
-import { ItalicIcon } from "lucide-react";
 import React from "react";
 
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useToolbar } from "./toolbar-provider";
+import { IconItalic } from "@tabler/icons-react";
 
 const ItalicToolbar = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, onClick, children, ...props }, ref) => {
@@ -30,7 +29,7 @@ const ItalicToolbar = React.forwardRef<HTMLButtonElement, ButtonProps>(
             disabled={!(editor?.can().chain().focus() as any).toggleItalic().run()}
             ref={ref}
             {...props}>
-            {children ?? <ItalicIcon className="h-4 w-4" />}
+            {children ?? <IconItalic className="h-4 w-4" />}
           </Button>
         </TooltipTrigger>
         <TooltipContent>

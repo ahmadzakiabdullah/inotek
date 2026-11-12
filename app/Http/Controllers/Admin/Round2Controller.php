@@ -27,7 +27,7 @@ class Round2Controller extends Controller
      */
     public function index(): Response
     {
-        $activeSession = CompetitionSession::where('is_active', true)->first();
+        $activeSession = CompetitionSession::active();
 
         if (! $activeSession) {
             return Inertia::render('admin/round2/Index', [
@@ -65,7 +65,7 @@ class Round2Controller extends Controller
         $validated = $request->validate([
             'limit' => ['required', 'integer', 'in:3,5,10'],
         ]);
-        $activeSession = CompetitionSession::where('is_active', true)->first();
+        $activeSession = CompetitionSession::active();
 
         if (! $activeSession) {
             return back()->with('error', 'No active competition session.');
@@ -97,7 +97,7 @@ class Round2Controller extends Controller
      */
     public function lockToggle(): RedirectResponse
     {
-        $activeSession = CompetitionSession::where('is_active', true)->first();
+        $activeSession = CompetitionSession::active();
 
         if (! $activeSession) {
             return back()->with('error', 'No active competition session.');
@@ -131,7 +131,7 @@ class Round2Controller extends Controller
             'award_level' => ['required', 'string', 'in:Gold,Silver,Bronze,None'],
         ]);
 
-        $activeSession = CompetitionSession::where('is_active', true)->first();
+        $activeSession = CompetitionSession::active();
         if (! $activeSession || $project->session_id !== $activeSession->id || $project->status !== Project::STATUS_APPROVED) {
             abort(404);
         }

@@ -1,12 +1,12 @@
 "use client";
-
-import { BoldIcon } from "lucide-react";
 import React from "react";
 
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useToolbar } from "./toolbar-provider";
+import { IconBold } from "@tabler/icons-react";
+
 // import type { Extension } from "@tiptap/core";
 // import type { StarterKitOptions } from "@tiptap/starter-kit";
 
@@ -34,7 +34,7 @@ const BoldToolbar = React.forwardRef<HTMLButtonElement, ButtonProps>(
             disabled={!(editor?.can().chain().focus() as any).toggleBold().run()}
             ref={ref}
             {...props}>
-            {children ?? <BoldIcon className="h-4 w-4" />}
+            {children ?? <IconBold className="h-4 w-4" />}
           </Button>
         </TooltipTrigger>
         <TooltipContent>

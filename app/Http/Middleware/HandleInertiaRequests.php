@@ -50,8 +50,12 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user() ? array_merge($request->user()->toArray(), [
                     'role' => $request->user()->role?->name,
                 ]) : null,
-                'notifications' => $request->user() 
-                    ? $request->user()->unreadNotifications()->orderBy('created_at', 'desc')->get()->map(function ($n) {
+                'notifications_unread_count' => $request->user()
+                    ? $request->user()->unreadNotifications()->count()
+                    : 0,
+                // Only the latest notifications are sent with every page load.
+                'notifications' => $request->user()
+                    ? $request->user()->unreadNotifications()->orderBy('created_at', 'desc')->limit(20)->get()->map(function ($n) {
                         return [
                             'id' => $n->id,
                             'title' => $n->data['title'] ?? 'Notification',

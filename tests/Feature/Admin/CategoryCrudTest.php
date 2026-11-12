@@ -5,6 +5,7 @@ namespace Tests\Feature\Admin;
 use App\Models\Category;
 use App\Models\CompetitionSession;
 use App\Models\User;
+use App\Models\Project;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -110,5 +111,28 @@ class CategoryCrudTest extends TestCase
         $this->assertDatabaseMissing('categories', [
             'id' => $category->id,
         ]);
+    }
+
+    public function test_admin_cannot_delete_category_that_has_projects(): void
+    {
+        $admin = User::factory()->create(['role_id' => 1]);
+        $session = CompetitionSession::create(['name' => 'Session 1', 'is_active' => true]);
+        $category = Category::create(['session_id' => $session->id, 'code' => 'C1', 'name' => 'Tech']);
+        Project::create([
+            'session_id' => $session->id,
+            'category_id' => $category->id,
+            'user_id' => User::factory()->create(['role_id' => 4])->id,
+            'title' => 'History Project',
+            'abstract' => 'Abstract',
+            'institution_type' => 'utem',
+            'status' => Project::STATUS_APPROVED,
+            'supervisor_name' => 'Supervisor',
+            'supervisor_email' => 'supervisor@example.com',
+        ]);
+
+        $this->actingAs($admin)->delete(route('admin.categories.destroy', $category))
+            ->assertRedirect(route('admin.categories.index'));
+
+        $this->assertDatabaseHas('categories', ['id' => $category->id]);
     }
 }

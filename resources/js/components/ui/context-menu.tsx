@@ -2,9 +2,10 @@
 
 import * as React from "react";
 import * as ContextMenuPrimitive from "@radix-ui/react-context-menu";
-import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react";
+import { CircleIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { IconCheck, IconChevronRight } from "@tabler/icons-react";
 
 function ContextMenu({ ...props }: React.ComponentProps<typeof ContextMenuPrimitive.Root>) {
   return <ContextMenuPrimitive.Root data-slot="context-menu" {...props} />;
@@ -52,7 +53,7 @@ function ContextMenuSubTrigger({
       )}
       {...props}>
       {children}
-      <ChevronRightIcon className="ml-auto" />
+      <IconChevronRight className="ml-auto" />
     </ContextMenuPrimitive.SubTrigger>
   );
 }
@@ -131,7 +132,7 @@ function ContextMenuCheckboxItem({
       {...props}>
       <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
         <ContextMenuPrimitive.ItemIndicator>
-          <CheckIcon className="size-4" />
+          <IconCheck className="size-4" />
         </ContextMenuPrimitive.ItemIndicator>
       </span>
       {children}

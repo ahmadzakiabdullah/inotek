@@ -84,12 +84,14 @@ interface Project {
 
 interface Props {
     activeSession: CompetitionSession | null;
+    registrationOpen: boolean;
     categories: Category[];
     project: Project | null;
 }
 
 export default function ProjectIndex({
     activeSession,
+    registrationOpen,
     categories,
     project,
 }: Props) {
@@ -295,7 +297,7 @@ return;
                                         </CardDescription>
                                     </div>
                                     <div className="flex flex-wrap gap-2">
-                                        {inArray(project.status, [1, 2]) && (
+                                        {registrationOpen && inArray(project.status, [1, 2]) && (
                                             <>
                                                 <Button
                                                     onClick={() =>
@@ -633,7 +635,7 @@ return;
                             </div>
                         </div>
                     </div>
-                ) : (
+                ) : registrationOpen ? (
                     // Registration / Editing Form View
                     <Card className="border border-border/50 bg-card/40 backdrop-blur-sm">
                         <CardHeader>
@@ -1093,6 +1095,18 @@ return;
                                 </div>
                             </CardFooter>
                         </form>
+                    </Card>
+                ) : (
+                    <Card className="border border-amber-500/20 bg-amber-500/5">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-lg">
+                                <AlertCircle className="h-5 w-5 text-amber-600" />
+                                Registration Closed
+                            </CardTitle>
+                            <CardDescription>
+                                Registration for {activeSession.name} is currently closed. You can return during the registration period.
+                            </CardDescription>
+                        </CardHeader>
                     </Card>
                 )}
             </div>

@@ -60,10 +60,10 @@ interface User {
     name: string;
     username: string;
     email: string;
-    role_id: number;
+    role_id: number | null;
     role: Role | null;
-    created_at: string;
-    updated_at: string;
+    created_at?: string | null;
+    updated_at?: string | null;
 }
 
 interface Props {
@@ -114,7 +114,9 @@ export default function UsersIndex({ users, roles }: Props) {
             const roleLabel = user.role?.label || 'No Role';
             const term = searchTerm.toLowerCase();
 
-            const matchesRole = roleFilter === 'all' || user.role_id.toString() === roleFilter;
+            const matchesRole =
+                roleFilter === 'all' ||
+                (roleFilter === 'none' ? user.role_id === null : user.role_id?.toString() === roleFilter);
 
             return matchesRole && (
                 user.name.toLowerCase().includes(term) ||
@@ -174,10 +176,10 @@ return filteredUsers;
     // Role Stats
     const stats = useMemo(() => {
         const total = users.length;
-        const admins = users.filter((u) => u.role_id === 1).length;
-        const lecturers = users.filter((u) => u.role_id === 2).length;
-        const judges = users.filter((u) => u.role_id === 3).length;
-        const standardUsers = users.filter((u) => u.role_id === 4).length;
+        const admins = users.filter((u) => u.role?.name === 'admin').length;
+        const lecturers = users.filter((u) => u.role?.name === 'lecturer').length;
+        const judges = users.filter((u) => u.role?.name === 'judge').length;
+        const standardUsers = users.filter((u) => u.role?.name === 'user').length;
 
         return { total, admins, lecturers, judges, standardUsers };
     }, [users]);
@@ -191,7 +193,7 @@ return filteredUsers;
         }
     };
 
-    const getRoleBadgeVariant = (roleId: number) => {
+    const getRoleBadgeVariant = (roleId: number | null) => {
         switch (roleId) {
             case 1: // admin
                 return 'destructive';
@@ -227,7 +229,7 @@ return filteredUsers;
             username: user.username,
             email: user.email,
             password: '',
-            role_id: user.role_id.toString(),
+            role_id: user.role_id?.toString() ?? '',
         });
         editForm.clearErrors();
         setIsEditOpen(true);
@@ -240,7 +242,8 @@ return filteredUsers;
 return;
 }
 
-        editForm.put(`/dashboard/users/${selectedUser.id}`, {
+        editForm.transform((data) => ({ ...data, _method: 'put' }));
+        editForm.post(`/dashboard/users/${selectedUser.id}`, {
             onSuccess: () => {
                 setIsEditOpen(false);
                 setSelectedUser(null);
@@ -412,6 +415,7 @@ return;
                                     aria-label="Filter users by role"
                                 >
                                     <NativeSelectOption value="all">All roles</NativeSelectOption>
+                                    <NativeSelectOption value="none">No role</NativeSelectOption>
                                     {roles.map((role) => (
                                         <NativeSelectOption key={role.id} value={role.id.toString()}>
                                             {role.label}

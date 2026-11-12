@@ -1,6 +1,6 @@
 "use client";
 
-import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Check, ChevronDown } from "lucide-react";
+import { AlignCenter, AlignJustify, AlignLeft, AlignRight } from "lucide-react";
 import { useMediaQuery } from "@uidotdev/usehooks";
 import { MobileToolbarGroup, MobileToolbarItem } from "./mobile-toolbar-group";
 
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToolbar } from "./toolbar-provider";
+import { IconCheck, IconChevronDown } from "@tabler/icons-react";
 
 export const AlignmentTooolbar = () => {
   const { editor } = useToolbar();
@@ -93,7 +94,7 @@ export const AlignmentTooolbar = () => {
             <Button variant="ghost" size="sm" className="h-8 w-max font-normal" type="button">
               <span className="mr-2">{alignmentOptions[findIndex(currentTextAlign())]?.icon}</span>
               {alignmentOptions[findIndex(currentTextAlign())]?.name}
-              <ChevronDown className="ml-2 h-4 w-4" />
+              <IconChevronDown className="ml-2 h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
@@ -114,7 +115,7 @@ export const AlignmentTooolbar = () => {
               <span className="mr-2">{option.icon}</span>
               {option.name}
 
-              {option.value === currentTextAlign() && <Check className="ml-auto h-4 w-4" />}
+              {option.value === currentTextAlign() && <IconCheck className="ml-auto h-4 w-4" />}
             </DropdownMenuItem>
           ))}
         </DropdownMenuGroup>

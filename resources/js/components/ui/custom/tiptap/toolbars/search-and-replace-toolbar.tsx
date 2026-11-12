@@ -1,7 +1,6 @@
 "use client";
 /* eslint-disable */
 // @ts-nocheck
-import { ArrowLeftIcon, ArrowRightIcon, X, Repeat } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 import { useToolbar } from "./toolbar-provider";
 import { type SearchAndReplaceStorage } from "../extensions/search-and-replace";
+import { IconArrowLeft, IconArrowRight, IconX, IconRepeat } from "@tabler/icons-react";
 
 export function SearchAndReplaceToolbar() {
   const { editor } = useToolbar();
@@ -67,7 +67,7 @@ export function SearchAndReplaceToolbar() {
                 setOpen(!open);
               }}
               className={cn("h-8 w-max px-3 font-normal")}>
-              <Repeat className="mr-2 h-4 w-4" />
+              <IconRepeat className="mr-2 h-4 w-4" />
               <p>Search & Replace</p>
             </Button>
           </PopoverTrigger>
@@ -100,10 +100,10 @@ export function SearchAndReplaceToolbar() {
               {results?.length === 0 ? selectedResult : selectedResult + 1}/{results?.length}
             </span>
             <Button onClick={selectPrevious} size="icon" variant="ghost" className="size-7">
-              <ArrowLeftIcon className="size-4" />
+              <IconArrowLeft className="size-4" />
             </Button>
             <Button onClick={selectNext} size="icon" className="size-7" variant="ghost">
-              <ArrowRightIcon className="h-4 w-4" />
+              <IconArrowRight className="h-4 w-4" />
             </Button>
             <Separator orientation="vertical" className="mx-0.5 h-7" />
             <Button
@@ -113,7 +113,7 @@ export function SearchAndReplaceToolbar() {
               size="icon"
               className="size-7"
               variant="ghost">
-              <Repeat className="h-4 w-4" />
+              <IconRepeat className="h-4 w-4" />
             </Button>
             <Button
               onClick={() => {
@@ -122,12 +122,12 @@ export function SearchAndReplaceToolbar() {
               size="icon"
               className="size-7"
               variant="ghost">
-              <X className="h-4 w-4" />
+              <IconX className="h-4 w-4" />
             </Button>
           </div>
         ) : (
           <div className={cn("relative w-full")}>
-            <X
+            <IconX
               onClick={() => {
                 setOpen(false);
               }}
@@ -141,7 +141,7 @@ export function SearchAndReplaceToolbar() {
                 onClick={() => {
                   setReplacing(false);
                 }}>
-                <ArrowLeftIcon className="h-4 w-4" />
+                <IconArrowLeft className="h-4 w-4" />
               </Button>
               <h2 className="text-sm font-medium">Search and replace</h2>
             </div>
@@ -192,10 +192,10 @@ export function SearchAndReplaceToolbar() {
                   size="icon"
                   className="h-7 w-7"
                   variant="secondary">
-                  <ArrowLeftIcon className="h-4 w-4" />
+                  <IconArrowLeft className="h-4 w-4" />
                 </Button>
                 <Button onClick={selectNext} size="icon" className="h-7 w-7" variant="secondary">
-                  <ArrowRightIcon className="h-4 w-4" />
+                  <IconArrowRight className="h-4 w-4" />
                 </Button>
               </div>
 

@@ -1,6 +1,6 @@
 import { usePage } from '@inertiajs/react';
 import { Mail, ShieldCheck, UserRound } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -12,7 +12,6 @@ export function ProfileCard() {
     const username = user?.username;
     const email = user?.email || '—';
     const role = user?.role || 'user';
-    const avatar = user?.avatar || `/images/avatars/10.png`;
 
     const initials =
         name
@@ -28,8 +27,7 @@ export function ProfileCard() {
             <CardHeader className="border-b bg-muted/30">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                     <Avatar className="size-20 border-4 border-background shadow-sm">
-                            <AvatarImage src={avatar} alt={name} />
-                            <AvatarFallback>{initials}</AvatarFallback>
+                        <AvatarFallback>{initials}</AvatarFallback>
                     </Avatar>
                     <div className="space-y-1">
                         <CardTitle>{name}</CardTitle>

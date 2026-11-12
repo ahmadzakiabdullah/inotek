@@ -48,7 +48,7 @@ class CertificateAndAuditLogTest extends TestCase
 
         // Create Rubric & map to Category so we have active evaluation paths
         $rubric = Rubric::create(['name' => 'Test Rubric']);
-        $this->category->rubrics()->attach($rubric);
+        $this->category->rubrics()->attach($rubric, ['session_id' => $this->session->id]);
 
         // Create a Project for Student 1
         $this->project = Project::create([
@@ -116,11 +116,47 @@ class CertificateAndAuditLogTest extends TestCase
         // 2. Assign Gold award
         $this->project->update(['award_level' => 'Gold']);
 
-        // 3. Owner can download achievement certificate
+        // 3. Owner cannot download it before the results are finalized
+        $this->actingAs($this->student)
+            ->get(route('certificates.downloadAchievement', $this->project))
+            ->assertForbidden();
+
+        // 4. Owner can download achievement certificate once results are finalized
+        $this->session->update(['r2_locked' => true]);
         $response = $this->actingAs($this->student)
-            ->get(route('certificates.downloadAchievement', $this->project));
+            ->get(route('certificates.downloadAchievement', $this->project->fresh()));
         $response->assertStatus(200);
         $response->assertHeader('Content-Type', 'application/pdf');
+    }
+
+    public function test_public_certificate_verification_hides_contact_details()
+    {
+        $this->project->update([
+            'status' => Project::STATUS_APPROVED,
+            'pcode' => 'C1-01',
+            'certificate_hash' => 'private-hash',
+            'supervisor_email' => 'supervisor@example.test',
+            'supervisor_phone' => '012-3456789',
+            'admin_comments' => 'internal note',
+            'award_level' => 'Gold',
+        ]);
+        $this->project->teamMembers()->create([
+            'name' => 'Team Mate',
+            'email' => 'teammate@example.test',
+            'phone' => '019-8765432',
+        ]);
+
+        $response = $this->get(route('certificates.verify', 'private-hash'));
+
+        $response->assertOk();
+        $response->assertSee('Team Mate');
+        $response->assertDontSee($this->student->email);
+        $response->assertDontSee('supervisor@example.test');
+        $response->assertDontSee('teammate@example.test');
+        $response->assertDontSee('019-8765432');
+        $response->assertDontSee('internal note');
+        // Award stays hidden until the results are finalized.
+        $response->assertInertia(fn ($page) => $page->where('project.award_level', null));
     }
 
     /**

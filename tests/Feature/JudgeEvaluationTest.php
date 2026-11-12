@@ -84,6 +84,7 @@ class JudgeEvaluationTest extends TestCase
         ]);
 
         CategoryRubricMapping::create([
+            'session_id' => $this->session->id,
             'category_id' => $this->category->id,
             'rubric_id' => $this->rubric->id,
         ]);
@@ -584,5 +585,64 @@ class JudgeEvaluationTest extends TestCase
         $response->assertRedirect();
         $this->session->refresh();
         $this->assertTrue($this->session->r2_locked);
+    }
+
+    public function test_round_1_scores_are_frozen_once_round_2_judging_has_started(): void
+    {
+        JudgeAssignment::create([
+            'project_id' => $this->project->id,
+            'judge_id' => $this->judge->id,
+            'session_id' => $this->session->id,
+            'round_no' => 1,
+        ]);
+        JudgeAssignment::create([
+            'project_id' => $this->project->id,
+            'judge_id' => $this->judge2->id,
+            'session_id' => $this->session->id,
+            'round_no' => 2,
+        ]);
+
+        $response = $this->actingAs($this->judge)->post(route('judge.evaluations.store', $this->project), [
+            'scores' => [$this->item1->id => 5, $this->item2->id => 5],
+            'round_no' => 1,
+        ]);
+
+        $response->assertSessionHas('error', 'Round 1 evaluation is closed because Round 2 judging has started.');
+        $this->assertDatabaseMissing('scores', ['project_id' => $this->project->id, 'round_no' => 1]);
+    }
+
+    public function test_judge_with_conflict_of_interest_cannot_be_assigned(): void
+    {
+        $supervisorJudge = User::factory()->create(['role_id' => 3, 'email' => 'A@UTEM.com']);
+
+        $response = $this->actingAs($this->admin)->post(route('admin.assignments.store'), [
+            'project_id' => $this->project->id,
+            'judge_id' => $supervisorJudge->id,
+            'round_no' => 1,
+        ]);
+
+        $response->assertSessionHas('error', 'This judge has a conflict of interest with the project (owner or supervisor).');
+        $this->assertDatabaseMissing('judge_assignments', ['judge_id' => $supervisorJudge->id]);
+    }
+
+    public function test_judge_comment_length_is_limited(): void
+    {
+        JudgeAssignment::create([
+            'project_id' => $this->project->id,
+            'judge_id' => $this->judge->id,
+            'session_id' => $this->session->id,
+            'round_no' => 1,
+        ]);
+
+        $this->actingAs($this->judge)->post(route('judge.evaluations.store', $this->project), [
+            'scores' => [$this->item1->id => 5, $this->item2->id => 5],
+            'round_no' => 1,
+            'comments' => str_repeat('a', 5001),
+        ])->assertSessionHasErrors('comments');
+
+        $this->actingAs($this->judge)->post(route('judge.evaluations.store', $this->project), [
+            'scores' => 'not-an-array',
+            'round_no' => 1,
+        ])->assertSessionHasErrors('scores');
     }
 }

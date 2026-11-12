@@ -6,6 +6,17 @@ This document provides developer guidelines, environment setup, testing commands
 
 ## 1. Key CLI Commands
 
+The current local Windows setup uses PHP 8.4.27. Check the executable and loaded
+configuration before running Artisan if multiple PHP versions are installed:
+```powershell
+where.exe php
+php --ini
+```
+The first executable should be `E:\PHP\php-8.4.27\php.exe`, and the loaded
+configuration should be `E:\PHP\php-8.4.27\php.ini`. Open a new terminal after
+changing the machine PATH. If startup warnings name an older PHP directory, that
+terminal is resolving a different executable/configuration.
+
 ### 1.1 Backend Environment Setup (PHP/Laravel)
 Set up backend dependencies, migrations, and run testing verification:
 ```bash
@@ -14,7 +25,11 @@ composer install
 
 # Regenerate key and bootstrap database
 php artisan key:generate
+# Local development database only: deletes all existing tables/data.
 php artisan migrate:fresh --seed
+
+# Existing deployment after database backup:
+php artisan migrate --force
 
 # Run automated tests
 php artisan test
@@ -58,17 +73,35 @@ php artisan reverb:start
 > Until Reverb is configured, use `BROADCAST_CONNECTION=log` for local development.
 > In production, manage the Reverb process using a supervisor configuration.
 
-### 2.2 Production checklist
+### 2.2 Deployment and frontend assets
+
+The production web root must point to Laravel's `public/` directory. After
+deploying code changes, compile frontend assets with `npm run build` and include
+the generated `public/build` files in the release. Back up the database before
+running release migrations. Clear/rebuild Laravel caches after deployment as
+appropriate:
+```bash
+php artisan optimize:clear
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
+The changelog is cached for up to one hour. An administrator can clear this
+specific cache from `/dashboard/changelog`; the registered endpoint is
+`POST /dashboard/changelog/clear-cache`. A compatibility route also accepts the old `POST /changelog/clear-cache` URL for already-cached frontend bundles.
+
+### 2.3 Production checklist
 
 Before deployment, confirm:
 
 - `APP_ENV=production`, `APP_DEBUG=false`, a generated `APP_KEY`, and HTTPS.
 - Database credentials, `SESSION_SECURE_COOKIE=true`, and a non-local mail transport.
+- On first production seeding, provide `INOTEK_BOOTSTRAP_ADMIN_EMAIL` and a unique `INOTEK_BOOTSTRAP_ADMIN_PASSWORD` of at least 16 characters through the deployment secret store. The seeder creates only this bootstrap admin in production; demo accounts and competition fixtures are limited to local/testing.
 - `php artisan storage:link`, migrations, and a continuously running queue worker.
 - Scheduled tasks, failed-job monitoring, database backups, and log rotation.
 - Reverb credentials and a supervised `php artisan reverb:start` process if enabled.
 
-### 2.3 Queue Workers
+### 2.4 Queue Workers
 System notifications are queued for database and broadcast delivery. Audit log writes
 and certificate PDF generation run during the request, and judging reminder emails are
 sent synchronously by the admin action. Run a worker to deliver queued notifications:

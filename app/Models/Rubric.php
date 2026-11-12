@@ -30,6 +30,6 @@ class Rubric extends Model
     /** @return BelongsToMany<Category, $this> */
     public function categories(): BelongsToMany
     {
-        return $this->belongsToMany(Category::class, 'category_rubric_mapping', 'rubric_id', 'category_id');
+        return $this->belongsToMany(Category::class, 'category_rubric_mapping', 'rubric_id', 'category_id')->withPivot('session_id');
     }
 }

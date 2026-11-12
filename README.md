@@ -5,6 +5,9 @@ INOTEK is a next-generation web application designed to manage innovation and te
 > [!NOTE]
 > This repository represents the modernized core codebase, consolidating the legacy procedural PHP system into a secure, single-page application framework.
 
+> [!NOTE]
+> Current operating model (October 2026): project, approval, score, and judging data belong to a competition session. Dashboard pages default to the active session. Categories are shared globally across sessions; project codes restart for each session. See [the PRD](docs/prd.md), [database reference](docs/database.md), and [changelog](docs/changelog.md).
+
 ---
 
 ## 🌟 Key Features
@@ -23,7 +26,7 @@ INOTEK is a next-generation web application designed to manage innovation and te
 * **Backend**: Laravel 13, PHP 8.4+
 * **Frontend**: React 19, Inertia.js (React), Vite
 * **Database**: MySQL 8.0 / MariaDB
-* **Design & Styling**: Tailwind CSS v4, Shadcn/UI (React components), Lucide Icons
+* **Design & Styling**: Tailwind CSS v4, Shadcn/UI (Mira preset), Tabler Icons
 
 ---
 
@@ -50,10 +53,14 @@ php artisan key:generate
 > Ensure you update the database credentials (`DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`) in your `.env` file to match your local database settings before running migrations.
 
 ### 3. Database Migration & Seeding
-Run migrations to generate tables, system roles, and demo users:
+For a fresh local development database only, create tables and seed local data:
 ```bash
 php artisan migrate:fresh --seed
 ```
+> [!WARNING]
+> `migrate:fresh` deletes all tables and data. Never use it on production. For an existing deployment, back up the database and run `php artisan migrate --force`.
+
+New registrations receive the `user` role. The system roles are `admin`, `lecturer`, `judge`, and `user`; role IDs must not be hard-coded in application logic.
 
 ### 4. Compiling Assets
 ```bash
@@ -82,3 +89,7 @@ For detailed technical specifications and developer handbooks, refer to the docu
 * 🗄️ **[Database Schema Reference](docs/database.md)**: Entity Relationship Diagram (ERD) and detailed table definitions.
 * 🛠️ **[Developer & API Reference Guide](docs/development.md)**: Coding standards, testing instructions, optional WebSocket setup, and API endpoints.
 * 🗺️ **[Development Roadmap (TODOS)](docs/todos.md)**: Active task checklist and implementation gantt phases.
+
+## Changelog
+
+See [the changelog](docs/changelog.md) for the current release and version history.

@@ -49,17 +49,10 @@ class UserController extends Controller
             "Created user: '{$newUser->name}' (Email: {$newUser->email}, Role ID: {$newUser->role_id})"
         );
 
-        if (class_exists(Inertia::class) && method_exists(Inertia::class, 'flash')) {
-            Inertia::flash('toast', [
+        $this->toast([
                 'type' => 'success',
                 'message' => __('User created successfully.'),
             ]);
-        } else {
-            session()->flash('toast', [
-                'type' => 'success',
-                'message' => __('User created successfully.'),
-            ]);
-        }
 
         return redirect()->route('admin.users.index');
     }
@@ -99,11 +92,7 @@ class UserController extends Controller
         // Prevent self-demotion from admin
         if ($user->id === $request->user()->id && ! Role::whereKey($validated['role_id'])->where('name', 'admin')->exists()) {
             $msg = __('You cannot change your own admin role.');
-            if (class_exists(Inertia::class) && method_exists(Inertia::class, 'flash')) {
-                Inertia::flash('toast', ['type' => 'error', 'message' => $msg]);
-            } else {
-                session()->flash('toast', ['type' => 'error', 'message' => $msg]);
-            }
+            $this->toast(['type' => 'error', 'message' => $msg]);
 
             return redirect()->route('admin.users.index');
         }
@@ -116,11 +105,7 @@ class UserController extends Controller
         );
 
         $msg = __('User updated successfully.');
-        if (class_exists(Inertia::class) && method_exists(Inertia::class, 'flash')) {
-            Inertia::flash('toast', ['type' => 'success', 'message' => $msg]);
-        } else {
-            session()->flash('toast', ['type' => 'success', 'message' => $msg]);
-        }
+        $this->toast(['type' => 'success', 'message' => $msg]);
 
         return redirect()->route('admin.users.index');
     }
@@ -133,11 +118,7 @@ class UserController extends Controller
         // Prevent deleting yourself
         if ($user->id === $request->user()->id) {
             $msg = __('You cannot delete your own account.');
-            if (class_exists(Inertia::class) && method_exists(Inertia::class, 'flash')) {
-                Inertia::flash('toast', ['type' => 'error', 'message' => $msg]);
-            } else {
-                session()->flash('toast', ['type' => 'error', 'message' => $msg]);
-            }
+            $this->toast(['type' => 'error', 'message' => $msg]);
 
             return redirect()->route('admin.users.index');
         }
@@ -152,11 +133,7 @@ class UserController extends Controller
         );
 
         $msg = __('User deleted successfully.');
-        if (class_exists(Inertia::class) && method_exists(Inertia::class, 'flash')) {
-            Inertia::flash('toast', ['type' => 'success', 'message' => $msg]);
-        } else {
-            session()->flash('toast', ['type' => 'success', 'message' => $msg]);
-        }
+        $this->toast(['type' => 'success', 'message' => $msg]);
 
         return redirect()->route('admin.users.index');
     }

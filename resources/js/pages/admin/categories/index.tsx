@@ -5,7 +5,6 @@ import {
     Search,
     Edit2,
     Trash2,
-    Calendar,
     AlertTriangle,
 } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
@@ -29,13 +28,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import {
     Table,
@@ -46,29 +38,20 @@ import {
     TableRow,
 } from '@/components/ui/table';
 
-interface CompetitionSession {
-    id: number;
-    name: string;
-    is_active: boolean;
-}
-
 interface Category {
     id: number;
-    session_id: number | null;
     code: string;
     name: string;
     allow_team: boolean;
-    session?: CompetitionSession | null;
     created_at: string;
     updated_at: string;
 }
 
 interface Props {
     categories: Category[];
-    sessions: CompetitionSession[];
 }
 
-export default function CategoriesIndex({ categories, sessions }: Props) {
+export default function CategoriesIndex({ categories }: Props) {
     const [searchTerm, setSearchTerm] = useState('');
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [isEditOpen, setIsEditOpen] = useState(false);
@@ -79,7 +62,6 @@ export default function CategoriesIndex({ categories, sessions }: Props) {
 
     // Form for create
     const createForm = useForm({
-        session_id: '',
         code: '',
         name: '',
         allow_team: false,
@@ -87,7 +69,6 @@ export default function CategoriesIndex({ categories, sessions }: Props) {
 
     // Form for edit
     const editForm = useForm({
-        session_id: '',
         code: '',
         name: '',
         allow_team: false,
@@ -105,18 +86,12 @@ export default function CategoriesIndex({ categories, sessions }: Props) {
                     .includes(searchTerm.toLowerCase()) ||
                 category.code
                     .toLowerCase()
-                    .includes(searchTerm.toLowerCase()) ||
-                (category.session &&
-                    category.session.name
-                        .toLowerCase()
-                        .includes(searchTerm.toLowerCase())),
+                    .includes(searchTerm.toLowerCase()),
         );
     }, [categories, searchTerm]);
 
     const handleOpenCreate = () => {
-        const activeSession = sessions.find((s) => s.is_active);
         createForm.setData({
-            session_id: activeSession ? activeSession.id.toString() : '',
             code: '',
             name: '',
             allow_team: false,
@@ -138,9 +113,6 @@ export default function CategoriesIndex({ categories, sessions }: Props) {
     const handleOpenEdit = (category: Category) => {
         setSelectedCategory(category);
         editForm.setData({
-            session_id: category.session_id
-                ? category.session_id.toString()
-                : '',
             code: category.code,
             name: category.name,
             allow_team: category.allow_team ?? false,
@@ -156,7 +128,7 @@ export default function CategoriesIndex({ categories, sessions }: Props) {
 return;
 }
 
-        editForm.put(`/dashboard/categories/${selectedCategory.id}`, {
+        editForm.post(`/dashboard/categories/${selectedCategory.id}`, {
             onSuccess: () => {
                 setIsEditOpen(false);
                 setSelectedCategory(null);
@@ -197,8 +169,7 @@ return;
                             Categories Management
                         </h1>
                         <p className="mt-1 text-sm text-muted-foreground">
-                            Configure active evaluation categories (e.g. C1
-                            Green Tech) scoped by competition sessions.
+                            Configure shared evaluation categories used across all competition sessions.
                         </p>
                     </div>
                     <div>
@@ -249,7 +220,7 @@ return;
                                             Category Name
                                         </TableHead>
                                         <TableHead className="font-semibold">
-                                            Assigned Session
+                                            Availability
                                         </TableHead>
                                         <TableHead className="font-semibold">
                                             Team Mode
@@ -278,28 +249,7 @@ return;
                                                     {category.name}
                                                 </TableCell>
                                                 <TableCell className="text-sm text-muted-foreground">
-                                                    {category.session ? (
-                                                        <span className="flex items-center gap-1.5">
-                                                            <Calendar className="h-3.5 w-3.5 text-muted-foreground/60" />
-                                                            {
-                                                                category.session
-                                                                    .name
-                                                            }
-                                                            {category.session
-                                                                .is_active && (
-                                                                <Badge
-                                                                    variant="success"
-                                                                    className="h-4 px-1 py-0 text-[9px]"
-                                                                >
-                                                                    Active
-                                                                </Badge>
-                                                            )}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-muted-foreground/50 italic">
-                                                            Global / No Session
-                                                        </span>
-                                                    )}
+                                                    Shared across sessions
                                                 </TableCell>
                                                 <TableCell>
                                                     {category.allow_team ? (
@@ -381,36 +331,6 @@ return;
                         onSubmit={handleCreateSubmit}
                         className="space-y-4 py-2"
                     >
-                        <div className="grid gap-2">
-                            <Label htmlFor="session_id">
-                                Competition Session
-                            </Label>
-                            <Select
-                                value={createForm.data.session_id}
-                                onValueChange={(val) =>
-                                    createForm.setData('session_id', val)
-                                }
-                            >
-                                <SelectTrigger className="bg-background/50">
-                                    <SelectValue placeholder="Select session" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {sessions.map((s) => (
-                                        <SelectItem
-                                            key={s.id}
-                                            value={s.id.toString()}
-                                        >
-                                            {s.name}{' '}
-                                            {s.is_active ? '(Active)' : ''}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <InputError
-                                message={createForm.errors.session_id}
-                            />
-                        </div>
-
                         <div className="grid gap-2">
                             <Label htmlFor="code">Category Code</Label>
                             <Input
@@ -495,36 +415,6 @@ return;
                             onSubmit={handleEditSubmit}
                             className="space-y-4 py-2"
                         >
-                            <div className="grid gap-2">
-                                <Label htmlFor="edit-session_id">
-                                    Competition Session
-                                </Label>
-                                <Select
-                                    value={editForm.data.session_id}
-                                    onValueChange={(val) =>
-                                        editForm.setData('session_id', val)
-                                    }
-                                >
-                                    <SelectTrigger className="bg-background/50">
-                                        <SelectValue placeholder="Select session" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {sessions.map((s) => (
-                                            <SelectItem
-                                                key={s.id}
-                                                value={s.id.toString()}
-                                            >
-                                                {s.name}{' '}
-                                                {s.is_active ? '(Active)' : ''}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <InputError
-                                    message={editForm.errors.session_id}
-                                />
-                            </div>
-
                             <div className="grid gap-2">
                                 <Label htmlFor="edit-code">Category Code</Label>
                                 <Input

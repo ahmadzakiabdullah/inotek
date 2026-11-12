@@ -86,7 +86,9 @@ return [
     |
     */
 
-    'table' => env('SESSION_TABLE', 'sessions'),
+    // `sessions` is a legacy INOTEK competition table in the production DB.
+    // Keep Laravel's HTTP sessions in their own table to avoid schema/data collisions.
+    'table' => env('SESSION_TABLE', 'laravel_sessions'),
 
     /*
     |--------------------------------------------------------------------------

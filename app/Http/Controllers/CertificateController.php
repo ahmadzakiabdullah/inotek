@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Project;
+use App\Models\User;
+use BaconQrCode\Renderer\GDLibRenderer;
+use BaconQrCode\Writer;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -16,54 +19,13 @@ class CertificateController extends Controller
      */
     public function downloadParticipation(Project $project): SymfonyResponse
     {
-        // Enforce access control: only project user or admin can download
-        $user = Auth::user();
-        if ($user->role?->name !== 'admin' && $project->user_id !== $user->id) {
-            abort(403, 'Unauthorized access.');
-        }
+        $this->authorizeDownload($project);
 
-        // Verify project is approved
         if ($project->status !== Project::STATUS_APPROVED) {
             return back()->withErrors(['status' => 'Certificates are only available for approved projects.']);
         }
 
-        // Generate certificate hash if empty
-        if (! $project->certificate_hash) {
-            $project->certificate_hash = bin2hex(random_bytes(16));
-            $project->save();
-        }
-
-        $project->load(['user', 'category', 'session', 'teamMembers']);
-
-        $verifyUrl = route('certificates.verify', ['hash' => $project->certificate_hash]);
-        $qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data='.urlencode($verifyUrl);
-
-        $qrCodeData = null;
-        try {
-            // Fetch QR Code data and convert to base64 for reliable DomPDF embedding
-            $opts = [
-                'http' => [
-                    'method' => 'GET',
-                    'header' => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)\r\n",
-                ],
-            ];
-            $context = stream_context_create($opts);
-            $img = file_get_contents($qrCodeUrl, false, $context);
-            if ($img !== false) {
-                $qrCodeData = base64_encode($img);
-            }
-        } catch (\Exception $e) {
-            // Log warning or skip
-        }
-
-        $pdf = Pdf::loadView('pdf.participation', [
-            'project' => $project,
-            'verifyUrl' => $verifyUrl,
-            'qrCodeData' => $qrCodeData,
-            'date' => now()->format('d F Y'),
-        ])->setPaper('a4', 'landscape');
-
-        return $pdf->download("Certificate_Participation_{$project->pcode}.pdf");
+        return $this->renderCertificate($project, 'pdf.participation', 'Certificate_Participation');
     }
 
     /**
@@ -71,13 +33,8 @@ class CertificateController extends Controller
      */
     public function downloadAchievement(Project $project): SymfonyResponse
     {
-        // Enforce access: project owner or admin
-        $user = Auth::user();
-        if ($user->role?->name !== 'admin' && $project->user_id !== $user->id) {
-            abort(403, 'Unauthorized access.');
-        }
+        $user = $this->authorizeDownload($project);
 
-        // Verify project is approved and has an award level
         if ($project->status !== Project::STATUS_APPROVED) {
             return back()->withErrors(['status' => 'Certificates are only available for approved projects.']);
         }
@@ -86,7 +43,61 @@ class CertificateController extends Controller
             return back()->withErrors(['award' => 'This project has not been assigned an achievement award level.']);
         }
 
-        // Generate certificate hash if empty
+        // Awards stay confidential until the results are finalized.
+        if (! $user->hasRole('admin') && ! $project->session?->r2_locked) {
+            abort(403, 'Achievement certificates are available after the results are announced.');
+        }
+
+        return $this->renderCertificate($project, 'pdf.achievement', 'Certificate_Achievement');
+    }
+
+    /**
+     * Publicly verify a certificate via its unique hash.
+     *
+     * Only the fields shown on the verification page are exposed, so no
+     * contact details or internal comments reach the public HTML payload.
+     */
+    public function verify(string $hash): Response
+    {
+        $project = Project::where('certificate_hash', $hash)
+            ->where('status', Project::STATUS_APPROVED)
+            ->with(['user:id,name', 'category:id,name,code', 'session:id,name,r2_locked', 'teamMembers:id,project_id,name'])
+            ->first();
+
+        return Inertia::render('certificate/Verify', [
+            'verified' => ! is_null($project),
+            'hash' => $hash,
+            'project' => $project ? [
+                'id' => $project->id,
+                'title' => $project->title,
+                'pcode' => $project->pcode,
+                'status' => $project->status,
+                'certificate_hash' => $project->certificate_hash,
+                'award_level' => $project->session?->r2_locked ? $project->award_level : null,
+                'user' => ['name' => $project->user?->name],
+                'category' => ['name' => $project->category?->name, 'code' => $project->category?->code],
+                'session' => ['name' => $project->session?->name],
+                'team_members' => $project->teamMembers->map(fn ($member) => ['name' => $member->name])->values()->all(),
+            ] : null,
+        ]);
+    }
+
+    /**
+     * Only the project owner or an admin may download certificates.
+     */
+    private function authorizeDownload(Project $project): User
+    {
+        /** @var User $user */
+        $user = Auth::user();
+        if (! $user->hasRole('admin') && $project->user_id !== $user->id) {
+            abort(403, 'Unauthorized access.');
+        }
+
+        return $user;
+    }
+
+    private function renderCertificate(Project $project, string $view, string $filePrefix): SymfonyResponse
+    {
         if (! $project->certificate_hash) {
             $project->certificate_hash = bin2hex(random_bytes(16));
             $project->save();
@@ -95,49 +106,29 @@ class CertificateController extends Controller
         $project->load(['user', 'category', 'session', 'teamMembers']);
 
         $verifyUrl = route('certificates.verify', ['hash' => $project->certificate_hash]);
-        $qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data='.urlencode($verifyUrl);
 
-        $qrCodeData = null;
-        try {
-            $opts = [
-                'http' => [
-                    'method' => 'GET',
-                    'header' => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)\r\n",
-                ],
-            ];
-            $context = stream_context_create($opts);
-            $img = file_get_contents($qrCodeUrl, false, $context);
-            if ($img !== false) {
-                $qrCodeData = base64_encode($img);
-            }
-        } catch (\Exception $e) {
-            // Log warning
-        }
-
-        $pdf = Pdf::loadView('pdf.achievement', [
+        $pdf = Pdf::loadView($view, [
             'project' => $project,
             'verifyUrl' => $verifyUrl,
-            'qrCodeData' => $qrCodeData,
+            'qrCodeData' => $this->qrCodePng($verifyUrl),
             'date' => now()->format('d F Y'),
         ])->setPaper('a4', 'landscape');
 
-        return $pdf->download("Certificate_Achievement_{$project->pcode}.pdf");
+        return $pdf->download("{$filePrefix}_{$project->pcode}.pdf");
     }
 
     /**
-     * Publicly verify a certificate via its unique hash.
+     * Generate the QR code locally so the verification URL is never sent to a
+     * third-party service and downloads cannot hang on an external request.
      */
-    public function verify(string $hash): Response
+    private function qrCodePng(string $data): ?string
     {
-        $project = Project::where('certificate_hash', $hash)
-            ->where('status', Project::STATUS_APPROVED)
-            ->with(['user', 'category', 'session', 'teamMembers'])
-            ->first();
+        try {
+            return base64_encode((new Writer(new GDLibRenderer(240, 1)))->writeString($data));
+        } catch (\Throwable $e) {
+            report($e);
 
-        return Inertia::render('certificate/Verify', [
-            'project' => $project,
-            'verified' => ! is_null($project),
-            'hash' => $hash,
-        ]);
+            return null;
+        }
     }
 }

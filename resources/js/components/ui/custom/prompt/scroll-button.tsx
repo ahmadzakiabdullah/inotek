@@ -3,8 +3,8 @@
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { type VariantProps } from "class-variance-authority";
-import { ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
+import { IconChevronDown } from "@tabler/icons-react";
 
 export type ScrollButtonProps = {
   scrollRef: React.RefObject<HTMLElement | null>;
@@ -70,7 +70,7 @@ function PromptScrollButton({
       )}
       onClick={handleScroll}
       {...props}>
-      <ChevronDown className="h-4 w-4" />
+      <IconChevronDown className="h-4 w-4" />
     </Button>
   );
 }

@@ -1,12 +1,11 @@
 "use client";
-
-import { List } from "lucide-react";
 import React from "react";
 
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useToolbar } from "./toolbar-provider";
+import { IconListDetails } from "@tabler/icons-react";
 
 const BulletListToolbar = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, onClick, children, ...props }, ref) => {
@@ -31,7 +30,7 @@ const BulletListToolbar = React.forwardRef<HTMLButtonElement, ButtonProps>(
             disabled={!(editor?.can().chain().focus() as any).toggleBulletList().run()}
             ref={ref}
             {...props}>
-            {children ?? <List className="h-4 w-4" />}
+            {children ?? <IconListDetails className="h-4 w-4" />}
           </Button>
         </TooltipTrigger>
         <TooltipContent>

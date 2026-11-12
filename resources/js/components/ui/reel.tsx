@@ -1,7 +1,7 @@
 "use client";
 
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
-import { ChevronLeft, ChevronRight, Pause, Play, Volume2, VolumeX } from "lucide-react";
+import { Pause, Play } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import type {
   ComponentProps,
@@ -14,6 +14,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { IconChevronLeft, IconChevronRight, IconVolume } from "@tabler/icons-react";
 
 // Explicit type for reel items
 export type ReelItem = {
@@ -490,7 +491,7 @@ export const ReelPreviousButton = ({ className, children, ...props }: ReelPrevio
       type="button"
       variant="ghost"
       {...props}>
-      {children || <ChevronLeft className="size-4" />}
+      {children || <IconChevronLeft className="size-4" />}
     </Button>
   );
 };
@@ -520,7 +521,7 @@ export const ReelNextButton = ({ className, children, ...props }: ReelNextButton
       type="button"
       variant="ghost"
       {...props}>
-      {children || <ChevronRight className="size-4" />}
+      {children || <IconChevronRight className="size-4" />}
     </Button>
   );
 };
@@ -556,7 +557,7 @@ export const ReelMuteButton = ({ className, children, ...props }: ReelMuteButton
       size="icon"
       variant="ghost"
       {...props}>
-      {children || (isMuted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />)}
+      {children || (isMuted ? <IconVolume className="size-4" /> : <IconVolume className="size-4" />)}
     </Button>
   );
 };

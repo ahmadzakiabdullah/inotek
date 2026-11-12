@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\CompetitionSession;
 use App\Models\JudgeAssignment;
 use App\Models\Project;
-use App\Models\Score;
 use App\Models\User;
 use App\Notifications\SystemNotification;
 use App\Services\AuditLogger;
@@ -30,7 +29,7 @@ class JudgeAssignmentController extends Controller
      */
     public function index(): Response
     {
-        $activeSession = CompetitionSession::where('is_active', true)->first();
+        $activeSession = CompetitionSession::active();
 
         if (! $activeSession) {
             return Inertia::render('admin/assignments/Index', [
@@ -58,15 +57,7 @@ class JudgeAssignmentController extends Controller
             ->where('session_id', $activeSession->id)
             ->get();
 
-        $roundOneAssignments = JudgeAssignment::where('session_id', $activeSession->id)
-            ->where('round_no', 1)
-            ->get(['project_id', 'judge_id']);
-        $roundOneComplete = $roundOneAssignments->isNotEmpty()
-            && $roundOneAssignments->every(fn ($assignment) => Score::where('project_id', $assignment->project_id)
-                ->where('judge_id', $assignment->judge_id)
-                ->where('session_id', $activeSession->id)
-                ->where('round_no', 1)
-                ->exists());
+        $roundOneComplete = $this->calculator->isRoundOneComplete($activeSession->id);
 
         return Inertia::render('admin/assignments/Index', [
             'projects' => $projects,
@@ -82,7 +73,7 @@ class JudgeAssignmentController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $activeSession = CompetitionSession::where('is_active', true)->first();
+        $activeSession = CompetitionSession::active();
 
         if (! $activeSession) {
             return back()->with('error', 'No active competition session.');
@@ -114,6 +105,14 @@ class JudgeAssignmentController extends Controller
             return back()->with('error', 'Project not found or not approved.');
         }
 
+        if ($this->calculator->hasConflictOfInterest($project, $user)) {
+            return back()->with('error', 'This judge has a conflict of interest with the project (owner or supervisor).');
+        }
+
+        if ($roundNo === 1 && $this->calculator->isRoundOneLocked($activeSession->id)) {
+            return back()->with('error', 'Round 1 is closed because Round 2 judging has started.');
+        }
+
         // Check conflicts before the session-wide Round 1 completion gate so
         // the administrator receives the specific eligibility explanation.
         if ($roundNo === 2 && ! $this->calculator->isJudgeEligibleForRound2($projectId, $judgeId, $activeSession->id)) {
@@ -131,17 +130,11 @@ class JudgeAssignmentController extends Controller
                 return back()->with('error', 'Round 2 assignments are limited to projects shortlisted from Round 1.');
             }
 
-            $roundOneAssignments = JudgeAssignment::where('session_id', $activeSession->id)
+            $hasRoundOneAssignments = JudgeAssignment::where('session_id', $activeSession->id)
                 ->where('round_no', 1)
-                ->get(['project_id', 'judge_id']);
-            $roundOneComplete = $roundOneAssignments->isNotEmpty()
-                && $roundOneAssignments->every(fn ($assignment) => Score::where('project_id', $assignment->project_id)
-                    ->where('judge_id', $assignment->judge_id)
-                    ->where('session_id', $activeSession->id)
-                    ->where('round_no', 1)
-                    ->exists());
+                ->exists();
 
-            if ($roundOneAssignments->isNotEmpty() && ! $roundOneComplete) {
+            if ($hasRoundOneAssignments && ! $this->calculator->isRoundOneComplete($activeSession->id)) {
                 return back()->with('error', 'Round 2 assignments are unavailable until all Round 1 evaluations are completed.');
             }
         }
@@ -156,15 +149,8 @@ class JudgeAssignmentController extends Controller
             return back()->with('error', 'This judge is already assigned to the selected project for this round.');
         }
 
-        // Check Round 2 assignment eligibility (conflict check)
-        if ($roundNo === 2) {
-            if ($activeSession->r2_locked) {
-                return back()->with('error', 'Round 2 assignment is locked because Round 2 session has been closed.');
-            }
-
-            if (! $this->calculator->isJudgeEligibleForRound2($projectId, $judgeId, $activeSession->id)) {
-                return back()->with('error', 'This judge is not eligible for Round 2 because they evaluated this project in Round 1.');
-            }
+        if ($roundNo === 2 && $activeSession->r2_locked) {
+            return back()->with('error', 'Round 2 assignment is locked because Round 2 session has been closed.');
         }
 
         // Create assignment
@@ -193,7 +179,9 @@ class JudgeAssignmentController extends Controller
                 // Keep resilient
             }
         } catch (\Exception $e) {
-            return back()->with('error', 'Error while assigning judge: '.$e->getMessage());
+            report($e);
+
+            return back()->with('error', 'The judge could not be assigned. Please try again or contact the system administrator.');
         }
 
         return back()->with('success', 'Judge has been assigned successfully.');
@@ -204,7 +192,7 @@ class JudgeAssignmentController extends Controller
      */
     public function destroy(JudgeAssignment $assignment): RedirectResponse
     {
-        $activeSession = CompetitionSession::where('is_active', true)->first();
+        $activeSession = CompetitionSession::active();
 
         if (! $activeSession || $assignment->session_id !== $activeSession->id) {
             return back()->with('error', 'Operation not allowed.');

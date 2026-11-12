@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
-use App\Models\CompetitionSession;
+use App\Models\Project;
+use App\Services\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -18,8 +20,7 @@ class CategoryController extends Controller
     public function index(): Response
     {
         return Inertia::render('admin/categories/index', [
-            'categories' => Category::with('session')->orderBy('id')->get(),
-            'sessions' => CompetitionSession::orderByDesc('id')->get(),
+            'categories' => Category::orderBy('code')->get(),
         ]);
     }
 
@@ -29,22 +30,16 @@ class CategoryController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'session_id' => ['nullable', 'exists:competition_sessions,id'],
-            'code' => ['required', 'string', 'max:50'],
+            'code' => ['required', 'string', 'max:50', 'unique:categories,code'],
             'name' => ['required', 'string', 'max:255'],
             'allow_team' => ['nullable', 'boolean'],
         ]);
 
         $validated['allow_team'] = $request->boolean('allow_team');
-
         Category::create($validated);
 
         $msg = __('Category created successfully.');
-        if (class_exists(Inertia::class) && method_exists(Inertia::class, 'flash')) {
-            Inertia::flash('toast', ['type' => 'success', 'message' => $msg]);
-        } else {
-            session()->flash('toast', ['type' => 'success', 'message' => $msg]);
-        }
+        $this->toast(['type' => 'success', 'message' => $msg]);
 
         return redirect()->route('admin.categories.index');
     }
@@ -55,22 +50,16 @@ class CategoryController extends Controller
     public function update(Request $request, Category $category): RedirectResponse
     {
         $validated = $request->validate([
-            'session_id' => ['nullable', 'exists:competition_sessions,id'],
-            'code' => ['required', 'string', 'max:50'],
+            'code' => ['required', 'string', 'max:50', Rule::unique('categories', 'code')->ignore($category->id)],
             'name' => ['required', 'string', 'max:255'],
             'allow_team' => ['nullable', 'boolean'],
         ]);
 
         $validated['allow_team'] = $request->boolean('allow_team');
-
         $category->update($validated);
 
         $msg = __('Category updated successfully.');
-        if (class_exists(Inertia::class) && method_exists(Inertia::class, 'flash')) {
-            Inertia::flash('toast', ['type' => 'success', 'message' => $msg]);
-        } else {
-            session()->flash('toast', ['type' => 'success', 'message' => $msg]);
-        }
+        $this->toast(['type' => 'success', 'message' => $msg]);
 
         return redirect()->route('admin.categories.index');
     }
@@ -80,14 +69,19 @@ class CategoryController extends Controller
      */
     public function destroy(Category $category): RedirectResponse
     {
+        // Projects (and their scores) cascade on delete, so keep categories with history.
+        if (Project::withTrashed()->where('category_id', $category->id)->exists()) {
+            $this->toast(['type' => 'error', 'message' => __('This category has projects and cannot be deleted.')]);
+
+            return redirect()->route('admin.categories.index');
+        }
+
         $category->delete();
 
+        AuditLogger::log('DELETE_CATEGORY', "Deleted category: '{$category->code}' ({$category->name})");
+
         $msg = __('Category deleted successfully.');
-        if (class_exists(Inertia::class) && method_exists(Inertia::class, 'flash')) {
-            Inertia::flash('toast', ['type' => 'success', 'message' => $msg]);
-        } else {
-            session()->flash('toast', ['type' => 'success', 'message' => $msg]);
-        }
+        $this->toast(['type' => 'success', 'message' => $msg]);
 
         return redirect()->route('admin.categories.index');
     }

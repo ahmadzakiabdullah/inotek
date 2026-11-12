@@ -13,10 +13,11 @@ import {
   ReactNodeViewRenderer,
   mergeAttributes
 } from "@tiptap/react";
-import { Image, Link, Upload, Loader2, X } from "lucide-react";
+import { Upload } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { useImageUpload } from "../hooks/use-image-upload";
 import { cn } from "@/lib/utils";
+import { IconPhoto, IconLink, IconLoader, IconX } from "@tabler/icons-react";
 
 export interface ImagePlaceholderOptions {
   HTMLAttributes: Record<string, any>;
@@ -160,7 +161,7 @@ function ImagePlaceholderComponent(props: NodeViewProps) {
               error && "border-destructive bg-destructive/5"
             )}>
             <div className="bg-background group-hover:bg-accent rounded-full p-4 shadow-sm transition-colors">
-              <Image className="h-6 w-6" />
+              <IconPhoto className="h-6 w-6" />
             </div>
             <div className="text-center">
               <p className="text-sm font-medium">Click to upload or drag and drop</p>
@@ -172,7 +173,7 @@ function ImagePlaceholderComponent(props: NodeViewProps) {
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-semibold">Add Image</h3>
               <Button variant="ghost" size="icon" onClick={() => setIsExpanded(false)}>
-                <X className="h-4 w-4" />
+                <IconX className="h-4 w-4" />
               </Button>
             </div>
 
@@ -183,7 +184,7 @@ function ImagePlaceholderComponent(props: NodeViewProps) {
                   Upload
                 </TabsTrigger>
                 <TabsTrigger value="url">
-                  <Link className="mr-2 h-4 w-4" />
+                  <IconLink className="mr-2 h-4 w-4" />
                   URL
                 </TabsTrigger>
               </TabsList>
@@ -217,7 +218,7 @@ function ImagePlaceholderComponent(props: NodeViewProps) {
                             Remove
                           </Button>
                           <Button disabled={uploading}>
-                            {uploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {uploading && <IconLoader className="mr-2 h-4 w-4 animate-spin" />}
                             Upload
                           </Button>
                         </div>

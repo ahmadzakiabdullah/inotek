@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\CompetitionSession;
 use App\Models\Project;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -22,7 +24,7 @@ class DashboardController extends Controller
             return redirect()->route('judge.evaluations.index');
         }
 
-        $activeSession = CompetitionSession::where('is_active', true)->first();
+        $activeSession = CompetitionSession::active();
 
         $data = [
             'activeSession' => $activeSession,
@@ -30,13 +32,17 @@ class DashboardController extends Controller
         ];
 
         if ($user->hasRole('admin')) {
+            $sessionProjects = Project::query()
+                ->when($activeSession, fn ($query) => $query->where('session_id', $activeSession->id))
+                ->when(! $activeSession, fn ($query) => $query->whereRaw('1 = 0'));
+
             $data['stats'] = [
-                'total_projects' => Project::count(),
-                'pending_reviews' => Project::where('status', Project::STATUS_SUBMITTED)->count(),
-                'approved_projects' => Project::where('status', Project::STATUS_APPROVED)->count(),
-                'rejected_projects' => Project::where('status', Project::STATUS_EDIT)->count(),
+                'total_projects' => (clone $sessionProjects)->count(),
+                'pending_reviews' => (clone $sessionProjects)->where('status', Project::STATUS_SUBMITTED)->count(),
+                'approved_projects' => (clone $sessionProjects)->where('status', Project::STATUS_APPROVED)->count(),
+                'rejected_projects' => (clone $sessionProjects)->where('status', Project::STATUS_EDIT)->count(),
             ];
-            $data['recent_projects'] = Project::with(['user', 'category'])
+            $data['recent_projects'] = (clone $sessionProjects)->with(['user', 'category'])
                 ->orderByDesc('id')
                 ->limit(5)
                 ->get();
@@ -46,20 +52,23 @@ class DashboardController extends Controller
             $pendingJudges = [];
 
             if ($activeSession) {
-                $categories = \App\Models\Category::where('session_id', $activeSession->id)->get();
+                $categories = \App\Models\Category::orderBy('code')->get();
+
+                // Two grouped queries instead of three queries per category.
+                $countByCategory = fn (string $table) => DB::table($table)
+                    ->join('projects', 'projects.id', '=', "{$table}.project_id")
+                    ->where("{$table}.session_id", $activeSession->id)
+                    ->where('projects.session_id', $activeSession->id)
+                    ->where('projects.status', Project::STATUS_APPROVED)
+                    ->whereNull('projects.deleted_at')
+                    ->groupBy('projects.category_id')
+                    ->pluck(DB::raw('COUNT(*)'), 'projects.category_id');
+                $assignmentCounts = $countByCategory('judge_assignments');
+                $scoreCounts = $countByCategory('scores');
+
                 foreach ($categories as $cat) {
-                    $approvedProjectIds = Project::where('session_id', $activeSession->id)
-                        ->where('category_id', $cat->id)
-                        ->where('status', Project::STATUS_APPROVED)
-                        ->pluck('id');
-
-                    $totalAssignments = \App\Models\JudgeAssignment::whereIn('project_id', $approvedProjectIds)
-                        ->where('session_id', $activeSession->id)
-                        ->count();
-
-                    $completedScores = \App\Models\Score::whereIn('project_id', $approvedProjectIds)
-                        ->where('session_id', $activeSession->id)
-                        ->count();
+                    $totalAssignments = (int) ($assignmentCounts[$cat->id] ?? 0);
+                    $completedScores = (int) ($scoreCounts[$cat->id] ?? 0);
 
                     $percentage = $totalAssignments > 0 ? round(($completedScores / $totalAssignments) * 100, 1) : 100.0;
 
@@ -116,7 +125,9 @@ class DashboardController extends Controller
             $data['pendingJudges'] = $pendingJudges;
         } elseif ($user->hasRole('lecturer')) {
             $myProjects = Project::with(['user', 'category'])
-                ->where('supervisor_email', $user->email)
+                ->whereRaw('LOWER(supervisor_email) = ?', [Str::lower($user->email)])
+                ->when($activeSession, fn ($query) => $query->where('session_id', $activeSession->id))
+                ->when(! $activeSession, fn ($query) => $query->whereRaw('1 = 0'))
                 ->orderByDesc('id')
                 ->get();
 

@@ -253,6 +253,7 @@ class NotificationSystemTest extends TestCase
             'max_points' => 5,
         ]);
         CategoryRubricMapping::create([
+            'session_id' => $this->session->id,
             'category_id' => $this->category->id,
             'rubric_id' => $rubric->id,
         ]);

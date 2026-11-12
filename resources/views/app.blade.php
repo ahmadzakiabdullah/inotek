@@ -30,9 +30,8 @@
             }
         </style>
 
-        <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+        <link rel="icon" type="image/png" href="/favicon.png?v=2">
+        <link rel="apple-touch-icon" href="/favicon.png?v=2">
 
         @php
             $systemName = \App\Models\Setting::get('system_name', config('app.name', 'Laravel'));

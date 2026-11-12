@@ -4,7 +4,9 @@ namespace App\Services;
 
 use App\Models\Category;
 use App\Models\Project;
+use App\Models\Rubric;
 use App\Models\Score;
+use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -15,15 +17,16 @@ class ScoreCalculator
      *
      * @param  array<int|string, int|float>  $scoreDetails  Key-value mapping of rubric_item_id => points within that item's maximum
      */
-    public function calculateTotal(Project $project, array $scoreDetails): float
+    public function calculateTotal(Project $project, array $scoreDetails, ?Rubric $rubric = null): float
     {
-        $category = $project->category;
-        if (! $category) {
-            return 0.0;
-        }
+        if (! $rubric) {
+            $category = $project->category;
+            if (! $category) {
+                return 0.0;
+            }
 
-        // Find mapped rubric
-        $rubric = $category->rubrics->first();
+            $rubric = $category->rubricsForSession($project->session_id)->orderByDesc('rubrics.id')->first();
+        }
         if (! $rubric) {
             return 0.0;
         }
@@ -33,17 +36,25 @@ class ScoreCalculator
             return 0.0;
         }
 
+        $totalWeight = $rubricItems->sum(fn ($item) => (float) $item->weight);
+        if ($totalWeight <= 0) {
+            return 0.0;
+        }
+
         $totalScore = 0.0;
 
         foreach ($rubricItems as $item) {
             $itemId = $item->id;
-            $points = (float) $scoreDetails[$itemId];
+            // Older imported evaluations may not have a score for every item
+            // in the current rubric. Treat missing criteria as zero instead
+            // of raising an undefined array key warning.
+            $points = (float) ($scoreDetails[$itemId] ?? 0);
             $maxPoints = (float) $item->max_points;
             $weight = (float) $item->weight;
 
             if ($maxPoints > 0) {
-                // Score contribution = (points / max_points) * weight * 100
-                $contribution = ($points / $maxPoints) * $weight * 100.0;
+                // Normalize configured weights so every rubric has a maximum of 100.
+                $contribution = ($points / $maxPoints) * ($weight / $totalWeight) * 100.0;
                 $totalScore += $contribution;
             }
         }
@@ -60,12 +71,25 @@ class ScoreCalculator
      */
     public function getRound1Shortlist(int $sessionId, int $limit = 3)
     {
-        // Get categories for the active session
-        $categories = Category::where('session_id', $sessionId)->get();
+        // Categories are shared across sessions; only query those with approved
+        // projects in this session, but keep every key so the response shape is stable.
+        $categories = Category::orderBy('code')->get();
+        $activeCategoryIds = Project::where('session_id', $sessionId)
+            ->where('status', Project::STATUS_APPROVED)
+            ->distinct()
+            ->pluck('category_id')
+            ->all();
         $shortlist = collect();
 
         foreach ($categories as $category) {
-            // Get projects in this category with their average Round 1 score
+            if (! in_array($category->id, $activeCategoryIds)) {
+                $shortlist->put($category->id, collect());
+
+                continue;
+            }
+
+            // Get projects in this category with their average Round 1 score.
+            // Ties are broken by project code so the shortlist is deterministic.
             $projects = Project::where('projects.session_id', $sessionId)
                 ->where('projects.category_id', $category->id)
                 ->where('projects.status', Project::STATUS_APPROVED)
@@ -74,6 +98,7 @@ class ScoreCalculator
                 ->select('projects.*', DB::raw('AVG(scores.total) as avg_score'), DB::raw('COUNT(scores.id) as judges_count'))
                 ->groupBy('projects.id')
                 ->orderBy('avg_score', 'desc')
+                ->orderBy('projects.pcode')
                 ->limit($limit)
                 ->get();
 
@@ -97,5 +122,49 @@ class ScoreCalculator
             ->exists();
 
         return ! $existsInRound1;
+    }
+
+    /**
+     * Whether every Round 1 assignment in the session has a submitted score.
+     * Returns false when there are no Round 1 assignments.
+     */
+    public function isRoundOneComplete(int $sessionId): bool
+    {
+        $assignments = DB::table('judge_assignments')
+            ->where('session_id', $sessionId)
+            ->where('round_no', 1);
+
+        if (! (clone $assignments)->exists()) {
+            return false;
+        }
+
+        return ! $assignments->whereNotExists(fn ($query) => $query->from('scores')
+            ->whereColumn('scores.project_id', 'judge_assignments.project_id')
+            ->whereColumn('scores.judge_id', 'judge_assignments.judge_id')
+            ->whereColumn('scores.session_id', 'judge_assignments.session_id')
+            ->where('scores.round_no', 1)
+        )->exists();
+    }
+
+    /**
+     * Round 1 scores are frozen once Round 2 judging has started (any Round 2
+     * assignment exists), so the shortlist cannot shift underneath Round 2.
+     */
+    public function isRoundOneLocked(int $sessionId): bool
+    {
+        return DB::table('judge_assignments')
+            ->where('session_id', $sessionId)
+            ->where('round_no', 2)
+            ->exists();
+    }
+
+    /**
+     * A judge has a conflict of interest when they own or supervise the project.
+     */
+    public function hasConflictOfInterest(Project $project, User $judge): bool
+    {
+        return $project->user_id === $judge->id
+            || ($project->supervisor_email !== null
+                && strcasecmp(trim($project->supervisor_email), trim($judge->email)) === 0);
     }
 }

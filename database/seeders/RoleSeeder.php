@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Role;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Schema;
 
 class RoleSeeder extends Seeder
 {
@@ -39,7 +40,13 @@ class RoleSeeder extends Seeder
             ],
         ];
 
+        $hasGuardName = Schema::hasColumn('roles', 'guard_name');
+
         foreach ($roles as $role) {
+            if ($hasGuardName) {
+                $role['guard_name'] = 'web';
+            }
+
             Role::updateOrCreate(['id' => $role['id']], $role);
         }
     }

@@ -1,6 +1,6 @@
 'use client';
 
-import { usePage, Link } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
 import { ChevronsUpDown } from 'lucide-react';
 import * as React from 'react';
 import { useEffect } from 'react';
@@ -69,20 +69,21 @@ setOpenMobile(false);
             <SidebarFooter>
                 <Card className="gap-4 overflow-hidden py-4 group-data-[collapsible=icon]:hidden">
                     <CardHeader className="px-3">
-                        <CardTitle>Download</CardTitle>
+                        <CardTitle>Contact</CardTitle>
                         <CardDescription>
-                            Unlock lifetime access to all dashboards, templates
-                            and components.
+                            Faculty of Electronic and Computer Technology and
+                            Engineering, Universiti Teknikal Malaysia Melaka.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="px-3">
                         <Button className="w-full" asChild>
-                            <Link
-                                href="https://shadcnuikit.com/pricing"
+                            <a
+                                href="https://inotek.utem.edu.my/contact"
                                 target="_blank"
+                                rel="noreferrer"
                             >
-                                Get Shadcn UI Kit
-                            </Link>
+                                Secretariat
+                            </a>
                         </Button>
                     </CardContent>
                 </Card>

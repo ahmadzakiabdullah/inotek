@@ -18,7 +18,7 @@ class LeaderboardController extends Controller
      */
     public function index(Request $request): Response|JsonResponse
     {
-        $activeSession = CompetitionSession::where('is_active', true)->first();
+        $activeSession = CompetitionSession::active();
 
         if (! $activeSession) {
             if ($request->wantsJson() || $request->input('api') === 'true') {
@@ -41,7 +41,12 @@ class LeaderboardController extends Controller
             ]);
         }
 
-        $categories = Category::where('session_id', $activeSession->id)->get();
+        $sessionCategoryIds = Project::where('session_id', $activeSession->id)
+            ->select('category_id')
+            ->distinct();
+        $categories = Category::whereIn('id', $sessionCategoryIds)
+            ->orderBy('code')
+            ->get();
 
         // Retrieve projects with their average Round 1, Round 2 scores and count of judges
         $projects = Project::where('session_id', $activeSession->id)
@@ -91,8 +96,8 @@ class LeaderboardController extends Controller
             $avgR1 = $r1 ? round($r1->avg_r1, 2) : 0.0;
             $avgR2 = $r2 ? round($r2->avg_r2, 2) : 0.0;
 
-            // Final score priority: Round 2 if evaluated, else Round 1
-            $finalScore = $avgR2 !== 0.0 ? $avgR2 : $avgR1;
+            // Presence of a Round 2 score, not its numeric value, determines priority.
+            $finalScore = $r2 ? $avgR2 : $avgR1;
 
             $judges = $isAuthenticatedLeaderboard ? $scoreDetails->get($project->id, collect())->map(fn ($score) => [
                 'name' => $score->judge_name,
@@ -115,7 +120,8 @@ class LeaderboardController extends Controller
                 'category_id' => $project->category_id,
                 'category_name' => $project->category->name ?? 'N/A',
                 ...($isAuthenticatedLeaderboard ? ['username' => $project->user?->name] : []),
-                'award_level' => $project->award_level,
+                // Awards stay confidential on the public board until results are finalized.
+                'award_level' => ($isAuthenticatedLeaderboard || $isPublicResultsPublished) ? $project->award_level : null,
                 ...(($isAuthenticatedLeaderboard || $isPublicResultsPublished) ? [
                     'avg_r1' => $avgR1,
                     'judges_r1' => $r1 ? $r1->judges_r1 : 0,
@@ -137,7 +143,11 @@ class LeaderboardController extends Controller
                 return $item['category_id'] === $cat->id;
             });
             if ($isAuthenticatedLeaderboard || $isPublicResultsPublished) {
-                $catProjects = $catProjects->sortByDesc('final_score');
+                // Round 2 finalists always rank above projects judged only in Round 1.
+                $catProjects = $catProjects->sortBy([
+                    fn ($a, $b) => ($b['judges_r2'] > 0) <=> ($a['judges_r2'] > 0),
+                    fn ($a, $b) => $b['final_score'] <=> $a['final_score'],
+                ]);
             } else {
                 $catProjects = $catProjects->sortBy('pcode');
             }

@@ -1,12 +1,11 @@
 "use client";
-
-import { WrapText } from "lucide-react";
 import React from "react";
 
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useToolbar } from "./toolbar-provider";
+import { IconTextWrap } from "@tabler/icons-react";
 
 const HardBreakToolbar = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, onClick, children, ...props }, ref) => {
@@ -25,7 +24,7 @@ const HardBreakToolbar = React.forwardRef<HTMLButtonElement, ButtonProps>(
             }}
             ref={ref}
             {...props}>
-            {children ?? <WrapText className="h-4 w-4" />}
+            {children ?? <IconTextWrap className="h-4 w-4" />}
           </Button>
         </TooltipTrigger>
         <TooltipContent>

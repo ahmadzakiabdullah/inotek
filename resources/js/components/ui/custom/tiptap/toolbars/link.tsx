@@ -2,8 +2,6 @@
 /* eslint-disable */
 // @ts-nocheck
 import { PopoverClose } from "@radix-ui/react-popover";
-import { Trash2, X } from "lucide-react";
-
 import React, { type FormEvent } from "react";
 
 import { Button, type ButtonProps } from "@/components/ui/button";
@@ -15,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToolbar } from "./toolbar-provider";
 import { getUrlFromString } from "../utils";
+import { IconTrash, IconX } from "@tabler/icons-react";
 
 const LinkToolbar = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, ...props }, ref) => {
@@ -65,7 +64,7 @@ const LinkToolbar = React.forwardRef<HTMLButtonElement, ButtonProps>(
           className="relative px-3 py-2.5">
           <div className="relative">
             <PopoverClose className="absolute top-3 right-3">
-              <X className="h-4 w-4" />
+              <IconX className="h-4 w-4" />
             </PopoverClose>
             <form onSubmit={handleSubmit}>
               <Label>Link</Label>
@@ -90,7 +89,7 @@ const LinkToolbar = React.forwardRef<HTMLButtonElement, ButtonProps>(
                         (editor?.chain().focus() as any).unsetLink().run();
                         setLink("");
                       }}>
-                      <Trash2 className="mr-2 h-4 w-4" />
+                      <IconTrash className="mr-2 h-4 w-4" />
                       Remove
                     </Button>
                   )}

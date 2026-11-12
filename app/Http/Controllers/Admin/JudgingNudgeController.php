@@ -19,7 +19,7 @@ class JudgingNudgeController extends Controller
      */
     public function nudge(Request $request): RedirectResponse
     {
-        $activeSession = CompetitionSession::where('is_active', true)->first();
+        $activeSession = CompetitionSession::active();
 
         if (! $activeSession) {
             return back()->withErrors(['session' => 'No active competition session found.']);

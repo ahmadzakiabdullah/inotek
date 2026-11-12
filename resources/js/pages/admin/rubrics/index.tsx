@@ -1,4 +1,4 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
 import {
     ClipboardList,
     Plus,
@@ -48,13 +48,13 @@ import { Textarea } from '@/components/ui/textarea';
 interface CompetitionSession {
     id: number;
     name: string;
+    is_active: boolean;
 }
 
 interface Category {
     id: number;
     code: string;
     name: string;
-    session?: CompetitionSession | null;
 }
 
 interface RubricItem {
@@ -81,9 +81,11 @@ interface Rubric {
 interface Props {
     rubrics: Rubric[];
     categories: Category[];
+    sessions: CompetitionSession[];
+    selectedSessionId: number;
 }
 
-export default function RubricsIndex({ rubrics, categories }: Props) {
+export default function RubricsIndex({ rubrics, categories, sessions, selectedSessionId }: Props) {
     const [searchTerm, setSearchTerm] = useState('');
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [isEditOpen, setIsEditOpen] = useState(false);
@@ -118,6 +120,7 @@ export default function RubricsIndex({ rubrics, categories }: Props) {
         description: '',
         items: [] as RubricItem[],
         category_ids: [] as number[],
+        session_id: selectedSessionId,
     });
 
     // Form for edit
@@ -126,10 +129,11 @@ export default function RubricsIndex({ rubrics, categories }: Props) {
         description: '',
         items: [] as RubricItem[],
         category_ids: [] as number[],
+        session_id: selectedSessionId,
     });
 
     // Form for delete
-    const deleteForm = useForm({});
+    const deleteForm = useForm({ session_id: selectedSessionId });
 
     // Filter rubrics based on search query
     const filteredRubrics = useMemo(() => {
@@ -236,6 +240,7 @@ export default function RubricsIndex({ rubrics, categories }: Props) {
                 },
             ],
             category_ids: [],
+            session_id: selectedSessionId,
         });
         createForm.clearErrors();
         setIsCreateOpen(true);
@@ -276,6 +281,7 @@ export default function RubricsIndex({ rubrics, categories }: Props) {
                 scale_descriptions: item.scale_descriptions || { 0: '', 1: '', 2: '', 3: '', 4: '', 5: '' },
             })),
             category_ids: rubric.categories.map((c) => c.id),
+            session_id: selectedSessionId,
         });
         editForm.clearErrors();
         setIsEditOpen(true);
@@ -298,7 +304,7 @@ return;
             items: formattedItems,
         }));
 
-        editForm.put(`/dashboard/rubrics/${selectedRubric.id}`, {
+        editForm.post(`/dashboard/rubrics/${selectedRubric.id}/update`, {
             onSuccess: () => {
                 setIsEditOpen(false);
                 setSelectedRubric(null);
@@ -318,7 +324,7 @@ return;
 return;
 }
 
-        deleteForm.delete(`/dashboard/rubrics/${selectedRubric.id}`, {
+        deleteForm.post(`/dashboard/rubrics/${selectedRubric.id}/delete`, {
             onSuccess: () => {
                 setIsDeleteOpen(false);
                 setSelectedRubric(null);
@@ -464,15 +470,22 @@ currentIds.splice(idx, 1);
                             Rubrics Management
                         </h1>
                         <p className="mt-1 text-sm text-muted-foreground">
-                            Configure evaluation criteria weightages and bind
-                            rubrics to active competition categories.
+                            Configure evaluation criteria and assign rubrics separately for each competition session.
                         </p>
                     </div>
-                    <div>
-                        <Button
-                            onClick={handleOpenCreate}
-                            className="w-full sm:w-auto"
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label htmlFor="rubric-session" className="text-sm font-medium">Session</label>
+                        <select
+                            id="rubric-session"
+                            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                            value={selectedSessionId || ''}
+                            onChange={(event) => router.get('/dashboard/rubrics', { session_id: Number(event.target.value) }, { preserveState: false, preserveScroll: false })}
                         >
+                            {sessions.map((session) => (
+                                <option key={session.id} value={session.id}>{session.name}{session.is_active ? ' (Active)' : ''}</option>
+                            ))}
+                        </select>
+                        <Button onClick={handleOpenCreate} className="w-full sm:w-auto" disabled={!selectedSessionId}>
                             <Plus className="mr-2 h-4 w-4" />
                             Create Rubric
                         </Button>
@@ -692,7 +705,7 @@ currentIds.splice(idx, 1);
                             <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-amber-700 text-xs">
                                 <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
                                 <div>
-                                    <span className="font-semibold">Weight Notice:</span> Total rubric weight is {(createWeightsSum * 100).toFixed(2)}%. Please review criteria weights so the total is 100%.
+                                        <span className="font-semibold">Weight Notice:</span> Total rubric weight is {(createWeightsSum * 100).toFixed(2)}%. Scores are normalized to a maximum of 100%.
                                 </div>
                             </div>
                         )}
@@ -887,11 +900,6 @@ currentIds.splice(idx, 1);
                                                     [{cat.code}]
                                                 </span>
                                                 {cat.name}
-                                                {cat.session && (
-                                                    <span className="ml-1 text-[10px] opacity-50">
-                                                        ({cat.session.name})
-                                                    </span>
-                                                )}
                                             </Label>
                                         </div>
                                     ))
@@ -946,7 +954,7 @@ currentIds.splice(idx, 1);
                                 <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-amber-700 text-xs">
                                     <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
                                     <div>
-                                        <span className="font-semibold">Weight Notice:</span> Total rubric weight is {(editWeightsSum * 100).toFixed(2)}%. Please review criteria weights so the total is 100%.
+                                        <span className="font-semibold">Weight Notice:</span> Total rubric weight is {(editWeightsSum * 100).toFixed(2)}%. Scores are normalized to a maximum of 100%.
                                     </div>
                                 </div>
                             )}
@@ -1142,11 +1150,6 @@ currentIds.splice(idx, 1);
                                                     [{cat.code}]
                                                 </span>
                                                 {cat.name}
-                                                {cat.session && (
-                                                    <span className="ml-1 text-[10px] opacity-50">
-                                                        ({cat.session.name})
-                                                    </span>
-                                                )}
                                             </Label>
                                         </div>
                                     ))}

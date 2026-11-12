@@ -1,6 +1,4 @@
 "use client";
-
-import { Code } from "lucide-react";
 import React from "react";
 
 import { Button, type ButtonProps } from "@/components/ui/button";
@@ -11,6 +9,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useToolbar } from "./toolbar-provider";
+import { IconCode } from "@tabler/icons-react";
 
 const CodeBlockToolbar = React.forwardRef<HTMLButtonElement, ButtonProps>(
 	({ className, onClick, children, ...props }, ref) => {
@@ -35,7 +34,7 @@ const CodeBlockToolbar = React.forwardRef<HTMLButtonElement, ButtonProps>(
 						ref={ref}
 						{...props}
 					>
-						{children ?? <Code className="h-4 w-4" />}
+						{children ?? <IconCode className="h-4 w-4" />}
 					</Button>
 				</TooltipTrigger>
 				<TooltipContent>

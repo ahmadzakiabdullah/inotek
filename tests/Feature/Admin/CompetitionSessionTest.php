@@ -4,6 +4,8 @@ namespace Tests\Feature\Admin;
 
 use App\Models\CompetitionSession;
 use App\Models\User;
+use App\Models\Category;
+use App\Models\Project;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -174,5 +176,46 @@ class CompetitionSessionTest extends TestCase
         $this->assertDatabaseMissing('competition_sessions', [
             'id' => $session->id,
         ]);
+    }
+
+    public function test_admin_cannot_delete_session_that_has_projects(): void
+    {
+        $admin = User::factory()->create(['role_id' => 1]);
+        $session = CompetitionSession::create(['name' => 'Past Session', 'is_active' => false]);
+        $category = Category::create(['session_id' => $session->id, 'code' => 'C1', 'name' => 'Tech']);
+        Project::create([
+            'session_id' => $session->id,
+            'category_id' => $category->id,
+            'user_id' => User::factory()->create(['role_id' => 4])->id,
+            'title' => 'History Project',
+            'abstract' => 'Abstract',
+            'institution_type' => 'utem',
+            'status' => Project::STATUS_APPROVED,
+            'supervisor_name' => 'Supervisor',
+            'supervisor_email' => 'supervisor@example.com',
+        ]);
+
+        $this->actingAs($admin)->delete(route('admin.sessions.destroy', $session))
+            ->assertRedirect(route('admin.sessions.index'));
+
+        $this->assertDatabaseHas('competition_sessions', ['id' => $session->id]);
+        $this->assertDatabaseHas('projects', ['session_id' => $session->id]);
+    }
+
+    public function test_session_form_cannot_change_round_two_lock(): void
+    {
+        $admin = User::factory()->create(['role_id' => 1]);
+        $session = CompetitionSession::create(['name' => 'Session 1', 'is_active' => true, 'r2_locked' => false]);
+
+        $this->actingAs($admin)->put(route('admin.sessions.update', $session), [
+            'name' => 'Session 1',
+            'is_active' => true,
+            'registration_mode' => 'open',
+            'session_starts_at' => '2026-01-01',
+            'session_ends_at' => '2026-12-31',
+            'r2_locked' => true,
+        ]);
+
+        $this->assertFalse($session->fresh()->r2_locked);
     }
 }

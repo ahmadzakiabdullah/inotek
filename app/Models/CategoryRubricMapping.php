@@ -9,8 +9,11 @@ class CategoryRubricMapping extends Model
 {
     protected $table = 'category_rubric_mapping';
 
+    public $timestamps = false;
+
     protected $fillable = [
         'category_id',
+        'session_id',
         'rubric_id',
     ];
 

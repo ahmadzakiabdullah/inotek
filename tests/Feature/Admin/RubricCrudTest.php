@@ -48,6 +48,7 @@ class RubricCrudTest extends TestCase
         $category = Category::create(['session_id' => $session->id, 'code' => 'C1', 'name' => 'Green Energy']);
 
         $response = $this->actingAs($admin)->post(route('admin.rubrics.store'), [
+            'session_id' => $session->id,
             'name' => 'Standard Rubric',
             'description' => 'Test rubric description.',
             'items' => [
@@ -57,9 +58,10 @@ class RubricCrudTest extends TestCase
             'category_ids' => [$category->id],
         ]);
 
-        $response->assertRedirect(route('admin.rubrics.index'));
+        $response->assertRedirect(route('admin.rubrics.index', ['session_id' => $session->id]));
 
         $this->assertDatabaseHas('rubrics', [
+
             'name' => 'Standard Rubric',
         ]);
 
@@ -76,8 +78,10 @@ class RubricCrudTest extends TestCase
     public function test_admin_can_create_rubric_if_weights_do_not_sum_to_1(): void
     {
         $admin = User::factory()->create(['role_id' => 1]);
+        $session = CompetitionSession::create(['name' => 'Session 1', 'is_active' => true]);
 
         $response = $this->actingAs($admin)->post(route('admin.rubrics.store'), [
+            'session_id' => $session->id,
             'name' => 'Legacy Rubric',
             'description' => 'Test description.',
             'items' => [
@@ -102,9 +106,10 @@ class RubricCrudTest extends TestCase
             ],
         ]);
 
-        $response->assertRedirect(route('admin.rubrics.index'));
+        $response->assertRedirect(route('admin.rubrics.index', ['session_id' => $session->id]));
 
         $this->assertDatabaseHas('rubrics', [
+
             'name' => 'Legacy Rubric',
         ]);
 
@@ -132,7 +137,8 @@ class RubricCrudTest extends TestCase
 
         $rubric = Rubric::create(['name' => 'Original Rubric']);
 
-        $response = $this->actingAs($admin)->put(route('admin.rubrics.update', $rubric), [
+        $response = $this->actingAs($admin)->post(route('admin.rubrics.update', $rubric), [
+            'session_id' => $session->id,
             'name' => 'Updated Rubric',
             'description' => 'Updated desc.',
             'items' => [
@@ -141,7 +147,7 @@ class RubricCrudTest extends TestCase
             'category_ids' => [$category->id],
         ]);
 
-        $response->assertRedirect(route('admin.rubrics.index'));
+        $response->assertRedirect(route('admin.rubrics.index', ['session_id' => $session->id]));
 
         $this->assertDatabaseHas('rubrics', [
             'id' => $rubric->id,
@@ -158,11 +164,14 @@ class RubricCrudTest extends TestCase
     public function test_admin_can_delete_rubric(): void
     {
         $admin = User::factory()->create(['role_id' => 1]);
+        $session = CompetitionSession::create(['name' => 'Session 1', 'is_active' => true]);
         $rubric = Rubric::create(['name' => 'ToDelete']);
 
-        $response = $this->actingAs($admin)->delete(route('admin.rubrics.destroy', $rubric));
+        $response = $this->actingAs($admin)->post(route('admin.rubrics.destroy', $rubric), [
+            'session_id' => $session->id,
+        ]);
 
-        $response->assertRedirect(route('admin.rubrics.index'));
+        $response->assertRedirect(route('admin.rubrics.index', ['session_id' => $session->id]));
         $this->assertDatabaseMissing('rubrics', [
             'id' => $rubric->id,
         ]);

@@ -26,6 +26,18 @@ class ProjectRegistrationTest extends TestCase
         $response->assertRedirect('/login');
     }
 
+    public function test_staff_roles_cannot_register_projects(): void
+    {
+        CompetitionSession::create(['name' => 'Session 1', 'is_active' => true, 'registration_mode' => 'open']);
+
+        foreach ([1, 2, 3] as $roleId) { // admin, lecturer, judge
+            $staff = User::factory()->create(['role_id' => $roleId]);
+
+            $this->actingAs($staff)->get(route('projects.index'))->assertForbidden();
+            $this->actingAs($staff)->post(route('projects.store'), [])->assertForbidden();
+        }
+    }
+
     public function test_authenticated_user_can_access_projects_dashboard(): void
     {
         $user = User::factory()->create(['role_id' => 4]); // student role

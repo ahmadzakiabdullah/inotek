@@ -73,6 +73,59 @@ class PublicLeaderboardPrivacyTest extends TestCase
             ->assertJsonPath("leaderboardData.{$category->id}.0.judges.0.comments", 'Private judging comment');
     }
 
+    public function test_award_and_rankings_stay_hidden_until_results_are_finalized(): void
+    {
+        [$session, $category, $project] = $this->makeScoredProject(false);
+        $project->update(['award_level' => 'Gold']);
+
+        $this->getJson(route('leaderboard.index'))
+            ->assertOk()
+            ->assertJsonPath("leaderboardData.{$category->id}.0.award_level", null);
+
+        $this->get(route('home'))
+            ->assertInertia(fn ($page) => $page->has('showcase.rankings', 0));
+
+        $session->update(['r2_locked' => true]);
+
+        $this->getJson(route('leaderboard.index'))
+            ->assertJsonPath("leaderboardData.{$category->id}.0.award_level", 'Gold');
+
+        $this->get(route('home'))
+            ->assertInertia(fn ($page) => $page->where('showcase.rankings.0.name', $project->title));
+    }
+
+    public function test_round_two_finalists_rank_above_round_one_only_projects(): void
+    {
+        [$session, $category, , $judge] = $this->makeScoredProject(true);
+        $finalist = Project::create([
+            'session_id' => $session->id,
+            'category_id' => $category->id,
+            'user_id' => User::factory()->create(['role_id' => 4])->id,
+            'pcode' => 'C1-02',
+            'title' => 'Finalist',
+            'abstract' => 'Abstract',
+            'institution_type' => 'utem',
+            'status' => Project::STATUS_APPROVED,
+            'supervisor_name' => 'Supervisor',
+            'supervisor_email' => 'supervisor@example.com',
+        ]);
+        foreach ([1 => 60, 2 => 70] as $round => $total) {
+            Score::create([
+                'project_id' => $finalist->id,
+                'judge_id' => $judge->id,
+                'session_id' => $session->id,
+                'round_no' => $round,
+                'total' => $total,
+                'score_details' => [],
+            ]);
+        }
+
+        // Solar Innovation has 75 in Round 1 only; the finalist (70 in Round 2) ranks first.
+        $this->getJson(route('leaderboard.index'))
+            ->assertJsonPath("leaderboardData.{$category->id}.0.title", 'Finalist')
+            ->assertJsonPath("leaderboardData.{$category->id}.1.title", 'Solar Innovation');
+    }
+
     /** @return array{CompetitionSession, Category, Project, User} */
     private function makeScoredProject(bool $finalized): array
     {
@@ -103,7 +156,7 @@ class PublicLeaderboardPrivacyTest extends TestCase
             'weight' => 1,
             'max_points' => 5,
         ]);
-        CategoryRubricMapping::create(['category_id' => $category->id, 'rubric_id' => $rubric->id]);
+        CategoryRubricMapping::create(['session_id' => $session->id, 'category_id' => $category->id, 'rubric_id' => $rubric->id]);
         Score::create([
             'project_id' => $project->id,
             'judge_id' => $judge->id,

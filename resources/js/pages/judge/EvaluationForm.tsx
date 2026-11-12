@@ -112,7 +112,12 @@ export default function EvaluationForm({ project, rubric, existingScore, roundNo
         setData('scores', points);
     }, [points]);
 
-    // Calculate dynamic live total score out of 100
+    const totalRubricWeight = rubric.items.reduce(
+        (total, item) => total + Number(item.weight),
+        0,
+    );
+
+    // Normalize configured weights so the live total matches the server score.
     const liveTotalScore = React.useMemo(() => {
         let total = 0;
         rubric.items.forEach((item) => {
@@ -121,12 +126,12 @@ export default function EvaluationForm({ project, rubric, existingScore, roundNo
             const weight = item.weight;
 
             if (maxPoints > 0) {
-                total += (currentPoints / maxPoints) * weight * 100;
+                total += (currentPoints / maxPoints) * (weight / totalRubricWeight) * 100;
             }
         });
 
         return Math.round(total * 100) / 100;
-    }, [points, rubric.items]);
+    }, [points, rubric.items, totalRubricWeight]);
 
     const handleSelectPoint = (itemId: number, point: number) => {
         if (isLocked) {
@@ -185,7 +190,7 @@ return;
                             </p>
                         )}
                         <p className="text-[11px] text-muted-foreground">
-                            Weight: <span className="font-semibold text-foreground font-mono">{(item.weight * 100).toFixed(0)}%</span> | 
+                            Weight: <span className="font-semibold text-foreground font-mono">{((item.weight / totalRubricWeight) * 100).toFixed(1)}%</span> | 
                             Max Points: <span className="font-semibold text-foreground font-mono">{item.max_points}</span>
                         </p>
                     </div>
@@ -217,7 +222,7 @@ return;
                         })}
                         {/* Selection Feedback badge */}
                         <span className="text-xs font-semibold text-muted-foreground ml-2 font-mono shrink-0">
-                            ({((currentPoint / item.max_points) * item.weight * 100).toFixed(1)}% contribution)
+                            ({((currentPoint / item.max_points) * (item.weight / totalRubricWeight) * 100).toFixed(1)}% contribution)
                         </span>
                     </div>
 

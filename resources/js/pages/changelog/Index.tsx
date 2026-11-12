@@ -32,12 +32,24 @@ interface ChangelogProps {
     timeline: VersionChange[];
 }
 
+// Escape HTML first so only the **bold** markdown becomes markup.
+function renderBold(text: string): string {
+    const escaped = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+    return escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+}
+
 export default function Index({ timeline }: ChangelogProps) {
     const { auth } = usePage().props as any;
     const isAdmin = auth?.user?.role === 'admin';
 
     const handleClearCache = () => {
-        router.post('/changelog/clear-cache', {}, {
+        router.post('/dashboard/changelog/clear-cache', {}, {
             onSuccess: () => {
                 // Flash success will be caught by global toaster
             }
@@ -185,7 +197,7 @@ return null;
                                                             {items.map((item, idx) => (
                                                                 <li key={idx} className="text-xs sm:text-sm text-muted-foreground leading-relaxed flex items-start gap-2">
                                                                     <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0 mt-0.5" />
-                                                                    <span dangerouslySetInnerHTML={{ __html: item.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                                                                    <span dangerouslySetInnerHTML={{ __html: renderBold(item) }} />
                                                                 </li>
                                                             ))}
                                                         </ul>

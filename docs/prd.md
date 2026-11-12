@@ -6,11 +6,12 @@ This document outlines the core functional requirements, user personas, operatio
 
 ## 1. User Personas & Permissions
 
-The system supports three primary user roles with distinct access rights:
+The system uses four database-backed roles with distinct access rights. All newly registered accounts receive the `user` role by default. Role meaning comes from the role name, not a fixed numeric ID.
 
 | Role | Access Level & Description | Key Capabilities |
 | :--- | :--- | :--- |
 | **Participant** | Student / Inventor Account | - Register a project submission.<br>- Manage team members (stored in dynamic records).<br>- Update project metadata (only prior to final submission).<br>- Download certificates post-event. |
+| **Lecturer** | UTeM staff / supervisor | - Supervise project submissions.<br>- View supervised projects and their workflow status. |
 | **Judge** | Evaluator Panelist | - View assigned projects scoped by the active session.<br>- Complete dynamic scoring rubrics per project category.<br>- Vote for "Best Presenter" and leave feedback comments. |
 | **Admin** | System Administrator | - Manage users, roles, categories, sessions, and rubrics.<br>- Bulk approve/reject incoming project registrations.<br>- Assign projects to judges (Round 1 & Round 2).<br>- Setup Round 2 qualifiers, toggles, and lock states.<br>- View audit logs. |
 
@@ -20,14 +21,17 @@ The system supports three primary user roles with distinct access rights:
 
 ### 2.1 Semester-Based Isolation
 > [!IMPORTANT]
-> The system must isolate all operational data by competition sessions (semesters).
-- All projects, team members, scoring records, and judging assignments must be explicitly scoped by an active `session_id`.
+> The system must isolate operational competition data by session.
+- Projects, scores, and judge assignments must be scoped by `session_id`; dashboards and approvals default to the active session and allow the administrator to select another session where applicable.
 - The same project IDs and judge IDs can reappear in different sessions without database constraint conflicts.
+- A session stores overall start/end dates and registration start/end dates. Registration is accepted only while its registration window is open.
+- Categories are a shared global catalog reused in every session. Rubrics and judge accounts may also be reused; project and evaluation records remain session-specific.
 
 ### 2.2 Project & Team Registration
 - **Rules**:
   - A participant can register a project only if they do not already own a project in the active session.
   - The project code (`pcode`) must be unique within the active session.
+  - Project code numbering restarts for each session and does not continue from the previous session.
   - Dynamic team member lists must be stored in a normalized database table (`penyelidik` mapped to `TeamMember`), replacing legacy flat columns.
 - **Validation**:
   - Selection of an active category (from a dynamically managed database list).
@@ -46,7 +50,7 @@ Projects progress through a defined state machine:
 - **Dynamic Rubrics**: Rubrics are managed by admins and mapped to project categories.
 - **Evaluation**:
   - Judges grade projects against mapped rubric items (on a scale of 0 to 5).
-  - The final score is calculated using the weighted formula: `(score / 5) * weight` for each item.
+  - The final score is calculated from each rubric item's normalized weight: `(score / max_points) * (item_weight / sum_of_item_weights) * 100`. This keeps the maximum score at 100 even if configured weights do not add up to exactly 100%.
   - Aggregate scores and item-level details (in JSON format) are stored in the database.
 
 ### 2.5 Round 2 (Pusingan Ke-2) Judging
@@ -87,7 +91,7 @@ Each user role has a tailored navigation menu and dashboard specific to their ta
 - **Dashboard Widgets**:
   - Quick statistics (Total projects, total participants, total judges).
   - Scoring progress breakdown by categories.
-  - Active session indicator and toggle.
+  - Active session indicator.
 - **Sidebar Menu Items**:
   - `Dashboard`: General overview.
   - `Users Management`: CRUD actions for users.

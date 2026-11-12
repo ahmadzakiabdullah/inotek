@@ -8,6 +8,7 @@ use App\Models\CompetitionSession;
 use App\Models\JudgeAssignment;
 use App\Models\Project;
 use App\Models\Score;
+use App\Models\Rubric;
 use App\Models\User;
 use App\Notifications\SystemNotification;
 use App\Services\AuditLogger;
@@ -31,7 +32,7 @@ class JudgeController extends Controller
      */
     public function index(): Response
     {
-        $activeSession = CompetitionSession::where('is_active', true)->first();
+        $activeSession = CompetitionSession::active();
 
         if (! $activeSession) {
             return Inertia::render('judge/Dashboard', [
@@ -92,7 +93,7 @@ class JudgeController extends Controller
      */
     public function show(Project $project, Request $request): Response
     {
-        $activeSession = CompetitionSession::where('is_active', true)->first();
+        $activeSession = CompetitionSession::active();
 
         if (! $activeSession) {
             abort(404, 'No active competition session.');
@@ -111,31 +112,30 @@ class JudgeController extends Controller
             ->where('round_no', $roundNo)
             ->first();
 
-        if (! $assignment) {
+        if (! $assignment || $project->status !== Project::STATUS_APPROVED) {
             abort(403, 'This project is not assigned to you for evaluation.');
         }
 
-        // Get mapped rubric
-        $category = $project->category;
-        $rubric = $category ? $category->rubrics()->with('items')->first() : null;
-
-        if (! $rubric) {
-            abort(404, 'Evaluation rubric not found for this project category.');
-        }
-
-        // Get existing score if any
         $existingScore = Score::where('project_id', $project->id)
             ->where('judge_id', $judgeId)
             ->where('session_id', $activeSession->id)
             ->where('round_no', $roundNo)
             ->first();
 
+        // Existing evaluations keep their rubric version. New evaluations use the latest.
+        $rubric = $existingScore ? $this->rubricForScore($existingScore) : null;
+        $rubric ??= $project->category?->rubricsForSession($project->session_id)->with('items')->orderByDesc('rubrics.id')->first();
+
+        if (! $rubric) {
+            abort(404, 'Evaluation rubric not found for this project category.');
+        }
+
         return Inertia::render('judge/EvaluationForm', [
             'project' => $project->load(['category', 'teamMembers', 'user']),
             'rubric' => $rubric,
             'existingScore' => $existingScore,
             'roundNo' => $roundNo,
-            'isLocked' => $roundNo === 2 && $activeSession->r2_locked,
+            'isLocked' => $this->isRoundLocked($roundNo, $activeSession),
         ]);
     }
 
@@ -144,7 +144,7 @@ class JudgeController extends Controller
      */
     public function store(Project $project, Request $request): RedirectResponse
     {
-        $activeSession = CompetitionSession::where('is_active', true)->first();
+        $activeSession = CompetitionSession::active();
 
         if (! $activeSession) {
             return back()->with('error', 'No active competition session.');
@@ -163,21 +163,30 @@ class JudgeController extends Controller
             ->where('round_no', $roundNo)
             ->first();
 
-        if (! $assignment) {
+        if (! $assignment || $project->status !== Project::STATUS_APPROVED) {
             return back()->with('error', 'Evaluation not allowed for this project.');
         }
 
-        // Check if Round 2 is locked
-        if ($roundNo === 2 && $activeSession->r2_locked) {
-            return back()->with('error', 'Round 2 evaluation has been locked and cannot be modified.');
+        if ($this->isRoundLocked($roundNo, $activeSession)) {
+            return back()->with('error', $roundNo === 1
+                ? 'Round 1 evaluation is closed because Round 2 judging has started.'
+                : 'Round 2 evaluation has been locked and cannot be modified.');
         }
 
-        $rubric = $project->category?->rubrics()->with('items')->first();
+        $existingScore = Score::where('project_id', $project->id)
+            ->where('judge_id', $judgeId)
+            ->where('session_id', $activeSession->id)
+            ->where('round_no', $roundNo)
+            ->first();
+        $rubric = $existingScore ? $this->rubricForScore($existingScore) : null;
+        $rubric ??= $project->category?->rubricsForSession($project->session_id)->with('items')->orderByDesc('rubrics.id')->first();
+
         if (! $rubric || $rubric->items->isEmpty()) {
             return back()->withErrors(['scores' => 'No evaluation rubric is configured for this project category.']);
         }
 
         $scoreRules = [
+            'bail',
             'required',
             'array',
             'size:'.$rubric->items->count(),
@@ -199,19 +208,19 @@ class JudgeController extends Controller
                 }
             },
         ];
-        foreach ($rubric->items as $item) {
-            $scoreRules['scores.'.$item->id] = ['required'];
-        }
-
         // Require a score for every rubric item, and reject IDs outside this rubric.
-        $request->validate([
+        $rules = [
             'scores' => $scoreRules,
-            'comments' => 'nullable|string',
-            'best_presenter' => 'nullable|string|max:100',
-        ]);
+            'comments' => ['nullable', 'string', 'max:5000'],
+            'best_presenter' => ['nullable', 'string', 'max:100'],
+        ];
+        foreach ($rubric->items as $item) {
+            $rules['scores.'.$item->id] = ['required'];
+        }
+        $request->validate($rules);
 
         $scoreDetails = $request->input('scores');
-        $total = $this->calculator->calculateTotal($project, $scoreDetails);
+        $total = $this->calculator->calculateTotal($project, $scoreDetails, $rubric);
 
         $score = Score::updateOrCreate(
             [
@@ -252,5 +261,31 @@ class JudgeController extends Controller
         }
 
         return redirect()->route('judge.evaluations.index')->with('success', 'Evaluation has been saved successfully.');
+    }
+
+    /**
+     * Round 1 freezes once Round 2 judging starts; Round 2 freezes when results are finalized.
+     */
+    private function isRoundLocked(int $roundNo, CompetitionSession $session): bool
+    {
+        return $roundNo === 1
+            ? $this->calculator->isRoundOneLocked($session->id)
+            : (bool) $session->r2_locked;
+    }
+
+    private function rubricForScore(Score $score): ?Rubric
+    {
+        $itemIds = array_map('strval', array_keys($score->score_details ?? []));
+        if ($itemIds === []) {
+            return null;
+        }
+
+        return Rubric::with('items')
+            ->whereHas('items', fn ($query) => $query->whereIn('id', $itemIds))
+            ->get()
+            ->first(fn (Rubric $rubric) => array_diff(
+                $itemIds,
+                $rubric->items->pluck('id')->map(fn ($id) => (string) $id)->all()
+            ) === []);
     }
 }

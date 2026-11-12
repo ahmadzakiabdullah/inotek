@@ -2,14 +2,9 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import {
     ArrowUpRight,
     BarChart3,
-    Check,
     ChevronRight,
-    Layers3,
     Menu,
-    ShieldCheck,
     Sparkles,
-    Trophy,
-    Users,
     X,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -18,57 +13,59 @@ import { dashboard, login, register } from '@/routes';
 interface Showcase {
     submissions: number;
     categories: number;
+    categoryList: { code: string; name: string }[];
     progress: number;
     rankings: { name: string }[];
 }
 
+interface RegistrationInfo {
+    isOpen: boolean;
+    mode: 'scheduled' | 'open' | 'closed' | null;
+    sessionHasStarted: boolean;
+    opensAt: string | null;
+    closesAt: string | null;
+}
+
 export default function Welcome() {
-    const { auth, showcase } = usePage().props as unknown as {
+    const { auth, showcase, activeSession, registration } = usePage().props as unknown as {
         auth: { user?: unknown };
         showcase: Showcase;
+        activeSession: string | null;
+        registration: RegistrationInfo;
     };
     const [open, setOpen] = useState(false);
 
     return (
         <>
-            <Head title="Innovation, organised" />
+            <Head title="Innovation and Technology Competition" />
             <div className="min-h-screen overflow-hidden bg-background text-foreground">
                 <header className="relative z-20 border-b border-border/60 bg-background/80 backdrop-blur-xl">
                     <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 lg:px-8">
-                        <a href="#top" className="flex items-center gap-3">
+                        <a href="/" className="flex items-center gap-3">
                             <img
-                                src="/logo.png"
-                                alt="Inotek"
-                                className="size-10 rounded-xl shadow-sm"
+                                src="/logo.svg"
+                                alt="Logo Universiti Teknikal Malaysia Melaka (UTeM)"
+                                className="h-11 w-auto max-w-40 object-contain"
                             />
                             <div>
                                 <p className="text-base font-semibold tracking-tight">
                                     INOTEK
                                 </p>
-                                <p className="text-[10px] font-medium tracking-[0.22em] text-muted-foreground">
-                                    INNOVATION PLATFORM
-                                </p>
                             </div>
                         </a>
                         <nav className="hidden items-center gap-8 text-sm text-muted-foreground md:flex">
-                            <a
-                                href="#about"
-                                className="transition-colors hover:text-foreground"
-                            >
-                                About
-                            </a>
                             <Link
                                 href="/leaderboard"
                                 className="transition-colors hover:text-foreground"
                             >
                                 Leaderboard
                             </Link>
-                            <a
-                                href="#features"
+                            <Link
+                                href="/contact"
                                 className="transition-colors hover:text-foreground"
                             >
-                                Features
-                            </a>
+                                Contact
+                            </Link>
                         </nav>
                         <div className="hidden items-center gap-3 md:flex">
                             <Link
@@ -98,10 +95,8 @@ export default function Welcome() {
                     {open && (
                         <div className="border-t border-border/60 px-6 py-4 md:hidden">
                             <div className="flex flex-col gap-4 text-sm">
-                                <a href="#about" onClick={() => setOpen(false)}>
-                                    About
-                                </a>
-                                <Link href="/leaderboard">Leaderboard</Link>
+                                <Link href="/leaderboard" onClick={() => setOpen(false)}>Leaderboard</Link>
+                                <Link href="/contact" onClick={() => setOpen(false)}>Contact</Link>
                                 <Link href={auth.user ? dashboard() : login()}>
                                     {auth.user ? 'Dashboard' : 'Log in'}
                                 </Link>
@@ -109,7 +104,7 @@ export default function Welcome() {
                         </div>
                     )}
                 </header>
-                <main id="top">
+                <main>
                     <section className="relative mx-auto max-w-7xl px-6 pt-20 pb-24 lg:px-8 lg:pt-28 lg:pb-32">
                         <div className="pointer-events-none absolute -top-24 -right-40 size-[34rem] rounded-full bg-primary/[0.06] blur-3xl" />
                         <div className="relative grid items-center gap-16 lg:grid-cols-[1.05fr_.95fr]">
@@ -119,24 +114,19 @@ export default function Welcome() {
                                     Built for meaningful ideas
                                 </div>
                                 <h1 className="max-w-3xl text-5xl font-bold tracking-[-0.045em] sm:text-6xl lg:text-7xl">
-                                    Turn bold ideas into{' '}
-                                    <span className="text-muted-foreground">
-                                        real impact.
-                                    </span>
+                                    INOTEK
                                 </h1>
                                 <p className="mt-7 max-w-xl text-lg leading-8 text-muted-foreground">
-                                    INOTEK brings innovators, reviewers, and
-                                    organisers together in one clear, connected
-                                    competition platform.
+                                    <a href="https://ftkek.utem.edu.my/" className="underline decoration-border underline-offset-4 transition-colors hover:text-foreground">
+                                        Faculty of Electronics and Computer Technology and Engineering
+                                    </a>
                                 </p>
                                 <div className="mt-9 flex flex-wrap items-center gap-4">
                                     <Link
-                                        href={
-                                            auth.user ? dashboard() : register()
-                                        }
+                                        href={auth.user ? dashboard() : login()}
                                         className="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/10 transition hover:-translate-y-0.5"
                                     >
-                                        Explore the platform{' '}
+                                        {auth.user ? 'Open dashboard' : 'Log in'}{' '}
                                         <ChevronRight className="ml-1 inline size-4" />
                                     </Link>
                                     <Link
@@ -187,6 +177,36 @@ export default function Welcome() {
                                         <Stat label="Submissions" value={showcase.submissions.toString()} />
                                         <Stat label="Categories" value={showcase.categories.toString()} />
                                     </div>
+                                    <div className="mt-5 rounded-2xl border border-border/70 p-4">
+                                        <div className="mb-3">
+                                            <p id="categories" className="text-sm font-semibold">Competition categories</p>
+                                            {activeSession && <p className="mt-1 text-xs text-muted-foreground">{activeSession}</p>}
+                                        </div>
+                                        {showcase.categoryList.length > 0 ? (
+                                            <ul className="grid gap-2 sm:grid-cols-2">
+                                                {showcase.categoryList.map((category) => (
+                                                    <li key={category.code} className="rounded-xl bg-muted/60 px-3 py-2 text-sm">
+                                                        <span className="mr-2 font-semibold text-primary">{category.code}</span>
+                                                        <span>{category.name}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        ) : <p className="text-sm text-muted-foreground">No categories listed for the active session.</p>}
+                                    </div>
+                                    <div className="mt-4 rounded-2xl border border-border/70 px-4 py-3 text-sm">
+                                        <div className="flex items-center gap-2 font-semibold">
+                                            <span className={`size-2 rounded-full ${registration.isOpen ? 'bg-emerald-500' : 'bg-muted-foreground/50'}`} />
+                                            {registration.isOpen ? 'Registration is open' : 'Registration is closed'}
+                                        </div>
+                                        {registration.mode === 'open' && <p className="mt-1 text-xs text-muted-foreground">Registration is open for this session.</p>}
+                                        {registration.mode === 'closed' && <p className="mt-1 text-xs text-muted-foreground">Registration is currently closed for this session.</p>}
+                                        {registration.mode === 'scheduled' && registration.opensAt && !registration.sessionHasStarted && <p className="mt-1 text-xs text-muted-foreground">The session has not started yet. Registration opens on {formatDate(registration.opensAt)}.</p>}
+                                        {registration.mode === 'scheduled' && registration.opensAt && registration.sessionHasStarted && !registration.isOpen && <p className="mt-1 text-xs text-muted-foreground">The registration window has ended or is not currently available.</p>}
+                                        {registration.mode === 'scheduled' && registration.opensAt && registration.closesAt && (
+                                            <p className="mt-1 text-xs text-muted-foreground">Registration period: {formatDate(registration.opensAt)} – {formatDate(registration.closesAt)}{registration.isOpen ? ` · Closes ${formatDate(registration.closesAt)}` : ''}</p>
+                                        )}
+                                        {!activeSession && <p className="mt-1 text-xs text-muted-foreground">There is no active competition session at the moment.</p>}
+                                    </div>
                                     <div className="mt-5 rounded-2xl bg-muted/60 p-4">
                                         <div className="mb-5 flex justify-between text-sm">
                                             <span className="font-medium">
@@ -210,71 +230,6 @@ export default function Welcome() {
                                         )) : <p className="text-sm text-muted-foreground">No approved projects yet.</p>}
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                    </section>
-                    <section
-                        id="features"
-                        className="border-y border-border/70 bg-muted/30"
-                    >
-                        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-8">
-                            <div className="max-w-xl">
-                                <p className="text-sm font-semibold text-muted-foreground">
-                                    ONE SHARED WORKSPACE
-                                </p>
-                                <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-                                    From first submission to final award.
-                                </h2>
-                            </div>
-                            <div className="mt-12 grid gap-5 md:grid-cols-3">
-                                <Feature
-                                    icon={Layers3}
-                                    title="Organise everything"
-                                    text="Manage sessions, categories, rubrics, and submissions from one focused workspace."
-                                />
-                                <Feature
-                                    icon={ShieldCheck}
-                                    title="Evaluate with confidence"
-                                    text="Give judges the structure and insight they need for fair, transparent scoring."
-                                />
-                                <Feature
-                                    icon={Trophy}
-                                    title="Make results visible"
-                                    text="Celebrate progress with live rankings, awards, and a polished public showcase."
-                                />
-                            </div>
-                        </div>
-                    </section>
-                    <section
-                        id="about"
-                        className="mx-auto max-w-7xl px-6 py-24 lg:px-8"
-                    >
-                        <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
-                            <div>
-                                <p className="text-sm font-semibold text-muted-foreground">
-                                    DESIGNED FOR PEOPLE WHO BUILD
-                                </p>
-                                <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-                                    A better stage for the next big idea.
-                                </h2>
-                                <p className="mt-5 max-w-lg leading-7 text-muted-foreground">
-                                    Whether you are submitting a project,
-                                    reviewing a breakthrough, or running the
-                                    programme, INOTEK keeps every moment moving
-                                    forward.
-                                </p>
-                            </div>
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <Mini
-                                    icon={Users}
-                                    title="One community"
-                                    text="Connect teams, mentors, judges, and organisers."
-                                />
-                                <Mini
-                                    icon={Check}
-                                    title="Clear progress"
-                                    text="Know what is next at every stage of the journey."
-                                />
                             </div>
                         </div>
                     </section>
@@ -302,6 +257,9 @@ function Stat({ label, value }: { label: string; value: string }) {
         </div>
     );
 }
+function formatDate(value: string) {
+    return new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`));
+}
 function Rank({
     name,
     place,
@@ -315,46 +273,6 @@ function Rank({
                 {place}
             </span>
             <span className="flex-1 font-medium">{name}</span>
-        </div>
-    );
-}
-function Feature({
-    icon: Icon,
-    title,
-    text,
-}: {
-    icon: typeof Layers3;
-    title: string;
-    text: string;
-}) {
-    return (
-        <div className="rounded-2xl border border-border bg-background p-6">
-            <div className="mb-8 flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                <Icon className="size-5" />
-            </div>
-            <h3 className="text-lg font-semibold">{title}</h3>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                {text}
-            </p>
-        </div>
-    );
-}
-function Mini({
-    icon: Icon,
-    title,
-    text,
-}: {
-    icon: typeof Users;
-    title: string;
-    text: string;
-}) {
-    return (
-        <div className="rounded-2xl border border-border p-5">
-            <Icon className="size-5" />
-            <h3 className="mt-5 font-semibold">{title}</h3>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                {text}
-            </p>
         </div>
     );
 }

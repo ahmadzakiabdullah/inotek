@@ -17,26 +17,17 @@ export default function PublicLayout({
                 <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 lg:px-8">
                     <Link href="/" className="flex items-center gap-3">
                         <img
-                            src="/logo.png"
-                            alt="Inotek"
-                            className="size-10 rounded-xl shadow-sm"
+                            src="/logo.svg"
+                            alt="Logo Universiti Teknikal Malaysia Melaka (UTeM)"
+                            className="h-11 w-auto max-w-40 object-contain"
                         />
                         <div>
                             <p className="text-base font-semibold tracking-tight">
                                 INOTEK
                             </p>
-                            <p className="text-[10px] font-medium tracking-[0.22em] text-muted-foreground">
-                                INNOVATION PLATFORM
-                            </p>
                         </div>
                     </Link>
                     <nav className="hidden items-center gap-8 text-sm text-muted-foreground md:flex">
-                        <Link
-                            href="/#about"
-                            className="transition-colors hover:text-foreground"
-                        >
-                            About
-                        </Link>
                         <Link
                             href="/leaderboard"
                             className="transition-colors hover:text-foreground"
@@ -44,10 +35,10 @@ export default function PublicLayout({
                             Leaderboard
                         </Link>
                         <Link
-                            href="/#features"
+                            href="/contact"
                             className="transition-colors hover:text-foreground"
                         >
-                            Features
+                            Contact
                         </Link>
                     </nav>
                     <div className="hidden items-center gap-3 md:flex">
@@ -78,8 +69,8 @@ export default function PublicLayout({
                 {open && (
                     <div className="border-t border-border/60 px-6 py-4 md:hidden">
                         <div className="flex flex-col gap-4 text-sm">
-                            <Link href="/#about">About</Link>
                             <Link href="/leaderboard">Leaderboard</Link>
+                            <Link href="/contact" onClick={() => setOpen(false)}>Contact</Link>
                             <Link href={auth.user ? dashboard() : login()}>
                                 {auth.user ? 'Dashboard' : 'Log in'}
                             </Link>

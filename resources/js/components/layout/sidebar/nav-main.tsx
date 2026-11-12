@@ -214,11 +214,6 @@ export function getNavItems(userRole: string | null | undefined): NavGroup[] {
             title: 'Supervisor Portal',
             items: [
                 {
-                    title: 'Supervised Projects',
-                    href: '/dashboard/projects',
-                    icon: FolderIcon,
-                },
-                {
                     title: 'Project Approvals',
                     href: '/dashboard/approvals',
                     icon: SquareCheckIcon,

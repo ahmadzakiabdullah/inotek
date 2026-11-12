@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -14,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { useToolbar } from "./toolbar-provider";
 import { useMediaQuery } from "@uidotdev/usehooks";
 import { MobileToolbarGroup, MobileToolbarItem } from "./mobile-toolbar-group";
+import { IconChevronDown } from "@tabler/icons-react";
 
 const levels = [1, 2, 3, 4] as const;
 
@@ -66,7 +66,7 @@ export const HeadingsToolbar = React.forwardRef<
               ref={ref}
               {...props}>
               {activeLevel ? `H${activeLevel}` : "Normal"}
-              <ChevronDown className="h-4 w-4" />
+              <IconChevronDown className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">

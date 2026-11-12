@@ -6,6 +6,7 @@ use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use App\Models\Role;
 use App\Models\User;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
 
@@ -25,7 +26,19 @@ class CreateNewUser implements CreatesNewUsers
             'password' => $this->passwordRules(),
         ])->validate();
 
-        $defaultRoleId = Role::where('name', 'user')->value('id');
+        $roleAttributes = [
+            'label' => 'User',
+            'description' => 'Standard user / Student.',
+        ];
+
+        if (Schema::hasColumn('roles', 'guard_name')) {
+            $roleAttributes['guard_name'] = 'web';
+        }
+
+        $defaultRoleId = Role::firstOrCreate(
+            ['name' => 'user'],
+            $roleAttributes,
+        )->id;
 
         return User::create([
             'name' => $input['name'],

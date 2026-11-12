@@ -27,6 +27,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Category {
     id: number;
@@ -73,6 +74,7 @@ export default function LeaderboardIndex({
     const [localLeaderboardData, setLocalLeaderboardData] =
         useState(leaderboardData);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [lastUpdated, setLastUpdated] = useState<Date | null>(new Date());
     const [activeCategoryTab, setActiveCategoryTab] = useState(
         categories.length > 0 ? categories[0].id.toString() : '',
     );
@@ -88,6 +90,7 @@ export default function LeaderboardIndex({
             .then((res) => res.json())
             .then((data) => {
                 setLocalLeaderboardData(data.leaderboardData);
+                setLastUpdated(new Date());
             })
             .catch((err) => console.error('Error fetching rankings:', err))
             .finally(() => setIsRefreshing(false));
@@ -191,18 +194,19 @@ return null;
                 className={
                     isAppLayout
                         ? 'space-y-6'
-                        : 'min-h-screen bg-background p-6 text-foreground md:p-12'
+                        : 'min-h-screen bg-background px-6 py-8 text-foreground lg:px-8'
                 }
             >
                 <div
                     className={
                     isAppLayout
                         ? 'w-full space-y-6'
-                            : 'mx-auto max-w-6xl space-y-8'
+                            : 'mx-auto w-full max-w-7xl space-y-8'
                     }
                 >
                     {/* Header Banner */}
-                    <div className="flex flex-col gap-4 rounded-xl border border-border/60 bg-card/60 p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                    <div className="rounded-xl border border-border/60 bg-card/60 p-6 shadow-sm">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div className="space-y-1">
                             <div className="flex items-center gap-2">
                                 <span className="flex h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
@@ -244,6 +248,11 @@ return null;
                             </Button>
                         </div>
                     </div>
+                        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border/60 pt-3 text-xs text-muted-foreground">
+                            <span>{showResults ? 'Results are final. Categories are ranked by their published score.' : 'Judging is in progress. Project standings will be finalized after judging closes.'}</span>
+                            <span aria-live="polite">{lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Updating automatically every 15 seconds'}</span>
+                        </div>
+                    </div>
 
                     {categories.length > 0 ? (
                         <Tabs
@@ -251,8 +260,15 @@ return null;
                             onValueChange={setActiveCategoryTab}
                             className="w-full space-y-6"
                         >
-                            {/* Scrollable Tabs row */}
-                            <div className="overflow-x-auto pb-1">
+                            <div className="md:hidden">
+                                <Select value={activeCategoryTab} onValueChange={setActiveCategoryTab}>
+                                    <SelectTrigger aria-label="Choose a competition category"><SelectValue placeholder="Choose a category" /></SelectTrigger>
+                                    <SelectContent>
+                                        {categories.map((cat) => <SelectItem key={cat.id} value={cat.id.toString()}>[{cat.code}] {cat.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="hidden overflow-x-auto pb-1 md:block">
                                 <TabsList className="flex w-max min-w-full border border-border bg-muted/60 p-1">
                                     {categories.map((cat) => (
                                         <TabsTrigger
@@ -299,6 +315,9 @@ return null;
                                                     </Badge>
                                                 </div>
                                             </CardHeader>
+                                            <div className="border-b border-border/60 bg-muted/10 px-6 py-3 text-xs text-muted-foreground">
+                                                {showResults ? 'Rankings use the finalized published score for this category.' : 'Rankings are not final while judging is underway; scores are hidden until results are published.'}
+                                            </div>
                                             <CardContent className="p-0">
                                                 <div className="overflow-x-auto">
                                                     <Table>
@@ -420,7 +439,7 @@ return null;
                                                                                     </div>
                                                                                 </TableCell>
                                                                                 {isAppLayout && <TableCell className="py-4 text-center align-middle font-mono text-xs text-muted-foreground">
-                                                                                    {(proj.avg_r1 ?? 0) >
+                                                                                    {(proj.judges_r1 ?? 0) >
                                                                                     0 ? (
                                                                                         <span>
                                                                                             {
@@ -442,7 +461,7 @@ return null;
                                                                                     )}
                                                                                 </TableCell>}
                                                                                 {isAppLayout && <TableCell className="py-4 text-center align-middle font-mono text-xs text-muted-foreground">
-                                                                                    {(proj.avg_r2 ?? 0) >
+                                                                                    {(proj.judges_r2 ?? 0) >
                                                                                     0 ? (
                                                                                         <span>
                                                                                             {
@@ -485,10 +504,9 @@ return null;
                                                                                 {isAppLayout && <TableCell className="py-4 text-center align-middle">
                                                                                     <Badge
                                                                                         variant="outline"
-                                                                                        className={`rounded border-border bg-muted/60 px-2.5 py-0.5 font-mono text-xs font-bold ${(proj.final_score ?? 0) > 0 ? 'text-primary' : 'text-muted-foreground'}`}
+                                                                                        className={`rounded border-border bg-muted/60 px-2.5 py-0.5 font-mono text-xs font-bold ${((proj.judges_r2 ?? 0) > 0 || (proj.judges_r1 ?? 0) > 0) ? 'text-primary' : 'text-muted-foreground'}`}
                                                                                     >
-                                                                                        {(proj.final_score ?? 0) >
-                                                                                        0
+                                                                                        {((proj.judges_r2 ?? 0) > 0 || (proj.judges_r1 ?? 0) > 0)
                                                                                             ? `${proj.final_score}%`
                                                                                             : 'No scores'}
                                                                                     </Badge>
@@ -508,16 +526,7 @@ return null;
                                                                             colSpan={isAppLayout ? 9 : 5}
                                                                         className="py-12 text-center text-sm text-muted-foreground italic"
                                                                     >
-                                                                        No
-                                                                        projects
-                                                                        have
-                                                                        been
-                                                                        approved
-                                                                        or
-                                                                        listed
-                                                                        in this
-                                                                        category
-                                                                        yet.
+                                                                        No approved projects are listed in this category yet.
                                                                     </TableCell>
                                                                 </TableRow>
                                                             )}
@@ -532,7 +541,7 @@ return null;
                         </Tabs>
                     ) : (
                         <div className="rounded-xl border border-dashed border-border bg-muted/20 p-8 text-center text-muted-foreground">
-                            No competition categories defined for this session.
+                            No categories have projects in this active session yet.
                         </div>
                     )}
                 </div>

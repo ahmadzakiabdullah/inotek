@@ -15,7 +15,34 @@ INOTEK uses **Semantic Versioning 2.0.0** (`vMajor.Minor.Patch`):
 
 ## 2. INOTEK Version History
 
-### [v1.5.0] - 2026-06-18 (Current Release)
+### [v1.6.3] - 2026-10-23 (Current Release)
+#### Changed
+* **Sidebar Contact Card**: Replaced the Download promotion with faculty contact information and a Secretariat button linking to the INOTEK contact page.
+* **Project Session Attribution**: Existing project registrations have been assigned to Sesi 1/2026 while Sesi 2/2026 remains the active session for new operations. Session-specific dashboards and approval filters show the selected session.
+* **Shared Category Catalog**: Categories and their rubric mappings are reused across sessions; project codes restart within each session.
+* **Session Scheduling**: Session period and registration open/close dates are stored as dates, with a registration mode controlling open, closed, or scheduled registration.
+#### Fixed
+* **Changelog Cache Action**: The dashboard route is `/dashboard/changelog/clear-cache`; a compatibility route also supports older bundles posting to `/changelog/clear-cache`.
+* **PHP CLI Setup**: The local Windows PATH now resolves PHP 8.4.27 by default.
+
+### [v1.6.2] - 2026-10-23
+#### Fixed
+* **User Role Assignment**: New registrations are assigned the `User` role, role summaries use role names instead of fixed numeric IDs, and legacy accounts can be mapped using project ownership, scoring activity, and confirmed institution email domains.
+* **Legacy User Updates**: User profile and role updates no longer expect `created_at` or `updated_at` columns in the legacy users table.
+* **User Editing on Restricted Hosts**: The edit form uses Laravel method spoofing so hosting environments that block direct `PUT` requests can still process user updates.
+
+### [v1.6.1] - 2026-10-23
+#### Fixed
+* **Session Approval Filtering**: Project approval lists and summary cards now follow the selected session, defaulting to the active session.
+* **Filter Control Layout**: Select controls now stay within their allocated width, preventing long session labels from overlapping adjacent filters.
+* **Session Date Display**: Session and registration periods show concise `dd/mm/yyyy` dates instead of full UTC timestamps.
+
+### [v1.6.0] - 2026-10-23
+#### Changed
+* **Shared Categories Across Sessions**: Categories are now defined once and reused by every competition session, instead of creating duplicate category records per session.
+* **Category Management**: Removed session assignment from category setup. Categories used by existing projects and rubric mappings are consolidated by category code and remain linked to their data.
+
+### [v1.5.0] - 2026-06-18
 #### Added
 * **Global System Settings Panel**: Built a dedicated administration panel to dynamically configure system names, fonts (from Google Fonts list), primary theme colors, date formats, and timezones in real-time.
 * **System Administration Navigation**: Grouped System Settings, Audit Logs, and Broadcast Alerts under a new "System Administration" menu with a settings gear icon.

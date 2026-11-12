@@ -2,25 +2,28 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Concerns\ProjectValidationRules;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\CompetitionSession;
 use App\Models\Project;
-use App\Models\TeamMember;
 use App\Models\User;
 use App\Notifications\SystemNotification;
 use App\Services\AuditLogger;
 use App\Services\ProjectCodeGenerator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ProjectApprovalController extends Controller
 {
+    use ProjectValidationRules;
+
     /**
      * Display a listing of projects for admin review.
      */
@@ -28,18 +31,70 @@ class ProjectApprovalController extends Controller
     {
         $user = auth()->user();
         $query = Project::with(['user', 'category', 'session', 'teamMembers'])->orderByDesc('id');
-
-        if ($user->hasRole('lecturer')) {
-            $query->where('supervisor_email', $user->email);
-        }
+        $this->limitToReviewer($query, $user);
 
         return Inertia::render('admin/approvals/index', [
             'projects' => $query->get(),
             'sessions' => CompetitionSession::orderByDesc('id')->get(),
-            'categories' => Category::orderBy('name')->get(['id', 'name', 'session_id']),
-            'students' => User::withRole('user')->orderBy('name')
-                ->get(['id', 'name', 'email']),
+            'categories' => Category::orderBy('code')->get(['id', 'name', 'code']),
+            // Only admins can register projects for students, so only they need the student list.
+            'students' => $user->hasRole('admin')
+                ? User::withRole('user')->orderBy('name')->get(['id', 'name', 'email'])
+                : [],
         ]);
+    }
+
+    /**
+     * Soft-delete a project from the admin approvals list.
+     */
+    public function destroy(Project $project): RedirectResponse
+    {
+        $user = auth()->user();
+        if (! $user?->hasRole('admin')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        DB::transaction(function () use ($project): void {
+            $project->delete();
+
+            AuditLogger::log(
+                'DELETE_PROJECT',
+                "Admin soft-deleted project '{$project->title}' (Code: {$project->pcode})."
+            );
+        });
+
+        $this->toast(['type' => 'success', 'message' => __('Project deleted successfully.')]);
+
+        return redirect()->route('admin.approvals.index');
+    }
+
+    /**
+     * Update project information without changing its session or category.
+     */
+    public function updateProject(Request $request, Project $project): RedirectResponse
+    {
+        $user = auth()->user();
+        if (! $user?->hasRole('admin')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $validated = $request->validate($this->projectRules(withCategory: false));
+        $this->ensureTeamAllowed($project->category, $validated);
+
+        DB::transaction(function () use ($project, $validated): void {
+            $oldTitle = $project->title;
+            $project->update($this->projectAttributes($validated));
+            $this->syncTeamMembers($project, $validated);
+
+            AuditLogger::log(
+                'UPDATE_PROJECT_ADMIN',
+                "Admin updated project '{$oldTitle}' (Code: {$project->pcode})."
+            );
+        });
+
+        $this->toast(['type' => 'success', 'message' => __('Project updated successfully.')]);
+
+        return redirect()->route('admin.approvals.index');
     }
 
     /**
@@ -51,26 +106,20 @@ class ProjectApprovalController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $activeSession = CompetitionSession::where('is_active', true)->first();
+        $activeSession = CompetitionSession::active();
         if (! $activeSession) {
             return back()->with('error', 'No active competition session found.');
         }
 
         $validated = $request->validate([
-            'user_id' => ['required', 'exists:users,id'],
-            'category_id' => ['required', Rule::exists('categories', 'id')->where('session_id', $activeSession->id)],
-            'title' => ['required', 'string', 'max:255'],
-            'abstract' => ['required', 'string'],
-            'institution_type' => ['required', 'string', 'in:utem,ipt'],
-            'supervisor_name' => ['required', 'string', 'max:255'],
-            'supervisor_email' => ['required', 'email', 'max:255'],
-            'supervisor_phone' => ['nullable', 'string', 'max:100'],
-            'video_url' => ['nullable', 'url', 'max:255'],
-            'poster_url' => ['nullable', 'url', 'max:255'],
-            'team_members' => ['nullable', 'array'],
-            'team_members.*.name' => ['required', 'string', 'max:255'],
-            'team_members.*.email' => ['nullable', 'email', 'max:255'],
-            'team_members.*.phone' => ['nullable', 'string', 'max:100'],
+            // Projects may only be registered for participant accounts.
+            'user_id' => ['required', Rule::exists('users', 'id')->where(
+                fn ($query) => $query->whereNull('deleted_at')
+                    ->whereIn('role_id', fn ($roles) => $roles->select('id')->from('roles')->where('name', 'user'))
+            )],
+            ...$this->projectRules(),
+        ], [
+            'user_id.exists' => __('The selected account is not a participant.'),
         ]);
 
         // Verify the student does not already have a project in the active session
@@ -79,52 +128,25 @@ class ProjectApprovalController extends Controller
             ->exists();
         if ($existing) {
             $msg = __('This student already has a project registered in the active session.');
-            if (class_exists(Inertia::class) && method_exists(Inertia::class, 'flash')) {
-                Inertia::flash('toast', ['type' => 'error', 'message' => $msg]);
-            } else {
-                session()->flash('toast', ['type' => 'error', 'message' => $msg]);
-            }
+            $this->toast(['type' => 'error', 'message' => $msg]);
 
             return back()->withErrors(['user_id' => $msg]);
         }
 
-        DB::transaction(function () use ($validated, $activeSession, $codeGenerator) {
-            $category = Category::where('session_id', $activeSession->id)->whereKey($validated['category_id'])->firstOrFail();
+        $category = Category::findOrFail((int) $validated['category_id']);
+        $this->ensureTeamAllowed($category, $validated);
 
-            if (! $category->allow_team && ! empty($validated['team_members'])) {
-                throw ValidationException::withMessages([
-                    'team_members' => __('Team members are not allowed for this category.'),
-                ]);
-            }
-
-            $pcode = $codeGenerator->next($activeSession->id, $category->id);
-
+        DB::transaction(function () use ($validated, $activeSession, $codeGenerator, $category) {
             $project = Project::create([
                 'session_id' => $activeSession->id,
-                'category_id' => $validated['category_id'],
+                'category_id' => $category->id,
                 'user_id' => $validated['user_id'],
-                'pcode' => $pcode,
-                'title' => $validated['title'],
-                'abstract' => $validated['abstract'],
-                'institution_type' => $validated['institution_type'],
+                'pcode' => $codeGenerator->next($activeSession->id, $category->id),
                 'status' => Project::STATUS_APPROVED, // Direct Approval
-                'supervisor_name' => $validated['supervisor_name'],
-                'supervisor_email' => $validated['supervisor_email'],
-                'supervisor_phone' => $validated['supervisor_phone'] ?? null,
-                'video_url' => $validated['video_url'] ?? null,
-                'poster_url' => $validated['poster_url'] ?? null,
+                ...$this->projectAttributes($validated),
             ]);
 
-            if (! empty($validated['team_members'])) {
-                foreach ($validated['team_members'] as $member) {
-                    TeamMember::create([
-                        'project_id' => $project->id,
-                        'name' => $member['name'],
-                        'email' => $member['email'] ?? null,
-                        'phone' => $member['phone'] ?? null,
-                    ]);
-                }
-            }
+            $this->syncTeamMembers($project, $validated);
 
             AuditLogger::log(
                 'CREATE_PROJECT_ADMIN',
@@ -132,12 +154,7 @@ class ProjectApprovalController extends Controller
             );
         });
 
-        $msg = __('Project created and approved successfully.');
-        if (class_exists(Inertia::class) && method_exists(Inertia::class, 'flash')) {
-            Inertia::flash('toast', ['type' => 'success', 'message' => $msg]);
-        } else {
-            session()->flash('toast', ['type' => 'success', 'message' => $msg]);
-        }
+        $this->toast(['type' => 'success', 'message' => __('Project created and approved successfully.')]);
 
         return redirect()->route('admin.approvals.index');
     }
@@ -157,50 +174,38 @@ class ProjectApprovalController extends Controller
         DB::transaction(function () use ($validated, $user, $codeGenerator) {
             $query = Project::whereIn('id', $validated['project_ids'])
                 ->where('status', Project::STATUS_SUBMITTED);
-            if ($user->hasRole('lecturer')) {
-                $query->where('supervisor_email', $user->email);
-            }
-            $projects = $query->get();
+            $this->limitToReviewer($query, $user);
 
-            foreach ($projects as $project) {
-                if ($project->status !== Project::STATUS_APPROVED) {
-                    // Auto-generate project code (pcode) if not set
-                    if (! $project->pcode) {
-                        $project->pcode = $codeGenerator->next($project->session_id, $project->category_id);
-                    }
+            foreach ($query->get() as $project) {
+                // Auto-generate project code (pcode) if not set
+                if (! $project->pcode) {
+                    $project->pcode = $codeGenerator->next($project->session_id, $project->category_id);
+                }
 
-                    $project->status = Project::STATUS_APPROVED;
-                    $project->admin_comments = null; // Clear comments upon approval
-                    $project->save();
+                $project->status = Project::STATUS_APPROVED;
+                $project->admin_comments = null; // Clear comments upon approval
+                $project->save();
 
-                    AuditLogger::log(
-                        'APPROVE_PROJECT',
-                        "Approved project: '{$project->title}' (Code: {$project->pcode})"
-                    );
+                AuditLogger::log(
+                    'APPROVE_PROJECT',
+                    "Approved project: '{$project->title}' (Code: {$project->pcode})"
+                );
 
-                    // Notify Student
-                    try {
-                        if ($project->user) {
-                            $project->user->notify(new SystemNotification(
-                                'Project Approved',
-                                "Your project '{$project->title}' ({$project->pcode}) has been approved.",
-                                '/dashboard/projects',
-                                'success'
-                            ));
-                        }
-                    } catch (\Exception $e) {
-                        // Keep resilient
-                    }
+                // Notify Student
+                try {
+                    $project->user?->notify(new SystemNotification(
+                        'Project Approved',
+                        "Your project '{$project->title}' ({$project->pcode}) has been approved.",
+                        '/dashboard/projects',
+                        'success'
+                    ));
+                } catch (\Exception $e) {
+                    report($e);
                 }
             }
         });
 
-        $msg = __('Selected projects approved successfully.');
-        if (class_exists(Inertia::class) && method_exists(Inertia::class, 'flash')) {
-            Inertia::flash('toast', ['type' => 'success', 'message' => $msg]);
-        } else {
-            session()->flash('toast', ['type' => 'success', 'message' => $msg]);
-        }
+        $this->toast(['type' => 'success', 'message' => __('Selected projects approved successfully.')]);
 
         return redirect()->route('admin.approvals.index');
     }
@@ -210,10 +215,7 @@ class ProjectApprovalController extends Controller
      */
     public function reject(Request $request, Project $project): RedirectResponse
     {
-        $user = auth()->user();
-        if ($user->hasRole('lecturer') && $project->supervisor_email !== $user->email) {
-            abort(403, __('Unauthorized action.'));
-        }
+        $this->authorizeReview($project);
 
         $validated = $request->validate([
             'admin_comments' => ['required', 'string', 'max:1000'],
@@ -235,24 +237,17 @@ class ProjectApprovalController extends Controller
 
         // Notify Student
         try {
-            if ($project->user) {
-                $project->user->notify(new SystemNotification(
-                    'Project Returned for Editing',
-                    "Your project '{$project->title}' has been returned for correction. Reason: {$validated['admin_comments']}",
-                    '/dashboard/projects',
-                    'warning'
-                ));
-            }
+            $project->user?->notify(new SystemNotification(
+                'Project Returned for Editing',
+                "Your project '{$project->title}' has been returned for correction. Reason: {$validated['admin_comments']}",
+                '/dashboard/projects',
+                'warning'
+            ));
         } catch (\Exception $e) {
-            // Keep resilient
+            report($e);
         }
 
-        $msg = __('Project rejected and sent back for editing.');
-        if (class_exists(Inertia::class) && method_exists(Inertia::class, 'flash')) {
-            Inertia::flash('toast', ['type' => 'warning', 'message' => $msg]);
-        } else {
-            session()->flash('toast', ['type' => 'warning', 'message' => $msg]);
-        }
+        $this->toast(['type' => 'warning', 'message' => __('Project rejected and sent back for editing.')]);
 
         return redirect()->route('admin.approvals.index');
     }
@@ -267,15 +262,12 @@ class ProjectApprovalController extends Controller
             'project_ids.*' => ['exists:projects,id'],
         ]);
 
-        $user = auth()->user();
         $query = Project::whereIn('id', $validated['project_ids'])
             ->where('status', Project::STATUS_SUBMITTED);
-        if ($user->hasRole('lecturer')) {
-            $query->where('supervisor_email', $user->email);
-        }
+        $this->limitToReviewer($query, auth()->user());
 
         $projects = $query->get();
-        $query->update([
+        Project::whereKey($projects->modelKeys())->update([
             'status' => Project::STATUS_CANCELLED,
         ]);
 
@@ -286,12 +278,7 @@ class ProjectApprovalController extends Controller
             );
         }
 
-        $msg = __('Selected projects cancelled successfully.');
-        if (class_exists(Inertia::class) && method_exists(Inertia::class, 'flash')) {
-            Inertia::flash('toast', ['type' => 'warning', 'message' => $msg]);
-        } else {
-            session()->flash('toast', ['type' => 'warning', 'message' => $msg]);
-        }
+        $this->toast(['type' => 'warning', 'message' => __('Selected projects cancelled successfully.')]);
 
         return redirect()->route('admin.approvals.index');
     }
@@ -305,10 +292,7 @@ class ProjectApprovalController extends Controller
             abort(403, __('New projects are view-only until submitted.'));
         }
 
-        $user = auth()->user();
-        if ($user->hasRole('lecturer') && $project->supervisor_email !== $user->email) {
-            abort(403, __('Unauthorized action.'));
-        }
+        $this->authorizeReview($project);
 
         $validated = $request->validate([
             'pcode' => [
@@ -331,13 +315,34 @@ class ProjectApprovalController extends Controller
             "Updated project code for '{$project->title}' from '{$oldCode}' to '{$validated['pcode']}'"
         );
 
-        $msg = __('Project code updated successfully.');
-        if (class_exists(Inertia::class) && method_exists(Inertia::class, 'flash')) {
-            Inertia::flash('toast', ['type' => 'success', 'message' => $msg]);
-        } else {
-            session()->flash('toast', ['type' => 'success', 'message' => $msg]);
-        }
+        $this->toast(['type' => 'success', 'message' => __('Project code updated successfully.')]);
 
         return redirect()->route('admin.approvals.index');
+    }
+
+    /**
+     * Lecturers only see projects they supervise, and nobody reviews their own project.
+     *
+     * @param  Builder<Project>  $query
+     */
+    private function limitToReviewer(Builder $query, User $user): void
+    {
+        if ($user->hasRole('lecturer')) {
+            $query->whereRaw('LOWER(supervisor_email) = ?', [Str::lower($user->email)]);
+        }
+
+        $query->where(fn (Builder $owner) => $owner->whereNull('user_id')->orWhere('user_id', '!=', $user->id));
+    }
+
+    private function authorizeReview(Project $project): void
+    {
+        $user = auth()->user();
+
+        $notSupervisor = $user->hasRole('lecturer')
+            && strcasecmp((string) $project->supervisor_email, (string) $user->email) !== 0;
+
+        if ($notSupervisor || $project->user_id === $user->id) {
+            abort(403, __('Unauthorized action.'));
+        }
     }
 }

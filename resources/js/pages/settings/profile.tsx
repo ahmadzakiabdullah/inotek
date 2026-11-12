@@ -10,6 +10,8 @@ import { Label } from '@/components/ui/label';
 import { edit } from '@/routes/profile';
 import { send } from '@/routes/verification';
 import type { Auth } from '@/types';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useInitials } from '@/hooks/use-initials';
 
 type PageProps = {
     auth: Auth;
@@ -23,6 +25,7 @@ export default function Profile({
     status?: string;
 }) {
     const { auth } = usePage<PageProps>().props;
+    const getInitials = useInitials();
 
     return (
         <>
@@ -36,6 +39,18 @@ export default function Profile({
                     title="Profile"
                     description="Update your name and email address"
                 />
+
+                <div className="flex items-center gap-3">
+                    <Avatar className="size-12">
+                        <AvatarFallback className="bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white">
+                            {getInitials(auth.user.name)}
+                        </AvatarFallback>
+                    </Avatar>
+                    <div>
+                        <p className="text-sm font-medium">{auth.user.name}</p>
+                        <p className="text-xs text-muted-foreground">Profile initials</p>
+                    </div>
+                </div>
 
                 <Form
                     {...ProfileController.update.form()}

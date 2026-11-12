@@ -4,14 +4,22 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Role;
+use App\Services\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class RoleController extends Controller
 {
+    /**
+     * System roles the application logic depends on. Protected by name, not ID,
+     * so they stay safe regardless of how the roles table was seeded.
+     */
+    private const PROTECTED_ROLES = ['admin', 'lecturer', 'judge', 'user'];
+
     /**
      * Display a listing of the roles.
      */
@@ -36,20 +44,17 @@ class RoleController extends Controller
         // Standardize name to lowercase
         $validated['name'] = strtolower($validated['name']);
 
+        if (Schema::hasColumn('roles', 'guard_name')) {
+            $validated['guard_name'] = 'web';
+        }
+
         Role::create($validated);
 
         // Flash toast notification using current system convention
-        if (class_exists(Inertia::class) && method_exists(Inertia::class, 'flash')) {
-            Inertia::flash('toast', [
+        $this->toast([
                 'type' => 'success',
                 'message' => __('Role created successfully.'),
             ]);
-        } else {
-            session()->flash('toast', [
-                'type' => 'success',
-                'message' => __('Role created successfully.'),
-            ]);
-        }
 
         return redirect()->route('admin.roles.index');
     }
@@ -59,8 +64,7 @@ class RoleController extends Controller
      */
     public function update(Request $request, Role $role): RedirectResponse
     {
-        $protectedRoles = [1, 2, 3, 4];
-        $isProtected = in_array($role->id, $protectedRoles);
+        $isProtected = in_array($role->name, self::PROTECTED_ROLES, true);
 
         $validated = $request->validate([
             'name' => [
@@ -79,11 +83,7 @@ class RoleController extends Controller
 
         if ($isProtected && $validated['name'] !== $role->name) {
             $msg = __('Cannot change system name for protected roles.');
-            if (class_exists(Inertia::class) && method_exists(Inertia::class, 'flash')) {
-                Inertia::flash('toast', ['type' => 'error', 'message' => $msg]);
-            } else {
-                session()->flash('toast', ['type' => 'error', 'message' => $msg]);
-            }
+            $this->toast(['type' => 'error', 'message' => $msg]);
 
             return redirect()->route('admin.roles.index');
         }
@@ -91,11 +91,7 @@ class RoleController extends Controller
         $role->update($validated);
 
         $msg = __('Role updated successfully.');
-        if (class_exists(Inertia::class) && method_exists(Inertia::class, 'flash')) {
-            Inertia::flash('toast', ['type' => 'success', 'message' => $msg]);
-        } else {
-            session()->flash('toast', ['type' => 'success', 'message' => $msg]);
-        }
+        $this->toast(['type' => 'success', 'message' => $msg]);
 
         return redirect()->route('admin.roles.index');
     }
@@ -105,26 +101,25 @@ class RoleController extends Controller
      */
     public function destroy(Role $role): RedirectResponse
     {
-        $protectedRoles = [1, 2, 3, 4];
-        if (in_array($role->id, $protectedRoles)) {
+        if (in_array($role->name, self::PROTECTED_ROLES, true)) {
             $msg = __('Cannot delete system-protected roles.');
-            if (class_exists(Inertia::class) && method_exists(Inertia::class, 'flash')) {
-                Inertia::flash('toast', ['type' => 'error', 'message' => $msg]);
-            } else {
-                session()->flash('toast', ['type' => 'error', 'message' => $msg]);
-            }
+            $this->toast(['type' => 'error', 'message' => $msg]);
+
+            return redirect()->route('admin.roles.index');
+        }
+
+        if ($role->users()->exists()) {
+            $this->toast(['type' => 'error', 'message' => __('Reassign the users in this role before deleting it.')]);
 
             return redirect()->route('admin.roles.index');
         }
 
         $role->delete();
 
+        AuditLogger::log('DELETE_ROLE', "Deleted role: '{$role->name}'");
+
         $msg = __('Role deleted successfully.');
-        if (class_exists(Inertia::class) && method_exists(Inertia::class, 'flash')) {
-            Inertia::flash('toast', ['type' => 'success', 'message' => $msg]);
-        } else {
-            session()->flash('toast', ['type' => 'success', 'message' => $msg]);
-        }
+        $this->toast(['type' => 'success', 'message' => $msg]);
 
         return redirect()->route('admin.roles.index');
     }

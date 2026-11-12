@@ -33,39 +33,33 @@ class CompetitionSeeder extends Seeder
             'r2_locked' => false,
         ]);
 
-        // 2. Create Categories for Active Session
+        // 2. Create shared categories used across all sessions
         $c1 = Category::create([
-            'session_id' => $activeSession->id,
             'code' => 'C1',
             'name' => 'Green Technology',
         ]);
 
         $c2 = Category::create([
-            'session_id' => $activeSession->id,
             'code' => 'C2',
             'name' => 'Smart Infrastructure',
         ]);
 
         $c3 = Category::create([
-            'session_id' => $activeSession->id,
             'code' => 'C3',
             'name' => 'Emerging Technology',
         ]);
 
         $c4 = Category::create([
-            'session_id' => $activeSession->id,
             'code' => 'C4',
             'name' => 'Creative Digital & Media',
         ]);
 
         $c6 = Category::create([
-            'session_id' => $activeSession->id,
             'code' => 'C6',
             'name' => 'Open Innovation',
         ]);
 
         $c5 = Category::create([
-            'session_id' => $activeSession->id,
             'code' => 'C5',
             'name' => 'Industry Design Project (IDP)',
         ]);
@@ -73,7 +67,7 @@ class CompetitionSeeder extends Seeder
         // 3. Create Rubrics
         $standardRubric = Rubric::create([
             'name' => 'Standard Rubric',
-            'description' => 'Official standard rubric for categories C1, C2, C3, C4, and C6. Total weight is intentionally 105%.',
+            'description' => 'Official standard rubric for categories C1, C2, C3, C4, and C6. Configured weights are normalized to a final score out of 100.',
         ]);
 
         $officialItems = [
@@ -133,30 +127,22 @@ class CompetitionSeeder extends Seeder
             ]));
         }
 
-        // 5. Map Categories to Rubrics
-        CategoryRubricMapping::create([
-            'category_id' => $c1->id,
-            'rubric_id' => $standardRubric->id,
-        ]);
-        CategoryRubricMapping::create([
-            'category_id' => $c2->id,
-            'rubric_id' => $standardRubric->id,
-        ]);
-        CategoryRubricMapping::create([
-            'category_id' => $c3->id,
-            'rubric_id' => $standardRubric->id,
-        ]);
-        CategoryRubricMapping::create([
-            'category_id' => $c4->id,
-            'rubric_id' => $standardRubric->id,
-        ]);
-        CategoryRubricMapping::create([
-            'category_id' => $c6->id,
-            'rubric_id' => $standardRubric->id,
-        ]);
-        CategoryRubricMapping::create([
-            'category_id' => $c5->id,
-            'rubric_id' => $idpRubric->id,
-        ]);
+        // 5. Map Categories to Rubrics separately in each session.
+        foreach ([$activeSession, $inactiveSession] as $session) {
+            foreach ([
+                [$c1, $standardRubric],
+                [$c2, $standardRubric],
+                [$c3, $standardRubric],
+                [$c4, $standardRubric],
+                [$c6, $standardRubric],
+                [$c5, $idpRubric],
+            ] as [$category, $rubric]) {
+                CategoryRubricMapping::create([
+                    'session_id' => $session->id,
+                    'category_id' => $category->id,
+                    'rubric_id' => $rubric->id,
+                ]);
+            }
+        }
     }
 }

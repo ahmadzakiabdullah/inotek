@@ -175,4 +175,16 @@ class RoleCrudTest extends TestCase
             'id' => 2,
         ]);
     }
+
+    public function test_admin_cannot_delete_role_that_still_has_users(): void
+    {
+        $admin = User::factory()->create(['role_id' => 1]);
+        $role = Role::create(['name' => 'reviewer', 'label' => 'Reviewer']);
+        User::factory()->create(['role_id' => $role->id]);
+
+        $this->actingAs($admin)->delete(route('admin.roles.destroy', $role))
+            ->assertRedirect(route('admin.roles.index'));
+
+        $this->assertDatabaseHas('roles', ['id' => $role->id]);
+    }
 }

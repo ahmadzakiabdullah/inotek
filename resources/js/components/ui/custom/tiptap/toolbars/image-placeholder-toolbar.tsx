@@ -1,12 +1,11 @@
 "use client";
-
-import { Image } from "lucide-react";
 import React from "react";
 
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useToolbar } from "./toolbar-provider";
+import { IconPhoto } from "@tabler/icons-react";
 
 const ImagePlaceholderToolbar = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, onClick, children, ...props }, ref) => {
@@ -29,7 +28,7 @@ const ImagePlaceholderToolbar = React.forwardRef<HTMLButtonElement, ButtonProps>
             }}
             ref={ref}
             {...props}>
-            {children ?? <Image className="h-4 w-4" />}
+            {children ?? <IconPhoto className="h-4 w-4" />}
           </Button>
         </TooltipTrigger>
         <TooltipContent>

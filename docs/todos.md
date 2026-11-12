@@ -2,6 +2,10 @@
 
 This document outlines the roadmap, plans, and checklist for developing the new INOTEK system based on the legacy PHP application, gap requirements, and system refinements.
 
+> [!NOTE]
+> Status reviewed 23 October 2026. The checklist records implementation work;
+> deployment-specific setup and remaining work are called out separately.
+
 ---
 
 ## 📋 Task Checklist
@@ -19,13 +23,13 @@ Judging runs twice a year (semesters). The same project IDs and judges can reapp
 - [x] Create migration to add `r2_locked` (BOOLEAN, default false) to the `competition_sessions` table.
 - [x] Set up composite unique key index: `[project_id, judge_id, session_id, round_no]` to allow the same judge to evaluate the same project ID across different semesters or rounds without database conflict.
 
-### 2. Dynamic Categories Management
-Categories must be fully dynamic (not hardcoded) to support changes from semester to semester.
+### 2. Shared Categories Management
+Categories are dynamic but global: maintain one category catalog and reuse the same category names and codes across sessions. Project records remain session scoped.
 - [x] Create `categories` database table (replacing static C1-C6 codes):
   - `id` (primary key)
   - `code` (e.g., `C1`)
   - `name` (e.g., `Green Technology`)
-  - `session_id` (nullable, if categories are scoped per semester)
+  - No session foreign key; categories are shared across sessions.
 - [x] Link `Project` model to `Category` model via `category_id` (foreign key).
 - [x] Build Admin Panel UI to CRUD categories (Add, edit, remove).
 
@@ -61,7 +65,7 @@ Select Top 3 or Top 5 projects per category for a second evaluation round, ensur
 - [x] Build user-facing download routes for "Participation" and "Achievement" certificates.
 
 ### 8. Real-Time Leaderboard & Audit Log
-- [ ] Set up **Laravel Reverb** (WebSocket) to stream live score changes to the public leaderboard.
+- [ ] Set up **Laravel Reverb** (WebSocket) to stream live score changes to the public leaderboard. It is not enabled in the current dependency set; validate Laravel 13 compatibility before enabling.
 - [x] Set up automatic event listeners to log critical admin actions (resets, status changes, rubric edits) to the `audit_logs` table.
 
 ---

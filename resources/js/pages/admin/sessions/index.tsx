@@ -46,6 +46,12 @@ interface CompetitionSession {
     id: number;
     name: string;
     is_active: boolean;
+    registration_mode: 'scheduled' | 'open' | 'closed';
+    registration_is_open: boolean;
+    session_starts_at: string | null;
+    session_ends_at: string | null;
+    registration_opens_at: string | null;
+    registration_closes_at: string | null;
     r2_locked: boolean;
     categories_count?: number;
     created_at: string;
@@ -54,6 +60,17 @@ interface CompetitionSession {
 
 interface Props {
     sessions: CompetitionSession[];
+}
+
+function formatDateOnly(value: string | null): string {
+    if (!value) return '-';
+
+    // Laravel serializes date casts as UTC ISO strings. Read the calendar date
+    // portion directly so the browser timezone cannot shift it by one day.
+    const date = value.slice(0, 10);
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+
+    return match ? `${match[3]}/${match[2]}/${match[1]}` : value;
 }
 
 export default function SessionsIndex({ sessions }: Props) {
@@ -68,6 +85,11 @@ export default function SessionsIndex({ sessions }: Props) {
     const createForm = useForm({
         name: '',
         is_active: false,
+        registration_mode: 'scheduled' as 'scheduled' | 'open' | 'closed',
+        session_starts_at: '',
+        session_ends_at: '',
+        registration_opens_at: '',
+        registration_closes_at: '',
         r2_locked: false,
     });
 
@@ -75,6 +97,11 @@ export default function SessionsIndex({ sessions }: Props) {
     const editForm = useForm({
         name: '',
         is_active: false,
+        registration_mode: 'scheduled' as 'scheduled' | 'open' | 'closed',
+        session_starts_at: '',
+        session_ends_at: '',
+        registration_opens_at: '',
+        registration_closes_at: '',
         r2_locked: false,
     });
 
@@ -117,6 +144,11 @@ export default function SessionsIndex({ sessions }: Props) {
         editForm.setData({
             name: session.name,
             is_active: session.is_active,
+            registration_mode: session.registration_mode,
+            session_starts_at: session.session_starts_at ?? '',
+            session_ends_at: session.session_ends_at ?? '',
+            registration_opens_at: session.registration_opens_at ?? '',
+            registration_closes_at: session.registration_closes_at ?? '',
             r2_locked: session.r2_locked,
         });
         editForm.clearErrors();
@@ -130,7 +162,8 @@ export default function SessionsIndex({ sessions }: Props) {
 return;
 }
 
-        editForm.put(`/dashboard/sessions/${selectedSession.id}`, {
+        editForm.transform((data) => ({ ...data, _method: 'put' }));
+        editForm.post(`/dashboard/sessions/${selectedSession.id}`, {
             onSuccess: () => {
                 setIsEditOpen(false);
                 setSelectedSession(null);
@@ -216,7 +249,7 @@ return;
                                 {activeSessionCount}
                             </div>
                             <p className="mt-1 text-xs text-muted-foreground">
-                                Currently receiving submissions
+                                Session selected for dashboard and judging
                             </p>
                         </CardContent>
                     </Card>
@@ -278,6 +311,12 @@ return;
                                             Status
                                         </TableHead>
                                         <TableHead className="w-[150px] text-center font-semibold">
+                                            Session Period
+                                        </TableHead>
+                                        <TableHead className="w-[150px] text-center font-semibold">
+                                            Registration
+                                        </TableHead>
+                                        <TableHead className="w-[150px] text-center font-semibold">
                                             Round 2 Judging
                                         </TableHead>
                                         <TableHead className="w-[150px] pr-6 text-right font-semibold">
@@ -322,6 +361,23 @@ return;
                                                             Inactive
                                                         </Badge>
                                                     )}
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    {formatDateOnly(session.session_starts_at)}
+                                                    {' - '}
+                                                    {formatDateOnly(session.session_ends_at)}
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    {session.registration_is_open ? (
+                                                        <Badge variant="success">Open</Badge>
+                                                    ) : (
+                                                        <Badge variant="secondary">Closed</Badge>
+                                                    )}
+                                                    <div className="mt-1 text-xs text-muted-foreground">
+                                                        {session.registration_mode === 'scheduled'
+                                                            ? `${formatDateOnly(session.registration_opens_at)} - ${formatDateOnly(session.registration_closes_at)}`
+                                                            : `Manual ${session.registration_mode}`}
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell className="text-center">
                                                     {session.r2_locked ? (
@@ -384,7 +440,7 @@ return;
                                     ) : (
                                         <TableRow>
                                             <TableCell
-                                                colSpan={5}
+                                                colSpan={7}
                                                 className="h-32 text-center text-muted-foreground"
                                             >
                                                 No sessions found matching your
@@ -401,7 +457,7 @@ return;
 
             {/* Create Dialog */}
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[560px]">
                     <DialogHeader>
                         <DialogTitle>Create Competition Session</DialogTitle>
                         <DialogDescription>
@@ -447,6 +503,46 @@ return;
                             />
                         </div>
 
+                        <div className="grid gap-2">
+                            <Label htmlFor="registration_mode">Registration Control</Label>
+                            <select
+                                id="registration_mode"
+                                className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                                value={createForm.data.registration_mode}
+                                onChange={(e) => createForm.setData('registration_mode', e.target.value as 'scheduled' | 'open' | 'closed')}
+                            >
+                                <option value="scheduled">Follow registration dates</option>
+                                <option value="open">Force open (within session dates)</option>
+                                <option value="closed">Force closed</option>
+                            </select>
+                            <InputError message={createForm.errors.registration_mode} />
+                            <p className="text-xs text-muted-foreground">
+                                Scheduled registration opens only between the dates below and within the session period. The schedule is evaluated in Malaysia time.
+                            </p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="grid gap-2">
+                                <Label htmlFor="session_starts_at">Session Starts</Label>
+                                <Input id="session_starts_at" type="date" required value={createForm.data.session_starts_at} onChange={(e) => createForm.setData('session_starts_at', e.target.value)} />
+                                <InputError message={createForm.errors.session_starts_at} />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="session_ends_at">Session Ends</Label>
+                                <Input id="session_ends_at" type="date" required value={createForm.data.session_ends_at} onChange={(e) => createForm.setData('session_ends_at', e.target.value)} />
+                                <InputError message={createForm.errors.session_ends_at} />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="registration_opens_at">Registration Opens</Label>
+                                <Input id="registration_opens_at" type="date" required={createForm.data.registration_mode === 'scheduled'} value={createForm.data.registration_opens_at} onChange={(e) => createForm.setData('registration_opens_at', e.target.value)} />
+                                <InputError message={createForm.errors.registration_opens_at} />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="registration_closes_at">Registration Closes</Label>
+                                <Input id="registration_closes_at" type="date" required={createForm.data.registration_mode === 'scheduled'} value={createForm.data.registration_closes_at} onChange={(e) => createForm.setData('registration_closes_at', e.target.value)} />
+                                <InputError message={createForm.errors.registration_closes_at} />
+                            </div>
+                        </div>
+
                         <DialogFooter className="pt-4">
                             <Button
                                 type="button"
@@ -470,7 +566,7 @@ return;
 
             {/* Edit Dialog */}
             <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[560px]">
                     <DialogHeader>
                         <DialogTitle>Edit Session</DialogTitle>
                         <DialogDescription>
@@ -515,6 +611,46 @@ return;
                                     }
                                     disabled={selectedSession.is_active} // Cannot directly toggle off active session unless another is activated
                                 />
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="edit-registration_mode">Registration Control</Label>
+                                <select
+                                    id="edit-registration_mode"
+                                    className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                                    value={editForm.data.registration_mode}
+                                    onChange={(e) => editForm.setData('registration_mode', e.target.value as 'scheduled' | 'open' | 'closed')}
+                                >
+                                    <option value="scheduled">Follow registration dates</option>
+                                    <option value="open">Force open (within session dates)</option>
+                                    <option value="closed">Force closed</option>
+                                </select>
+                                <InputError message={editForm.errors.registration_mode} />
+                                <p className="text-xs text-muted-foreground">
+                                    Scheduled registration opens only between the dates below and within the session period. The schedule is evaluated in Malaysia time.
+                                </p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="edit-session_starts_at">Session Starts</Label>
+                                    <Input id="edit-session_starts_at" type="date" required value={editForm.data.session_starts_at} onChange={(e) => editForm.setData('session_starts_at', e.target.value)} />
+                                    <InputError message={editForm.errors.session_starts_at} />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="edit-session_ends_at">Session Ends</Label>
+                                    <Input id="edit-session_ends_at" type="date" required value={editForm.data.session_ends_at} onChange={(e) => editForm.setData('session_ends_at', e.target.value)} />
+                                    <InputError message={editForm.errors.session_ends_at} />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="edit-registration_opens_at">Registration Opens</Label>
+                                    <Input id="edit-registration_opens_at" type="date" required={editForm.data.registration_mode === 'scheduled'} value={editForm.data.registration_opens_at} onChange={(e) => editForm.setData('registration_opens_at', e.target.value)} />
+                                    <InputError message={editForm.errors.registration_opens_at} />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="edit-registration_closes_at">Registration Closes</Label>
+                                    <Input id="edit-registration_closes_at" type="date" required={editForm.data.registration_mode === 'scheduled'} value={editForm.data.registration_closes_at} onChange={(e) => editForm.setData('registration_closes_at', e.target.value)} />
+                                    <InputError message={editForm.errors.registration_closes_at} />
+                                </div>
                             </div>
 
                             <div className="flex items-center justify-between rounded-lg border border-border/50 bg-muted/20 p-3">

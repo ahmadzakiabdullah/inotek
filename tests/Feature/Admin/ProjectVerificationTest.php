@@ -50,7 +50,7 @@ class ProjectVerificationTest extends TestCase
         $project1 = Project::create([
             'session_id' => $session->id,
             'category_id' => $category->id,
-            'user_id' => $admin->id,
+            'user_id' => User::factory()->create(['role_id' => 4])->id,
             'title' => 'Project 1',
             'abstract' => 'Sample',
             'institution_type' => 'utem',
@@ -62,7 +62,7 @@ class ProjectVerificationTest extends TestCase
         $project2 = Project::create([
             'session_id' => $session->id,
             'category_id' => $category->id,
-            'user_id' => $admin->id,
+            'user_id' => User::factory()->create(['role_id' => 4])->id,
             'title' => 'Project 2',
             'abstract' => 'Sample 2',
             'institution_type' => 'utem',
@@ -163,7 +163,7 @@ class ProjectVerificationTest extends TestCase
         $project = Project::create([
             'session_id' => $session->id,
             'category_id' => $category->id,
-            'user_id' => $admin->id,
+            'user_id' => User::factory()->create(['role_id' => 4])->id,
             'title' => 'Project 1',
             'abstract' => 'Sample',
             'institution_type' => 'utem',
@@ -194,7 +194,7 @@ class ProjectVerificationTest extends TestCase
         $project = Project::create([
             'session_id' => $session->id,
             'category_id' => $category->id,
-            'user_id' => $admin->id,
+            'user_id' => User::factory()->create(['role_id' => 4])->id,
             'title' => 'Project 1',
             'abstract' => 'Sample',
             'institution_type' => 'utem',
@@ -225,7 +225,7 @@ class ProjectVerificationTest extends TestCase
         Project::create([
             'session_id' => $session->id,
             'category_id' => $category->id,
-            'user_id' => $admin->id,
+            'user_id' => User::factory()->create(['role_id' => 4])->id,
             'title' => 'Project 1',
             'abstract' => 'Sample',
             'institution_type' => 'utem',
@@ -238,7 +238,7 @@ class ProjectVerificationTest extends TestCase
         $project2 = Project::create([
             'session_id' => $session->id,
             'category_id' => $category->id,
-            'user_id' => $admin->id,
+            'user_id' => User::factory()->create(['role_id' => 4])->id,
             'title' => 'Project 2',
             'abstract' => 'Sample 2',
             'institution_type' => 'utem',
@@ -265,14 +265,28 @@ class ProjectVerificationTest extends TestCase
         $otherLecturer = User::factory()->create(['role_id' => 2, 'email' => 'other@utem.edu.my']);
         $session = CompetitionSession::create(['name' => 'Session 1', 'is_active' => true]);
         $category = Category::create(['session_id' => $session->id, 'code' => 'C1', 'name' => 'Tech']);
+        $student = User::factory()->create(['role_id' => 4]);
 
-        // Supervised project
+        // Supervised project (supervisor email differs in case only)
         $project1 = Project::create([
             'session_id' => $session->id,
             'category_id' => $category->id,
-            'user_id' => $lecturer->id,
+            'user_id' => $student->id,
             'title' => 'Supervised Project',
             'abstract' => 'Sample',
+            'institution_type' => 'utem',
+            'status' => Project::STATUS_SUBMITTED,
+            'supervisor_name' => 'Lecturer A',
+            'supervisor_email' => 'Lecturer@UTeM.edu.my',
+        ]);
+
+        // A project the lecturer owns is never shown for their own review.
+        Project::create([
+            'session_id' => $session->id,
+            'category_id' => $category->id,
+            'user_id' => $lecturer->id,
+            'title' => 'Own Project',
+            'abstract' => 'Sample 3',
             'institution_type' => 'utem',
             'status' => Project::STATUS_SUBMITTED,
             'supervisor_name' => 'Lecturer A',
@@ -295,11 +309,58 @@ class ProjectVerificationTest extends TestCase
         $response = $this->actingAs($lecturer)->get(route('admin.approvals.index'));
         $response->assertStatus(200);
 
-        // Assert Inertia page receives only the supervised project
+        // Assert Inertia page receives only the supervised project, and no student list
         $response->assertInertia(fn ($page) => $page
             ->has('projects', 1)
             ->where('projects.0.id', $project1->id)
+            ->has('students', 0)
         );
+    }
+
+    public function test_lecturer_cannot_approve_own_project(): void
+    {
+        $lecturer = User::factory()->create(['role_id' => 2, 'email' => 'lecturer@utem.edu.my']);
+        $session = CompetitionSession::create(['name' => 'Session 1', 'is_active' => true]);
+        $category = Category::create(['session_id' => $session->id, 'code' => 'C1', 'name' => 'Tech']);
+
+        $project = Project::create([
+            'session_id' => $session->id,
+            'category_id' => $category->id,
+            'user_id' => $lecturer->id,
+            'title' => 'Own Project',
+            'abstract' => 'Sample',
+            'institution_type' => 'utem',
+            'status' => Project::STATUS_SUBMITTED,
+            'supervisor_name' => 'Lecturer A',
+            'supervisor_email' => 'lecturer@utem.edu.my',
+        ]);
+
+        $this->actingAs($lecturer)->post(route('admin.approvals.approve'), [
+            'project_ids' => [$project->id],
+        ]);
+
+        $this->assertSame(Project::STATUS_SUBMITTED, $project->fresh()->status);
+    }
+
+    public function test_admin_cannot_register_project_for_non_participant(): void
+    {
+        $admin = User::factory()->create(['role_id' => 1]);
+        $lecturer = User::factory()->create(['role_id' => 2]);
+        $session = CompetitionSession::create(['name' => 'Session 1', 'is_active' => true]);
+        $category = Category::create(['session_id' => $session->id, 'code' => 'C1', 'name' => 'Tech']);
+
+        $response = $this->actingAs($admin)->post(route('admin.approvals.storeProject'), [
+            'user_id' => $lecturer->id,
+            'category_id' => $category->id,
+            'title' => 'Lecturer project',
+            'abstract' => 'Project abstract',
+            'institution_type' => 'utem',
+            'supervisor_name' => 'Dr. Supervisor',
+            'supervisor_email' => 'supervisor@utem.edu.my',
+        ]);
+
+        $response->assertSessionHasErrors('user_id');
+        $this->assertDatabaseMissing('projects', ['user_id' => $lecturer->id]);
     }
 
     public function test_lecturer_cannot_reject_unsupervised_project(): void

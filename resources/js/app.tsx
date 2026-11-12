@@ -18,6 +18,7 @@ createInertiaApp({
             case name === 'welcome':
                 return null;
             case name === 'leaderboard/Index':
+            case name === 'contact/Index':
                 return PublicLayout;
             case name === 'leaderboard/App':
                 return AppLayout;

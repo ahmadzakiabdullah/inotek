@@ -22,6 +22,7 @@ use App\Http\Controllers\WelcomeController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', WelcomeController::class)->name('home');
+Route::inertia('contact', 'contact/Index')->name('contact');
 
 // Public Verification & Live Leaderboard
 Route::get('verify/certificate/{hash}', [CertificateController::class, 'verify'])->name('certificates.verify');
@@ -31,10 +32,6 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::inertia('profile', 'account/profile')->name('account.profile');
 
-    // Participant Project Routes
-    Route::resource('projects', ProjectController::class)->except(['create', 'show', 'edit']);
-    Route::post('projects/{project}/submit', [ProjectController::class, 'submit'])->name('projects.submit');
-
     // Certificate Downloads
     Route::get('projects/{project}/certificate/participation', [CertificateController::class, 'downloadParticipation'])->name('certificates.downloadParticipation');
     Route::get('projects/{project}/certificate/achievement', [CertificateController::class, 'downloadAchievement'])->name('certificates.downloadAchievement');
@@ -42,6 +39,13 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
     // Notifications
     Route::post('notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
+});
+
+// Participant Project Routes. Only participants may register projects, so
+// lecturers, judges and admins cannot enter (and then review or judge) their own.
+Route::middleware(['auth', 'verified', 'role:user'])->prefix('dashboard')->group(function () {
+    Route::resource('projects', ProjectController::class)->except(['create', 'show', 'edit']);
+    Route::post('projects/{project}/submit', [ProjectController::class, 'submit'])->name('projects.submit');
 });
 
 Route::middleware(['auth', 'verified', 'role:admin,lecturer,judge'])
@@ -57,6 +61,12 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         Route::post('changelog/clear-cache', [ChangelogController::class, 'clearCache'])->name('changelog.clear-cache');
     });
 
+// Keep compatibility with cached frontend bundles that still post to the
+// original root-level URL. New bundles use /dashboard/changelog/clear-cache.
+Route::post('changelog/clear-cache', [ChangelogController::class, 'clearCache'])
+    ->middleware(['auth', 'verified', 'role:admin'])
+    ->name('changelog.clear-cache.legacy');
+
 Route::middleware(['auth', 'verified', 'role:admin'])
     ->prefix('dashboard')
     ->name('admin.')
@@ -65,7 +75,15 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         Route::resource('users', UserController::class)->except(['create', 'show', 'edit']);
         Route::resource('sessions', CompetitionSessionController::class)->except(['create', 'show', 'edit']);
         Route::resource('categories', CategoryController::class)->except(['create', 'show', 'edit']);
-        Route::resource('rubrics', RubricController::class)->except(['create', 'show', 'edit']);
+        // IIS may reject PUT/PATCH before Laravel receives the request.
+        Route::post('categories/{category}', [CategoryController::class, 'update'])->name('categories.save');
+        // Use POST because IIS blocks PUT, PATCH and DELETE before Laravel receives them.
+        Route::post('approvals/{project}/delete', [ProjectApprovalController::class, 'destroy'])->name('approvals.delete');
+        Route::post('approvals/{project}/update', [ProjectApprovalController::class, 'updateProject'])->name('approvals.updateProject');
+        // IIS may reject PUT/PATCH/DELETE before Laravel receives the request.
+        Route::resource('rubrics', RubricController::class)->except(['create', 'show', 'edit', 'update', 'destroy']);
+        Route::post('rubrics/{rubric}/update', [RubricController::class, 'update'])->name('rubrics.update');
+        Route::post('rubrics/{rubric}/delete', [RubricController::class, 'destroy'])->name('rubrics.destroy');
 
         // Manual Announcements
         Route::get('announcements', [NotificationController::class, 'createAnnouncement'])->name('announcements.index');

@@ -19,9 +19,9 @@ import { useToolbar } from "./toolbar-provider";
 import type { Extension } from "@tiptap/core";
 import type { ColorOptions } from "@tiptap/extension-color";
 import type { HighlightOptions } from "@tiptap/extension-highlight";
-import { CheckIcon, ChevronDownIcon } from "lucide-react";
 import { useMediaQuery } from "@uidotdev/usehooks";
 import { MobileToolbarGroup, MobileToolbarItem } from "./mobile-toolbar-group";
+import { IconCheck, IconChevronDown } from "@tabler/icons-react";
 
 type TextStylingExtensions =
 	| Extension<ColorOptions, any>
@@ -82,7 +82,7 @@ const ColorHighlightButton = ({
 			</div>
 			<span>{name}</span>
 		</div>
-		{isActive && <CheckIcon className="h-4 w-4" />}
+		{isActive && <IconCheck className="h-4 w-4" />}
 	</button>
 );
 
@@ -172,7 +172,7 @@ export const ColorHighlightToolbar = () => {
 								className={cn("h-8 w-14 p-0 font-normal")}
 							>
 								<span className="text-md">A</span>
-								<ChevronDownIcon className="ml-2 h-4 w-4" />
+								<IconChevronDown className="ml-2 h-4 w-4" />
 							</Button>
 						</PopoverTrigger>
 					</TooltipTrigger>

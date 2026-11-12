@@ -14,6 +14,7 @@ import {
     Layers,
     FileCheck,
     ExternalLink,
+    Eye,
     AlertCircle,
     Plus,
     Trash2,
@@ -74,7 +75,7 @@ interface Category {
     id: number;
     code: string;
     name: string;
-    session_id?: number;
+    allow_team?: boolean;
 }
 
 interface Project {
@@ -120,12 +121,18 @@ export default function ApprovalsIndex({ projects, sessions, categories, student
     const userRole = auth?.user?.role;
 
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedSessionFilter, setSelectedSessionFilter] = useState('all');
+    const [selectedSessionFilter, setSelectedSessionFilter] = useState(() => {
+        const initialSession = sessions.find((session) => session.is_active) ?? sessions[0];
+
+        return initialSession ? initialSession.id.toString() : '';
+    });
     const [selectedStatusFilter, setSelectedStatusFilter] = useState('all');
     const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
 
     const [selectedProjectIds, setSelectedProjectIds] = useState<number[]>([]);
     const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
+    const [viewProject, setViewProject] = useState<Project | null>(null);
+    const [editingProject, setEditingProject] = useState<Project | null>(null);
 
     const [rejectProject, setRejectProject] = useState<Project | null>(null);
     const [editCodeProject, setEditCodeProject] = useState<Project | null>(
@@ -140,6 +147,18 @@ export default function ApprovalsIndex({ projects, sessions, categories, student
     // Form for edit code
     const editCodeForm = useForm({
         pcode: '',
+    });
+
+    const editProjectForm = useForm({
+        title: '',
+        abstract: '',
+        institution_type: 'utem',
+        supervisor_name: '',
+        supervisor_email: '',
+        supervisor_phone: '',
+        video_url: '',
+        poster_url: '',
+        team_members: [] as TeamMember[],
     });
 
     const [isRegisterOpen, setIsRegisterOpen] = useState(false);
@@ -170,7 +189,7 @@ export default function ApprovalsIndex({ projects, sessions, categories, student
 return [];
 }
 
-        return categories.filter((c) => c.session_id === activeSession.id);
+        return categories;
     }, [categories, activeSession]);
 
     const filteredStudents = useMemo(() => {
@@ -222,6 +241,41 @@ return students;
         setData('team_members', updated);
     };
 
+    const openProjectEdit = (project: Project) => {
+        setEditingProject(project);
+        editProjectForm.setData({
+            title: project.title,
+            abstract: project.abstract,
+            institution_type: project.institution_type,
+            supervisor_name: project.supervisor_name,
+            supervisor_email: project.supervisor_email,
+            supervisor_phone: project.supervisor_phone ?? '',
+            video_url: project.video_url ?? '',
+            poster_url: project.poster_url ?? '',
+            team_members: project.team_members ?? [],
+        });
+        editProjectForm.clearErrors();
+    };
+
+    const addEditTeamMember = () => {
+        editProjectForm.setData('team_members', [
+            ...editProjectForm.data.team_members,
+            { name: '', email: '', phone: '' },
+        ]);
+    };
+
+    const updateEditTeamMember = (index: number, field: keyof TeamMember, value: string) => {
+        const updated = [...editProjectForm.data.team_members];
+        updated[index] = { ...updated[index], [field]: value };
+        editProjectForm.setData('team_members', updated);
+    };
+
+    const removeEditTeamMember = (index: number) => {
+        const updated = [...editProjectForm.data.team_members];
+        updated.splice(index, 1);
+        editProjectForm.setData('team_members', updated);
+    };
+
     const handleCloseRegister = () => {
         setIsRegisterOpen(false);
         reset();
@@ -255,7 +309,6 @@ return students;
                         .includes(searchQuery.toLowerCase()));
 
             const matchesSession =
-                selectedSessionFilter === 'all' ||
                 project.session_id.toString() === selectedSessionFilter;
 
             const matchesStatus =
@@ -270,15 +323,18 @@ return students;
         });
     }, [projects, searchQuery, selectedSessionFilter, selectedStatusFilter, selectedCategoryFilter]);
 
-    // Stats
+    // Keep summary cards scoped to the selected session as well as the list.
     const stats = useMemo(() => {
-        const total = projects.length;
-        const pending = projects.filter((p) => p.status === 3).length; // Submitted status
-        const approved = projects.filter((p) => p.status === 4).length; // Approved status
-        const rejected = projects.filter((p) => p.status === 2).length; // Edit mode/rejected status
+        const sessionProjects = projects.filter(
+            (project) => project.session_id.toString() === selectedSessionFilter,
+        );
+        const total = sessionProjects.length;
+        const pending = sessionProjects.filter((p) => p.status === 3).length; // Submitted status
+        const approved = sessionProjects.filter((p) => p.status === 4).length; // Approved status
+        const rejected = sessionProjects.filter((p) => p.status === 2).length; // Edit mode/rejected status
 
         return { total, pending, approved, rejected };
-    }, [projects]);
+    }, [projects, selectedSessionFilter]);
 
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
@@ -382,6 +438,19 @@ return;
             onSuccess: () => {
                 setEditCodeProject(null);
                 editCodeForm.reset();
+            },
+        });
+    };
+
+    const handleEditProjectSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingProject) return;
+
+        editProjectForm.post(`/dashboard/approvals/${editingProject.id}/update`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setEditingProject(null);
+                setViewProject(null);
             },
         });
     };
@@ -524,15 +593,16 @@ return;
                         <div className="w-full min-w-0">
                             <Select
                                 value={selectedSessionFilter}
-                                onValueChange={setSelectedSessionFilter}
+                                onValueChange={(sessionId) => {
+                                    setSelectedSessionFilter(sessionId);
+                                    setSelectedProjectIds([]);
+                                    setSelectedCategoryFilter('all');
+                                }}
                             >
                                 <SelectTrigger className="h-9 bg-background/50">
                                     <SelectValue placeholder="All Sessions" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">
-                                        All Sessions
-                                    </SelectItem>
                                     {sessions.map((s) => (
                                         <SelectItem
                                             key={s.id}
@@ -656,7 +726,7 @@ return;
                                         <TableHead className="w-[120px] text-center font-semibold">
                                             Status
                                         </TableHead>
-                                        <TableHead className="w-[150px] pr-6 text-right font-semibold">
+                                        <TableHead className="w-[280px] pr-6 text-right font-semibold">
                                             Review
                                         </TableHead>
                                     </TableRow>
@@ -776,6 +846,47 @@ return;
                                                         </TableCell>
                                                         <TableCell className="pr-6 text-right">
                                                             <div className="flex items-center justify-end gap-1.5">
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => setViewProject(project)}
+                                                                    className="h-8 gap-1.5 px-2.5"
+                                                                >
+                                                                    <Eye className="h-4 w-4" />
+                                                                    View
+                                                                </Button>
+                                                                {userRole === 'admin' && (
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        onClick={() => openProjectEdit(project)}
+                                                                        className="h-8 gap-1.5 px-2.5"
+                                                                    >
+                                                                        <Edit3 className="h-4 w-4" />
+                                                                        Edit
+                                                                    </Button>
+                                                                )}
+                                                                {userRole === 'admin' && (
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        onClick={() => {
+                                                                            const confirmed = window.confirm(
+                                                                                `Delete "${project.title}"? It will be removed from active project lists. Scores, judge assignments and team records will be retained.`,
+                                                                            );
+                                                                            if (confirmed) {
+                                                                                router.post(`/dashboard/approvals/${project.id}/delete`, {}, { preserveScroll: true });
+                                                                            }
+                                                                        }}
+                                                                        className="h-8 px-2 text-destructive hover:bg-destructive/10"
+                                                                        title="Delete project"
+                                                                    >
+                                                                        Delete
+                                                                    </Button>
+                                                                )}
                                                                 {isPending ? (
                                                                     <>
                                                                         <Button
@@ -998,6 +1109,345 @@ return;
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Full project details */}
+            <Dialog
+                open={!!viewProject}
+                onOpenChange={(open) => !open && setViewProject(null)}
+            >
+                <DialogContent className="max-h-[90dvh] w-[calc(100vw-2rem)] max-w-5xl overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="pr-8 text-xl">
+                            {viewProject?.title ?? 'Project details'}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {[viewProject?.pcode, viewProject?.session?.name, viewProject?.category?.name]
+                                .filter(Boolean)
+                                .join(' · ')}
+                        </DialogDescription>
+                    </DialogHeader>
+                    {viewProject && (
+                        <div className="grid gap-4 py-2 md:grid-cols-2">
+                            <section className="space-y-3 rounded-lg border border-border/50 bg-muted/10 p-4">
+                                <h3 className="text-sm font-semibold">Project information</h3>
+                                <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                                    <div>
+                                        <dt className="text-xs text-muted-foreground">Status</dt>
+                                        <dd className="mt-1">
+                                            <Badge variant={getStatusBadgeVariant(viewProject.status)}>
+                                                {viewProject.status_label}
+                                            </Badge>
+                                        </dd>
+                                    </div>
+                                    <div>
+                                        <dt className="text-xs text-muted-foreground">Category</dt>
+                                        <dd className="mt-1 font-medium">
+                                            {viewProject.category?.code} {viewProject.category?.name ?? 'Not available'}
+                                        </dd>
+                                    </div>
+                                    <div>
+                                        <dt className="text-xs text-muted-foreground">Competition session</dt>
+                                        <dd className="mt-1 font-medium">{viewProject.session?.name ?? 'Not available'}</dd>
+                                    </div>
+                                    <div>
+                                        <dt className="text-xs text-muted-foreground">Institution</dt>
+                                        <dd className="mt-1 font-medium">
+                                            {viewProject.institution_type === 'utem' ? 'UTeM' : 'Other institution / IPT'}
+                                        </dd>
+                                    </div>
+                                </dl>
+                            </section>
+
+                            <section className="space-y-3 rounded-lg border border-border/50 bg-muted/10 p-4">
+                                <h3 className="text-sm font-semibold">Participant</h3>
+                                <div className="text-sm font-medium">{viewProject.user?.name ?? 'Unknown participant'}</div>
+                                {viewProject.user?.email && (
+                                    <a className="block break-all text-sm text-muted-foreground hover:text-foreground" href={`mailto:${viewProject.user.email}`}>
+                                        {viewProject.user.email}
+                                    </a>
+                                )}
+                                <div className="border-t border-border/50 pt-3">
+                                    <h4 className="text-xs font-semibold text-muted-foreground">Supervisor</h4>
+                                    <p className="mt-1 text-sm font-medium">{viewProject.supervisor_name || 'Not provided'}</p>
+                                    {viewProject.supervisor_email && (
+                                        <a className="block break-all text-sm text-muted-foreground hover:text-foreground" href={`mailto:${viewProject.supervisor_email}`}>
+                                            {viewProject.supervisor_email}
+                                        </a>
+                                    )}
+                                    {viewProject.supervisor_phone && (
+                                        <p className="mt-1 text-sm text-muted-foreground">{viewProject.supervisor_phone}</p>
+                                    )}
+                                </div>
+                            </section>
+
+                            <section className="space-y-2 rounded-lg border border-border/50 bg-muted/10 p-4 md:col-span-2">
+                                <h3 className="text-sm font-semibold">Abstract</h3>
+                                <p className="whitespace-pre-wrap break-words text-sm leading-6 text-muted-foreground">
+                                    {viewProject.abstract || 'No abstract provided.'}
+                                </p>
+                            </section>
+
+                            <section className="space-y-3 rounded-lg border border-border/50 bg-muted/10 p-4">
+                                <h3 className="text-sm font-semibold">Team members</h3>
+                                {viewProject.team_members?.length ? (
+                                    <ul className="space-y-3">
+                                        {viewProject.team_members.map((member, index) => (
+                                            <li key={`${member.email ?? member.name}-${index}`} className="border-b border-border/40 pb-2 last:border-0 last:pb-0">
+                                                <p className="text-sm font-medium">{member.name}</p>
+                                                {member.email && <p className="break-all text-xs text-muted-foreground">{member.email}</p>}
+                                                {member.phone && <p className="text-xs text-muted-foreground">{member.phone}</p>}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">No team members listed.</p>
+                                )}
+                            </section>
+
+                            <section className="space-y-3 rounded-lg border border-border/50 bg-muted/10 p-4">
+                                <h3 className="text-sm font-semibold">Project materials</h3>
+                                <div className="flex flex-col items-start gap-2">
+                                    {viewProject.video_url && (
+                                        <a href={viewProject.video_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline">
+                                            <Video className="h-4 w-4" /> Watch video demo <ExternalLink className="h-3.5 w-3.5" />
+                                        </a>
+                                    )}
+                                    {viewProject.poster_url && (
+                                        <a href={viewProject.poster_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline">
+                                            <FileText className="h-4 w-4" /> View project poster <ExternalLink className="h-3.5 w-3.5" />
+                                        </a>
+                                    )}
+                                    {!viewProject.video_url && !viewProject.poster_url && (
+                                        <p className="text-sm text-muted-foreground">No links provided.</p>
+                                    )}
+                                </div>
+                            </section>
+
+                            {viewProject.admin_comments && (
+                                <section className="space-y-2 rounded-lg border border-border/50 bg-muted/10 p-4 md:col-span-2">
+                                    <h3 className="text-sm font-semibold">Review comments</h3>
+                                    <p className="whitespace-pre-wrap text-sm text-muted-foreground">{viewProject.admin_comments}</p>
+                                </section>
+                            )}
+                        </div>
+                    )}
+                    <DialogFooter>
+                        {userRole === 'admin' && viewProject && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                    const project = viewProject;
+                                    setViewProject(null);
+                                    openProjectEdit(project);
+                                }}
+                            >
+                                <Edit3 className="mr-2 h-4 w-4" />
+                                Edit project
+                            </Button>
+                        )}
+                        <Button type="button" variant="outline" onClick={() => setViewProject(null)}>
+                            Close
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Admin project editor */}
+            <Dialog
+                open={!!editingProject}
+                onOpenChange={(open) => {
+                    if (!open) setEditingProject(null);
+                }}
+            >
+                <DialogContent className="max-h-[90dvh] w-[calc(100vw-2rem)] max-w-4xl overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Edit project</DialogTitle>
+                        <DialogDescription>
+                            Update project details for {editingProject?.pcode ?? editingProject?.title}. The competition session and category stay unchanged to preserve judging links.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {editingProject && (
+                        <form onSubmit={handleEditProjectSubmit} className="space-y-5 py-2">
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-project-title">Project title</Label>
+                                    <Input
+                                        id="edit-project-title"
+                                        value={editProjectForm.data.title}
+                                        onChange={(event) => editProjectForm.setData('title', event.target.value)}
+                                        required
+                                    />
+                                    <InputError message={editProjectForm.errors.title} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-project-institution">Institution type</Label>
+                                    <Select
+                                        value={editProjectForm.data.institution_type}
+                                        onValueChange={(value) => editProjectForm.setData('institution_type', value)}
+                                    >
+                                        <SelectTrigger id="edit-project-institution">
+                                            <SelectValue placeholder="Select institution type" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="utem">UTeM</SelectItem>
+                                            <SelectItem value="ipt">Other institution / IPT</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <InputError message={editProjectForm.errors.institution_type} />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-project-abstract">Abstract</Label>
+                                <Textarea
+                                    id="edit-project-abstract"
+                                    value={editProjectForm.data.abstract}
+                                    onChange={(event) => editProjectForm.setData('abstract', event.target.value)}
+                                    className="min-h-36 resize-y"
+                                    required
+                                />
+                                <InputError message={editProjectForm.errors.abstract} />
+                            </div>
+
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <div className="space-y-3 rounded-lg border border-border/50 p-4">
+                                    <h3 className="text-sm font-semibold">Supervisor</h3>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="edit-project-supervisor">Name</Label>
+                                        <Input
+                                            id="edit-project-supervisor"
+                                            value={editProjectForm.data.supervisor_name}
+                                            onChange={(event) => editProjectForm.setData('supervisor_name', event.target.value)}
+                                            required
+                                        />
+                                        <InputError message={editProjectForm.errors.supervisor_name} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="edit-project-supervisor-email">Email</Label>
+                                        <Input
+                                            id="edit-project-supervisor-email"
+                                            type="email"
+                                            value={editProjectForm.data.supervisor_email}
+                                            onChange={(event) => editProjectForm.setData('supervisor_email', event.target.value)}
+                                            required
+                                        />
+                                        <InputError message={editProjectForm.errors.supervisor_email} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="edit-project-supervisor-phone">Phone</Label>
+                                        <Input
+                                            id="edit-project-supervisor-phone"
+                                            value={editProjectForm.data.supervisor_phone}
+                                            onChange={(event) => editProjectForm.setData('supervisor_phone', event.target.value)}
+                                        />
+                                        <InputError message={editProjectForm.errors.supervisor_phone} />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3 rounded-lg border border-border/50 p-4">
+                                    <h3 className="text-sm font-semibold">Project links</h3>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="edit-project-video">Video demo URL</Label>
+                                        <Input
+                                            id="edit-project-video"
+                                            type="url"
+                                            value={editProjectForm.data.video_url}
+                                            onChange={(event) => editProjectForm.setData('video_url', event.target.value)}
+                                            placeholder="https://"
+                                        />
+                                        <InputError message={editProjectForm.errors.video_url} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="edit-project-poster">Poster URL</Label>
+                                        <Input
+                                            id="edit-project-poster"
+                                            type="url"
+                                            value={editProjectForm.data.poster_url}
+                                            onChange={(event) => editProjectForm.setData('poster_url', event.target.value)}
+                                            placeholder="https://"
+                                        />
+                                        <InputError message={editProjectForm.errors.poster_url} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <section className="space-y-3 rounded-lg border border-border/50 p-4">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <div>
+                                        <h3 className="text-sm font-semibold">Team members</h3>
+                                        <p className="text-xs text-muted-foreground">Update participant names and contact details.</p>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={addEditTeamMember}
+                                        disabled={editingProject.category?.allow_team === false}
+                                    >
+                                        <Plus className="mr-1.5 h-4 w-4" /> Add member
+                                    </Button>
+                                </div>
+                                {editingProject.category?.allow_team === false && (
+                                    <p className="text-xs text-muted-foreground">Team members are disabled for this category.</p>
+                                )}
+                                {editProjectForm.data.team_members.map((member, index) => (
+                                    <div key={`${member.email ?? member.name}-${index}`} className="grid gap-3 rounded-md bg-muted/20 p-3 md:grid-cols-[1fr_1fr_1fr_auto]">
+                                        <div className="space-y-1">
+                                            <Label htmlFor={`edit-team-${index}-name`}>Name</Label>
+                                            <Input
+                                                id={`edit-team-${index}-name`}
+                                                value={member.name}
+                                                onChange={(event) => updateEditTeamMember(index, 'name', event.target.value)}
+                                                required
+                                            />
+                                            <InputError message={editProjectForm.errors[`team_members.${index}.name` as any]} />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label htmlFor={`edit-team-${index}-email`}>Email</Label>
+                                            <Input
+                                                id={`edit-team-${index}-email`}
+                                                type="email"
+                                                value={member.email ?? ''}
+                                                onChange={(event) => updateEditTeamMember(index, 'email', event.target.value)}
+                                            />
+                                            <InputError message={editProjectForm.errors[`team_members.${index}.email` as any]} />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label htmlFor={`edit-team-${index}-phone`}>Phone</Label>
+                                            <Input
+                                                id={`edit-team-${index}-phone`}
+                                                value={member.phone ?? ''}
+                                                onChange={(event) => updateEditTeamMember(index, 'phone', event.target.value)}
+                                            />
+                                            <InputError message={editProjectForm.errors[`team_members.${index}.phone` as any]} />
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="self-end text-destructive"
+                                            aria-label={`Remove team member ${index + 1}`}
+                                            onClick={() => removeEditTeamMember(index)}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                ))}
+                            </section>
+
+                            <DialogFooter>
+                                <Button type="button" variant="outline" onClick={() => setEditingProject(null)}>
+                                    Cancel
+                                </Button>
+                                <Button type="submit" disabled={editProjectForm.processing}>
+                                    {editProjectForm.processing ? 'Saving...' : 'Save changes'}
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    )}
+                </DialogContent>
+            </Dialog>
 
             {/* Rejection Comments Dialog */}
             <Dialog

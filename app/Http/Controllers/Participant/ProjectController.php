@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\Participant;
 
+use App\Concerns\ProjectValidationRules;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\CompetitionSession;
 use App\Models\Project;
-use App\Models\TeamMember;
 use App\Models\User;
 use App\Notifications\SystemNotification;
 use App\Services\ProjectCodeGenerator;
@@ -15,24 +15,25 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ProjectController extends Controller
 {
+    use ProjectValidationRules;
+
     /**
      * Display the participant's project dashboard/form.
      */
     public function index(): Response
     {
-        $activeSession = CompetitionSession::where('is_active', true)->first();
+        $activeSession = CompetitionSession::active();
 
         $project = null;
         $categories = [];
 
         if ($activeSession) {
-            $categories = Category::where('session_id', $activeSession->id)->get();
+            $categories = Category::orderBy('code')->get();
             $project = Project::with('teamMembers', 'category')
                 ->where('session_id', $activeSession->id)
                 ->where('user_id', Auth::id())
@@ -41,6 +42,7 @@ class ProjectController extends Controller
 
         return Inertia::render('participant/project/index', [
             'activeSession' => $activeSession,
+            'registrationOpen' => (bool) ($activeSession?->isRegistrationOpen()),
             'categories' => $categories,
             'project' => $project,
         ]);
@@ -51,78 +53,38 @@ class ProjectController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $activeSession = CompetitionSession::where('is_active', true)->first();
+        $activeSession = CompetitionSession::active();
 
-        if (! $activeSession) {
-            return back()->withErrors(['session' => __('No active competition session found.')]);
+        if (! $activeSession || ! $activeSession->isRegistrationOpen()) {
+            return back()->withErrors(['session' => __('Registration is currently closed.')]);
         }
 
-        // Limit students to 1 project per active session
+        // One project per participant per session (the route is limited to participants).
         $user = Auth::user();
-        if ($user->role?->name === 'user') {
-            $existing = Project::where('session_id', $activeSession->id)
-                ->where('user_id', $user->id)
-                ->exists();
-            if ($existing) {
-                return back()->withErrors(['project' => __('You have already registered a project in this session.')]);
-            }
+        $existing = Project::where('session_id', $activeSession->id)
+            ->where('user_id', $user->id)
+            ->exists();
+        if ($existing) {
+            return back()->withErrors(['project' => __('You have already registered a project in this session.')]);
         }
 
-        $validated = $request->validate([
-            'category_id' => ['required', Rule::exists('categories', 'id')->where('session_id', $activeSession->id)],
-            'title' => ['required', 'string', 'max:255'],
-            'abstract' => ['required', 'string'],
-            'institution_type' => ['required', 'string', 'in:utem,ipt'],
-            'supervisor_name' => ['required', 'string', 'max:255'],
-            'supervisor_email' => ['required', 'email', 'max:255'],
-            'supervisor_phone' => ['nullable', 'string', 'max:100'],
-            'video_url' => ['nullable', 'url', 'max:255'],
-            'poster_url' => ['nullable', 'url', 'max:255'],
-            'team_members' => ['nullable', 'array'],
-            'team_members.*.name' => ['required', 'string', 'max:255'],
-            'team_members.*.email' => ['nullable', 'email', 'max:255'],
-            'team_members.*.phone' => ['nullable', 'string', 'max:100'],
-        ]);
-
-        $category = Category::where('session_id', $activeSession->id)->whereKey($validated['category_id'])->firstOrFail();
-        if (! $category->allow_team && ! empty($validated['team_members'])) {
-            return back()->withErrors(['team_members' => __('Team members are not allowed for this category.')]);
-        }
+        $validated = $request->validate($this->projectRules());
+        $this->ensureTeamAllowed(Category::find((int) $validated['category_id']), $validated);
 
         DB::transaction(function () use ($validated, $activeSession, $user) {
             $project = Project::create([
                 'session_id' => $activeSession->id,
                 'category_id' => $validated['category_id'],
                 'user_id' => $user->id,
-                'title' => $validated['title'],
-                'abstract' => $validated['abstract'],
-                'institution_type' => $validated['institution_type'],
                 'status' => Project::STATUS_NEW,
-                'supervisor_name' => $validated['supervisor_name'],
-                'supervisor_email' => $validated['supervisor_email'],
-                'supervisor_phone' => $validated['supervisor_phone'] ?? null,
-                'video_url' => $validated['video_url'] ?? null,
-                'poster_url' => $validated['poster_url'] ?? null,
+                ...$this->projectAttributes($validated),
             ]);
 
-            if (! empty($validated['team_members'])) {
-                foreach ($validated['team_members'] as $member) {
-                    TeamMember::create([
-                        'project_id' => $project->id,
-                        'name' => $member['name'],
-                        'email' => $member['email'] ?? null,
-                        'phone' => $member['phone'] ?? null,
-                    ]);
-                }
-            }
+            $this->syncTeamMembers($project, $validated);
         });
 
         $msg = __('Project registered as draft.');
-        if (class_exists(Inertia::class) && method_exists(Inertia::class, 'flash')) {
-            Inertia::flash('toast', ['type' => 'success', 'message' => $msg]);
-        } else {
-            session()->flash('toast', ['type' => 'success', 'message' => $msg]);
-        }
+        $this->toast(['type' => 'success', 'message' => $msg]);
 
         return redirect()->route('projects.index');
     }
@@ -137,65 +99,29 @@ class ProjectController extends Controller
             abort(403, __('Unauthorized action.'));
         }
 
+        if (! $project->session?->isRegistrationOpen()) {
+            return back()->withErrors(['session' => __('Registration for this session is closed.')]);
+        }
+
         // Only allow edits on draft statuses
         if (! in_array($project->status, [Project::STATUS_NEW, Project::STATUS_EDIT])) {
             return back()->withErrors(['status' => __('Cannot update a submitted or approved project.')]);
         }
 
-        $validated = $request->validate([
-            'category_id' => ['required', Rule::exists('categories', 'id')->where('session_id', $project->session_id)],
-            'title' => ['required', 'string', 'max:255'],
-            'abstract' => ['required', 'string'],
-            'institution_type' => ['required', 'string', 'in:utem,ipt'],
-            'supervisor_name' => ['required', 'string', 'max:255'],
-            'supervisor_email' => ['required', 'email', 'max:255'],
-            'supervisor_phone' => ['nullable', 'string', 'max:100'],
-            'video_url' => ['nullable', 'url', 'max:255'],
-            'poster_url' => ['nullable', 'url', 'max:255'],
-            'team_members' => ['nullable', 'array'],
-            'team_members.*.name' => ['required', 'string', 'max:255'],
-            'team_members.*.email' => ['nullable', 'email', 'max:255'],
-            'team_members.*.phone' => ['nullable', 'string', 'max:100'],
-        ]);
-
-        $category = Category::where('session_id', $project->session_id)->whereKey($validated['category_id'])->firstOrFail();
-        if (! $category->allow_team && ! empty($validated['team_members'])) {
-            return back()->withErrors(['team_members' => __('Team members are not allowed for this category.')]);
-        }
+        $validated = $request->validate($this->projectRules());
+        $this->ensureTeamAllowed(Category::find((int) $validated['category_id']), $validated);
 
         DB::transaction(function () use ($validated, $project) {
             $project->update([
                 'category_id' => $validated['category_id'],
-                'title' => $validated['title'],
-                'abstract' => $validated['abstract'],
-                'institution_type' => $validated['institution_type'],
-                'supervisor_name' => $validated['supervisor_name'],
-                'supervisor_email' => $validated['supervisor_email'],
-                'supervisor_phone' => $validated['supervisor_phone'] ?? null,
-                'video_url' => $validated['video_url'] ?? null,
-                'poster_url' => $validated['poster_url'] ?? null,
+                ...$this->projectAttributes($validated),
             ]);
 
-            // Sync team members (delete old, insert new)
-            $project->teamMembers()->delete();
-            if (! empty($validated['team_members'])) {
-                foreach ($validated['team_members'] as $member) {
-                    TeamMember::create([
-                        'project_id' => $project->id,
-                        'name' => $member['name'],
-                        'email' => $member['email'] ?? null,
-                        'phone' => $member['phone'] ?? null,
-                    ]);
-                }
-            }
+            $this->syncTeamMembers($project, $validated);
         });
 
         $msg = __('Project updated successfully.');
-        if (class_exists(Inertia::class) && method_exists(Inertia::class, 'flash')) {
-            Inertia::flash('toast', ['type' => 'success', 'message' => $msg]);
-        } else {
-            session()->flash('toast', ['type' => 'success', 'message' => $msg]);
-        }
+        $this->toast(['type' => 'success', 'message' => $msg]);
 
         return redirect()->route('projects.index');
     }
@@ -207,6 +133,10 @@ class ProjectController extends Controller
     {
         if ($project->user_id !== Auth::id()) {
             abort(403, __('Unauthorized action.'));
+        }
+
+        if (! $project->session?->isRegistrationOpen()) {
+            return back()->withErrors(['session' => __('Registration for this session is closed.')]);
         }
 
         if (! in_array($project->status, [Project::STATUS_NEW, Project::STATUS_EDIT])) {
@@ -239,11 +169,7 @@ class ProjectController extends Controller
         }
 
         $msg = __('Project submitted successfully.');
-        if (class_exists(Inertia::class) && method_exists(Inertia::class, 'flash')) {
-            Inertia::flash('toast', ['type' => 'success', 'message' => $msg]);
-        } else {
-            session()->flash('toast', ['type' => 'success', 'message' => $msg]);
-        }
+        $this->toast(['type' => 'success', 'message' => $msg]);
 
         return redirect()->route('projects.index');
     }
@@ -255,6 +181,10 @@ class ProjectController extends Controller
     {
         if ($project->user_id !== Auth::id()) {
             abort(403, __('Unauthorized action.'));
+        }
+
+        if (! $project->session?->isRegistrationOpen()) {
+            return back()->withErrors(['session' => __('Registration for this session is closed.')]);
         }
 
         if (! in_array($project->status, [Project::STATUS_NEW, Project::STATUS_EDIT])) {
@@ -271,11 +201,7 @@ class ProjectController extends Controller
         });
 
         $msg = __('Project deleted successfully.');
-        if (class_exists(Inertia::class) && method_exists(Inertia::class, 'flash')) {
-            Inertia::flash('toast', ['type' => 'success', 'message' => $msg]);
-        } else {
-            session()->flash('toast', ['type' => 'success', 'message' => $msg]);
-        }
+        $this->toast(['type' => 'success', 'message' => $msg]);
 
         return redirect()->route('projects.index');
     }

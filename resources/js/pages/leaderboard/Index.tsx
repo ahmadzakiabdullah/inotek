@@ -70,7 +70,8 @@ export default function LeaderboardIndex({
 }: Props) {
     const { component } = usePage();
     const isAppLayout = component === 'leaderboard/App';
-    const showResults = resultsPublished || isAppLayout;
+    // The server decides visibility: lecturers get public-shaped data until results are locked.
+    const showResults = resultsPublished;
     const [localLeaderboardData, setLocalLeaderboardData] =
         useState(leaderboardData);
     const [isRefreshing, setIsRefreshing] = useState(false);

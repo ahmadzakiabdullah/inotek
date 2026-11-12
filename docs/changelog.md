@@ -15,7 +15,25 @@ INOTEK uses **Semantic Versioning 2.0.0** (`vMajor.Minor.Patch`):
 
 ## 2. INOTEK Version History
 
-### [v1.6.3] - 2026-10-23 (Current Release)
+### [v1.7.0] - 2026-11-12 (Current Release)
+#### Security
+* **Certificate Verification Privacy**: The public verify page now receives only names, project title/code, category and session. Student, team member and supervisor emails and phone numbers are no longer exposed.
+* **Results Confidentiality**: Award levels, scores and rankings stay hidden on the public leaderboard, home page and verify page until Round 2 results are locked. Achievement certificates cannot be downloaded before then (admins excepted).
+* **Lecturer and Participant Visibility**: Lecturers see scores, awards and judge comments on the staff leaderboard only after results are locked; participant and supervisor pages no longer receive the award level early. Admins and judges keep full access.
+* **Project Registration**: Only participant accounts can register projects. Nobody can approve, return or cancel their own project.
+* **Judge Conflict of Interest**: A judge who owns or supervises a project cannot be assigned to evaluate it.
+* **Hardening**: Student list limited to admins, roles protected by name, internal error messages hidden, stricter score and project validation.
+#### Changed
+* **Round 1 Lock**: Round 1 scores are frozen automatically once any Round 2 assignment exists. Delete the Round 2 assignments to reopen Round 1.
+* **Leaderboard Ordering**: Round 2 finalists always rank above projects scored only in Round 1.
+* **Safe Deletion**: Sessions, categories and roles that still have projects or users cannot be deleted.
+* **Results Lock**: `r2_locked` is no longer editable from the session form; it changes only through the audited Round 2 lock toggle.
+* **Certificate QR Codes**: Generated locally instead of through an external service.
+#### Fixed
+* **Migrations**: `2026_11_02_000001_scope_rubric_mappings_to_sessions` no longer fails on fresh MySQL databases (error 1553).
+* **Changelog Rendering**: Changelog content is escaped before rendering.
+
+### [v1.6.3] - 2026-10-23
 #### Changed
 * **Sidebar Contact Card**: Replaced the Download promotion with faculty contact information and a Secretariat button linking to the INOTEK contact page.
 * **Project Session Attribution**: Existing project registrations have been assigned to Sesi 1/2026 while Sesi 2/2026 remains the active session for new operations. Session-specific dashboards and approval filters show the selected session.
@@ -59,8 +77,8 @@ INOTEK uses **Semantic Versioning 2.0.0** (`vMajor.Minor.Patch`):
 
 ### [v1.4.0] - 2026-06-18
 #### Added
-* **Real-time Broadcast Announcement**: Added the Admin Composer at `/admin/announcements` with live previews.
-* **Notification System**: Integrated real-time popup alerts via Laravel Reverb (WebSockets) and asynchronous background queues for database notification delivery.
+* **Broadcast Announcement**: Added the Admin Composer at `/dashboard/announcements` with live previews.
+* **Notification System**: Added database notifications delivered through background queues, with broadcast-ready events (Laravel Reverb not yet enabled).
 
 ---
 

@@ -6,8 +6,8 @@ Semakan terakhir: 16 Jun 2026.
 > Dokumen ini ialah snapshot arkib keadaan sistem pada 16 Jun 2026, termasuk portal
 > PHP legacy dan andaian migrasi ketika itu. Ia bukan rujukan operasi semasa bagi
 > aplikasi Laravel. Rujuk [README](README.md), [PRD](docs/prd.md),
-> [rujukan pangkalan data](docs/database.md), dan [changelog](docs/changelog.md)
-> untuk keadaan terkini (23 Oktober 2026).
+> [rujukan pangkalan data](docs/database.md), [changelog](docs/changelog.md),
+> [senarai tugasan](docs/todos.md) dan [cadangan penambahbaikan](fix.md) untuk keadaan terkini.
 
 ## 1. Gambaran Umum
 

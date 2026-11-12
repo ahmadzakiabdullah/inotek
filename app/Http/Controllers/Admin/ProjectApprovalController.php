@@ -34,7 +34,9 @@ class ProjectApprovalController extends Controller
         $this->limitToReviewer($query, $user);
 
         return Inertia::render('admin/approvals/index', [
-            'projects' => $query->get(),
+            'projects' => $user->hasRole('admin')
+                ? $query->get()
+                : $query->get()->each(fn (Project $project) => $project->hideUnpublishedAward()),
             'sessions' => CompetitionSession::orderByDesc('id')->get(),
             'categories' => Category::orderBy('code')->get(['id', 'name', 'code']),
             // Only admins can register projects for students, so only they need the student list.

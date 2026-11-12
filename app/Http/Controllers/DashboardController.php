@@ -137,7 +137,7 @@ class DashboardController extends Controller
                 'approved_projects' => $myProjects->where('status', Project::STATUS_APPROVED)->count(),
                 'rejected_projects' => $myProjects->where('status', Project::STATUS_EDIT)->count(),
             ];
-            $data['my_projects'] = $myProjects;
+            $data['my_projects'] = $myProjects->each(fn (Project $project) => $project->hideUnpublishedAward($activeSession));
         } else {
             // Student / User role
             $project = null;
@@ -145,7 +145,8 @@ class DashboardController extends Controller
                 $project = Project::with(['category', 'teamMembers'])
                     ->where('session_id', $activeSession->id)
                     ->where('user_id', $user->id)
-                    ->first();
+                    ->first()
+                    ?->hideUnpublishedAward($activeSession);
             }
             $data['project'] = $project;
         }

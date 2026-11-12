@@ -63,14 +63,54 @@ class PublicLeaderboardPrivacyTest extends TestCase
     public function test_internal_leaderboard_keeps_judging_details(): void
     {
         [, $category, $project, $judge] = $this->makeScoredProject(false);
-        $staff = User::factory()->create(['role_id' => 2]);
+        foreach ([1, 3] as $roleId) { // admin, judge
+            $staff = User::factory()->create(['role_id' => $roleId]);
 
-        $response = $this->actingAs($staff)->getJson(route('dashboard.leaderboard'));
+            $this->actingAs($staff)->getJson(route('dashboard.leaderboard'))
+                ->assertOk()
+                ->assertJsonPath("leaderboardData.{$category->id}.0.username", $project->user->name)
+                ->assertJsonPath("leaderboardData.{$category->id}.0.judges.0.name", $judge->name)
+                ->assertJsonPath("leaderboardData.{$category->id}.0.judges.0.comments", 'Private judging comment');
+        }
+    }
 
-        $response->assertOk()
-            ->assertJsonPath("leaderboardData.{$category->id}.0.username", $project->user->name)
-            ->assertJsonPath("leaderboardData.{$category->id}.0.judges.0.name", $judge->name)
-            ->assertJsonPath("leaderboardData.{$category->id}.0.judges.0.comments", 'Private judging comment');
+    public function test_lecturer_leaderboard_hides_results_until_round_two_is_finalized(): void
+    {
+        [$session, $category, $project] = $this->makeScoredProject(false);
+        $project->update(['award_level' => 'Gold']);
+        $lecturer = User::factory()->create(['role_id' => 2]);
+
+        $this->actingAs($lecturer)->getJson(route('dashboard.leaderboard'))
+            ->assertOk()
+            ->assertJsonPath("leaderboardData.{$category->id}.0.award_level", null)
+            ->assertJsonMissingPath("leaderboardData.{$category->id}.0.final_score")
+            ->assertJsonMissingPath("leaderboardData.{$category->id}.0.judges");
+
+        $session->update(['r2_locked' => true]);
+
+        $this->actingAs($lecturer)->getJson(route('dashboard.leaderboard'))
+            ->assertJsonPath("leaderboardData.{$category->id}.0.award_level", 'Gold')
+            ->assertJsonPath("leaderboardData.{$category->id}.0.final_score", 75);
+    }
+
+    public function test_participant_and_supervisor_pages_hide_award_until_round_two_is_finalized(): void
+    {
+        [$session, , $project] = $this->makeScoredProject(false);
+        $project->update(['award_level' => 'Gold']);
+        $participant = $project->user;
+        $supervisor = User::factory()->create(['role_id' => 2, 'email' => 'supervisor@example.com']);
+
+        $this->actingAs($participant)->get(route('projects.index'))
+            ->assertInertia(fn ($page) => $page->missing('project.award_level'));
+        $this->actingAs($participant)->get(route('dashboard'))
+            ->assertInertia(fn ($page) => $page->missing('project.award_level'));
+        $this->actingAs($supervisor)->get(route('dashboard'))
+            ->assertInertia(fn ($page) => $page->missing('my_projects.0.award_level'));
+
+        $session->update(['r2_locked' => true]);
+
+        $this->actingAs($participant)->get(route('projects.index'))
+            ->assertInertia(fn ($page) => $page->where('project.award_level', 'Gold'));
     }
 
     public function test_award_and_rankings_stay_hidden_until_results_are_finalized(): void

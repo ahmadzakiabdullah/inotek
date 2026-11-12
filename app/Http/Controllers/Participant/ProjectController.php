@@ -37,7 +37,8 @@ class ProjectController extends Controller
             $project = Project::with('teamMembers', 'category')
                 ->where('session_id', $activeSession->id)
                 ->where('user_id', Auth::id())
-                ->first();
+                ->first()
+                ?->hideUnpublishedAward($activeSession);
         }
 
         return Inertia::render('participant/project/index', [

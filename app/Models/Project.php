@@ -65,6 +65,21 @@ class Project extends Model
     ];
 
     /**
+     * Hide the award from serialization until the session's results are locked.
+     * Use before passing projects to non-admin users.
+     */
+    public function hideUnpublishedAward(?CompetitionSession $session = null): static
+    {
+        $session ??= $this->session;
+
+        if (! $session?->r2_locked) {
+            $this->makeHidden('award_level');
+        }
+
+        return $this;
+    }
+
+    /**
      * Get the session that owns the project.
      */
     /** @return BelongsTo<CompetitionSession, $this> */

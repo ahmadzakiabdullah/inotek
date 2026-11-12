@@ -3,7 +3,7 @@
 This document outlines the roadmap, plans, and checklist for developing the new INOTEK system based on the legacy PHP application, gap requirements, and system refinements.
 
 > [!NOTE]
-> Status reviewed 23 October 2026. The checklist records implementation work;
+> Status reviewed 12 November 2026. The checklist records implementation work;
 > deployment-specific setup and remaining work are called out separately.
 
 ---
@@ -38,23 +38,27 @@ Pemarkahan (Scoring) must pull dynamic rubric criteria based on the selected pro
 - [x] Create database tables:
   - `rubrics` (id, name, description)
   - `rubric_items` (id, rubric_id, criteria_name, weight, max_points)
-  - `category_rubric_mapping` (id, category_id, rubric_id)
-- [x] Build Admin Panel to assign rubrics to categories.
+  - `category_rubric_mapping` (id, category_id, session_id, rubric_id) — one rubric per category per session.
+- [x] Build Admin Panel to assign rubrics to categories (per session).
 - [x] Build dynamic evaluation form rendering in the Judge Portal (looks up project's category -> looks up rubric -> renders inputs dynamically).
 - [x] Store breakdown scores as a JSON array (`score_details`) in the `scores` table, and final calculated value in `total`.
 
 ### 4. Round 2 (Pusingan Ke-2) Pemarkahan
-Select Top 3 or Top 5 projects per category for a second evaluation round, ensuring no judge conflict.
+Select Top 3, 5 or 10 projects per category for a second evaluation round, ensuring no judge conflict.
 - [x] Develop query logic in `ScoreCalculator` to average Round 1 scores:
-  - Select Top N projects (where N is configurable: 3 or 5) grouped by `category_id`.
+  - Select Top N projects (where N is configurable: 3, 5 or 10) grouped by `category_id`.
 - [x] Build Admin UI to view the qualified Round 2 shortlist and assign Round 2 judges.
 - [x] Implement validation rule: Block assignment if the judge already evaluated the same project in Round 1.
 - [x] Implement Round 2 locking (`r2_locked` inside the active session).
+- [x] Auto-lock Round 1 once any Round 2 assignment exists (delete Round 2 assignments to reopen).
+- [x] Allow Round 2 assignments only after all Round 1 evaluations are complete (and only for shortlisted projects).
+- [x] Block conflict-of-interest assignments: a judge who owns or supervises a project cannot be assigned to it.
+- [x] Keep results confidential before `r2_locked`: no scores/awards on the public leaderboard, empty homepage rankings, award hidden on the verify page, achievement certificates admin-only, and no `award_level` sent to participants' or lecturers' pages (lecturers see staff leaderboard scores only after `r2_locked`).
 
 ### 5. Project Registration & Team Management
 - [x] Design the dynamic team member registration form in React.
 - [x] Set up the `TeamMember` model and associate it with the `Project` model (One-to-Many relationship mapping to the `penyelidik` database table).
-- [x] Build the file upload logic for poster and video links.
+- [x] Add optional poster URL and video URL fields (validated links, no file upload).
 
 ### 6. Admin Approvals & Project Verification
 - [x] Implement bulk project approvals (`approve_projects`) interface for admins.
@@ -65,8 +69,18 @@ Select Top 3 or Top 5 projects per category for a second evaluation round, ensur
 - [x] Build user-facing download routes for "Participation" and "Achievement" certificates.
 
 ### 8. Real-Time Leaderboard & Audit Log
-- [ ] Set up **Laravel Reverb** (WebSocket) to stream live score changes to the public leaderboard. It is not enabled in the current dependency set; validate Laravel 13 compatibility before enabling.
+- [ ] Set up **Laravel Reverb** (WebSocket) to stream live score changes to the public leaderboard. The app already runs on Laravel 13, `ScoreUpdated` implements `ShouldBroadcast`, and the leaderboard listens on `window.Echo`; only the Reverb server/config is missing (`BROADCAST_CONNECTION=log`), so the leaderboard currently polls `?api=true`.
 - [x] Set up automatic event listeners to log critical admin actions (resets, status changes, rubric edits) to the `audit_logs` table.
+
+### 9. Deployment Setup & Hardening (Remaining Work)
+- [ ] Configure SMTP mail delivery and run a queue worker (mail currently uses `MAIL_MAILER=log`).
+- [ ] Enforce email verification (`MustVerifyEmail` on the `User` model).
+- [ ] Switch critical foreign keys to `restrictOnDelete` to protect historical evaluation records.
+- [ ] Store `rubric_id` on `scores` so each evaluation records the rubric it was graded against.
+- [ ] Move project authorization into a `ProjectPolicy`.
+- [ ] Replace the project status integer constants with a status enum.
+- [ ] Update the 16 stale feature tests to match current behaviour.
+- [ ] Document/remove the MySQL requirement for running the test suite (tests currently require MySQL).
 
 ---
 
@@ -111,7 +125,7 @@ These are recommended high-premium enhancements to improve user engagement, syst
 ### 1. Dynamic Certificate Verification (Secure QR Code Verification)
 - [x] Add a unique, secure QR code at the bottom of generated PDF certificates (DomPDF).
 - [x] Implement a public verification route: `/verify/certificate/{hash}`.
-- [x] Scan verification: Allows external parties (employers, sponsors) to scan the certificate QR and instantly verify the student's name, project title, category, score, and achievement level on the system's official portal.
+- [x] Scan verification: Allows external parties (employers, sponsors) to scan the certificate QR and instantly verify the student's name, project title, project code, category, session and team members on the system's official portal. No score is shown; the achievement level appears only after `r2_locked`.
 
 ### 2. Gamified Judge Progress Dashboard
 - [x] Build a visual progress tracker for judges showing:
@@ -121,7 +135,7 @@ These are recommended high-premium enhancements to improve user engagement, syst
 
 ### 3. Real-Time Admin Judging Monitor (Visual Chart)
 - [x] Add a real-time completion chart in the Admin Dashboard showing progress per category (e.g., Green Tech: 90% judged, emerging tech: 40% judged).
-- [x] Implement a single-click "Nudge Pending Judges" button to send automated friendly email reminders to judges who haven't completed their scoring.
+- [x] Implement a single-click "Nudge Pending Judges" button to send automated friendly email reminders to judges who haven't completed their scoring. Emails are sent synchronously (not queued), and nothing is delivered while `MAIL_MAILER=log`; delivery depends on SMTP setup.
 
 ### 4. Database Integrity & Soft Deletes
 - [x] Implement Laravel's `SoftDeletes` trait on the `Project`, `TeamMember`, and `User` models.

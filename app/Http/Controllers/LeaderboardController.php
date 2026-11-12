@@ -54,8 +54,12 @@ class LeaderboardController extends Controller
             ->with(['user', 'category'])
             ->get();
 
-        $isAuthenticatedLeaderboard = $request->routeIs('dashboard.leaderboard');
-        $isPublicResultsPublished = $activeSession->r2_locked;
+        $isPublicResultsPublished = (bool) $activeSession->r2_locked;
+        // Lecturers supervise participants, so they only see scores, awards and
+        // judge comments once results are finalized; admins and judges always do.
+        $user = $request->user();
+        $isAuthenticatedLeaderboard = $request->routeIs('dashboard.leaderboard')
+            && ($isPublicResultsPublished || $user?->hasRole('admin') || $user?->hasRole('judge'));
 
         // Keep judging details restricted to the authenticated staff leaderboard.
         $r1Averages = collect();

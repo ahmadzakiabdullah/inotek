@@ -12,7 +12,7 @@ Disediakan berdasarkan audit kod pada 12 November 2026. Dokumen ini menyenaraika
 
 ## Status pelaksanaan (dikemas kini 12 November 2026)
 
-Semua perubahan kod berikut sudah dibuat di server, tetapi **belum di-commit**. Backup kod sebelum perubahan disimpan di mesin pengaudit (`scratchpad/backup-pre-fix/source.tar` dan `tracked.diff`).
+Semua perubahan kod berikut sudah di-commit (`8b5481b`) dan digabungkan ke `main` melalui PR #5 (`b79034c`). Server production kini berada pada branch `main`.
 
 **Pengesahan yang dibuat:**
 - Ujian penuh dijalankan pada salinan setempat dengan MySQL 8: 163 ujian, 147 lulus.
@@ -22,9 +22,9 @@ Semua perubahan kod berikut sudah dibuat di server, tetapi **belum di-commit**. 
 
 | # | Item | Status | Nota |
 |---|---|---|---|
-| 0 | Commit snapshot / aliran deploy | ⏳ Manual | Perlu dilakukan oleh pemilik repo |
+| 0 | Commit snapshot / aliran deploy | ✅ Siap | PR #5 digabungkan ke `main`; server pada `main`. Aliran deploy di bawah kekal sebagai amalan |
 | 1 | Props minimum halaman verify sijil | ✅ Siap | `CertificateController::verify` |
-| 2 | Sembunyi anugerah dan ranking sebelum dikunci | ✅ Siap | Leaderboard, laman utama, sijil pencapaian |
+| 2 | Sembunyi anugerah dan ranking sebelum dikunci | ✅ Siap | Leaderboard, laman utama, sijil pencapaian. Susulan 12 Nov: `award_level` juga disembunyikan daripada halaman peserta dan pensyarah (`Project::hideUnpublishedAward`), dan pensyarah hanya melihat markah/anugerah/komen di leaderboard staf selepas `r2_locked` |
 | 3 | Hadkan pendaftaran projek dan semakan konflik | ✅ Siap | Route `role:user`; tidak boleh semak projek sendiri; konflik juri disemak dalam `ScoreCalculator::hasConflictOfInterest` |
 | 4 | Halang padam sesi/kategori yang ada projek | ✅ Siap | Ditambah juga untuk role yang masih ada pengguna. FK belum ditukar kepada `restrict` (perlu migration pada DB production) |
 | 5 | SMTP dan queue worker | ⏳ Manual | Konfigurasi `.env` dan servis Windows |
@@ -38,7 +38,7 @@ Semua perubahan kod berikut sudah dibuat di server, tetapi **belum di-commit**. 
 | 13 | Mesej ralat dalaman | ✅ Siap | |
 | 14 | Validasi markah juri | ✅ Siap | `bail`, `comments` max 5000, projek mesti diluluskan |
 | 15 | Validasi lain | ✅ Siap | Had `abstract` 10,000 (bukan 5000, kerana panjang data sedia ada tidak dapat disemak); `category_id` mesti integer |
-| 16 | `LOG_LEVEL` production | ⏳ Manual | Ubah dalam `.env` |
+| 16 | `LOG_LEVEL` production | ✅ Siap | `.env`: `LOG_LEVEL=warning`, `LOG_STACK=daily`, `LOG_DAILY_DAYS=30` |
 | — | Prestasi | ✅ Kebanyakan siap | `rubric_id` dalam `scores` belum dibuat (perlu migration) |
 | — | Kebersihan kod | 🟡 Separuh | Siap: helper `toast()`, trait `ProjectValidationRules`, `CompetitionSession::active()`, escape changelog. Belum: `ProjectPolicy`, enum status, buang route alias lama |
 
@@ -50,18 +50,18 @@ Semua perubahan kod berikut sudah dibuat di server, tetapi **belum di-commit**. 
 - tidak menghantar `registration_mode` atau tarikh sesi yang kini diwajibkan; atau
 - masih menganggap kategori terikat pada sesi (kini kategori dikongsi antara sesi).
 
-**Langkah manual yang masih perlu dibuat:**
-1. `npm run build`, supaya perubahan frontend berkuat kuasa (pautan sidebar pensyarah, escape changelog).
-2. Konfigurasi SMTP, `queue:work` dan `LOG_LEVEL` dalam `.env` (#5, #16).
-3. Commit semua perubahan ke git (#0).
+**Langkah manual:**
+1. ✅ `npm run build` (12 Nov). Perlu diulang selepas setiap perubahan frontend; jalankan dari drive yang dipetakan (cth. `Z:`), bukan laluan rangkaian UNC.
+2. 🟡 `LOG_LEVEL` siap (#16). SMTP dan `queue:work` (#5) masih perlu dibuat bersama IT.
+3. ✅ Commit dan gabung ke `main` (#0).
 
 ---
 
 ## Prasyarat: aliran kerja deploy
 
-Kod sekarang diubah terus pada server production (`\\10.1.2.22\e\events\inotek`). Lebih 115 fail telah diubah tanpa commit, dan `phpunit` tidak dipasang di server, jadi ujian tidak dapat dijalankan di situ.
+Sehingga 12 November 2026, kod diubah terus pada server production (`\\10.1.2.22\e\events\inotek`). Semua perubahan itu kini sudah di-commit dan digabungkan ke `main`. `phpunit` tidak dipasang di server, jadi ujian perlu dijalankan di mesin dev.
 
-- [ ] Commit perubahan semasa ke branch baharu, contohnya `git checkout -b prod-snapshot-2026-11`, kemudian push.
+- [x] Commit perubahan semasa ke branch baharu (`prod-snapshot-2026-11`), push, dan gabung ke `main` (PR #5).
 - [ ] Buat semua pembetulan di mesin dev yang ada `composer install` lengkap (dengan pakej dev).
 - [ ] Jalankan `php artisan test` dan `vendor/bin/phpstan` sebelum deploy.
 - [ ] Deploy ke production melalui `git pull` diikuti `composer install --no-dev --optimize-autoloader`, `php artisan migrate --force`, `php artisan optimize` dan `npm run build`.
@@ -321,15 +321,16 @@ Gabungkan juga kod `downloadParticipation` dan `downloadAchievement` yang hampir
 
 ## Ujian yang perlu ditambah
 
-- [ ] Halaman verify sijil tidak mengandungi e-mel atau nombor telefon.
-- [ ] Leaderboard awam dan laman utama tidak mendedahkan `award_level` atau ranking sebelum `r2_locked`.
+- [x] Halaman verify sijil tidak mengandungi e-mel atau nombor telefon (`CertificateAndAuditLogTest`).
+- [x] Leaderboard awam dan laman utama tidak mendedahkan `award_level` atau ranking sebelum `r2_locked` (`PublicLeaderboardPrivacyTest`).
+- [x] Pensyarah tidak melihat markah/anugerah di leaderboard staf, dan halaman peserta/pensyarah tidak menerima `award_level`, sebelum `r2_locked` (`PublicLeaderboardPrivacyTest`, ditambah 12 Nov).
 - [ ] Sijil pencapaian disekat sebelum `r2_locked`.
-- [ ] Pensyarah atau juri tidak boleh mendaftar projek (403).
-- [ ] Pensyarah tidak boleh meluluskan projek miliknya sendiri.
-- [ ] Juri yang ada konflik kepentingan tidak boleh ditugaskan.
-- [ ] Sesi atau kategori yang masih ada projek tidak boleh dipadam.
-- [ ] Markah R1 tidak boleh diubah selepas `r1_locked`.
-- [ ] Susunan leaderboard: finalis R2 sentiasa di atas projek yang hanya ada markah R1.
+- [x] Pensyarah atau juri tidak boleh mendaftar projek (`ProjectRegistrationTest`).
+- [x] Pensyarah tidak boleh meluluskan projek miliknya sendiri (`ProjectVerificationTest`).
+- [x] Juri yang ada konflik kepentingan tidak boleh ditugaskan (`JudgeEvaluationTest`).
+- [x] Sesi atau kategori yang masih ada projek tidak boleh dipadam (`CompetitionSessionTest`, `CategoryCrudTest`).
+- [x] Markah R1 tidak boleh diubah selepas penugasan R2 pertama dibuat (`JudgeEvaluationTest`).
+- [x] Susunan leaderboard: finalis R2 sentiasa di atas projek yang hanya ada markah R1 (`PublicLeaderboardPrivacyTest`).
 
 ---
 

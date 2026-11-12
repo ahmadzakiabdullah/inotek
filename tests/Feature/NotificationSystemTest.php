@@ -46,6 +46,7 @@ class NotificationSystemTest extends TestCase
             'name' => 'Session 2026',
             'is_active' => true,
             'r2_locked' => false,
+            'registration_mode' => 'open',
         ]);
 
         // Create Category

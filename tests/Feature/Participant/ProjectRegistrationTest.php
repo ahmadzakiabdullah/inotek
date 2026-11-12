@@ -49,7 +49,7 @@ class ProjectRegistrationTest extends TestCase
     public function test_user_can_save_project_draft(): void
     {
         $user = User::factory()->create(['role_id' => 4]);
-        $session = CompetitionSession::create(['name' => 'Session 1', 'is_active' => true]);
+        $session = CompetitionSession::create(['name' => 'Session 1', 'is_active' => true, 'registration_mode' => 'open']);
         $category = Category::create(['session_id' => $session->id, 'code' => 'C1', 'name' => 'Tech', 'allow_team' => true]);
 
         $response = $this->actingAs($user)->post(route('projects.store'), [
@@ -80,16 +80,15 @@ class ProjectRegistrationTest extends TestCase
         ]);
     }
 
-    public function test_user_cannot_register_project_in_active_session_using_another_sessions_category(): void
+    public function test_user_cannot_register_project_with_unknown_category(): void
     {
+        // Categories are shared across sessions, so only existence is enforced.
         $user = User::factory()->create(['role_id' => 4]);
-        $activeSession = CompetitionSession::create(['name' => 'Active', 'is_active' => true]);
-        $otherSession = CompetitionSession::create(['name' => 'Other', 'is_active' => false]);
-        $category = Category::create(['session_id' => $otherSession->id, 'code' => 'C2', 'name' => 'Other Category']);
+        $activeSession = CompetitionSession::create(['name' => 'Active', 'is_active' => true, 'registration_mode' => 'open']);
 
         $response = $this->actingAs($user)->post(route('projects.store'), [
-            'category_id' => $category->id,
-            'title' => 'Mismatched project',
+            'category_id' => 999999,
+            'title' => 'Unknown category project',
             'abstract' => 'Project abstract',
             'institution_type' => 'utem',
             'supervisor_name' => 'Dr. Supervisor',
@@ -100,13 +99,11 @@ class ProjectRegistrationTest extends TestCase
         $this->assertDatabaseMissing('projects', ['user_id' => $user->id, 'session_id' => $activeSession->id]);
     }
 
-    public function test_user_cannot_change_project_to_category_from_another_session(): void
+    public function test_user_cannot_change_project_to_unknown_category(): void
     {
         $user = User::factory()->create(['role_id' => 4]);
-        $session = CompetitionSession::create(['name' => 'Session 1', 'is_active' => true]);
-        $otherSession = CompetitionSession::create(['name' => 'Session 2', 'is_active' => false]);
-        $category = Category::create(['session_id' => $session->id, 'code' => 'C1', 'name' => 'Tech']);
-        $otherCategory = Category::create(['session_id' => $otherSession->id, 'code' => 'C2', 'name' => 'Other']);
+        $session = CompetitionSession::create(['name' => 'Session 1', 'is_active' => true, 'registration_mode' => 'open']);
+        $category = Category::create(['code' => 'C1', 'name' => 'Tech']);
         $project = Project::create([
             'session_id' => $session->id,
             'category_id' => $category->id,
@@ -120,7 +117,7 @@ class ProjectRegistrationTest extends TestCase
         ]);
 
         $response = $this->actingAs($user)->put(route('projects.update', $project), [
-            'category_id' => $otherCategory->id,
+            'category_id' => 999999,
             'title' => 'Changed project',
             'abstract' => 'Changed abstract',
             'institution_type' => 'utem',
@@ -135,7 +132,7 @@ class ProjectRegistrationTest extends TestCase
     public function test_user_cannot_save_team_members_if_category_disallows_team(): void
     {
         $user = User::factory()->create(['role_id' => 4]);
-        $session = CompetitionSession::create(['name' => 'Session 1', 'is_active' => true]);
+        $session = CompetitionSession::create(['name' => 'Session 1', 'is_active' => true, 'registration_mode' => 'open']);
         $category = Category::create(['session_id' => $session->id, 'code' => 'C1', 'name' => 'Tech', 'allow_team' => false]);
 
         $response = $this->actingAs($user)->post(route('projects.store'), [
@@ -161,7 +158,7 @@ class ProjectRegistrationTest extends TestCase
     public function test_student_limited_to_one_project_submission(): void
     {
         $user = User::factory()->create(['role_id' => 4]); // user role (student)
-        $session = CompetitionSession::create(['name' => 'Session 1', 'is_active' => true]);
+        $session = CompetitionSession::create(['name' => 'Session 1', 'is_active' => true, 'registration_mode' => 'open']);
         $category = Category::create(['session_id' => $session->id, 'code' => 'C1', 'name' => 'Tech']);
 
         // Register first project
@@ -196,7 +193,7 @@ class ProjectRegistrationTest extends TestCase
     public function test_user_can_submit_project_generating_pcode(): void
     {
         $user = User::factory()->create(['role_id' => 4]);
-        $session = CompetitionSession::create(['name' => 'Session 1', 'is_active' => true]);
+        $session = CompetitionSession::create(['name' => 'Session 1', 'is_active' => true, 'registration_mode' => 'open']);
         $category = Category::create(['session_id' => $session->id, 'code' => 'C1', 'name' => 'Tech']);
 
         $project = Project::create([
@@ -226,7 +223,7 @@ class ProjectRegistrationTest extends TestCase
     {
         $user = User::factory()->create(['role_id' => 4]);
         $anotherUser = User::factory()->create(['role_id' => 4]);
-        $session = CompetitionSession::create(['name' => 'Session 1', 'is_active' => true]);
+        $session = CompetitionSession::create(['name' => 'Session 1', 'is_active' => true, 'registration_mode' => 'open']);
         $category = Category::create(['session_id' => $session->id, 'code' => 'C1', 'name' => 'Tech']);
         Project::create([
             'session_id' => $session->id,
@@ -261,7 +258,7 @@ class ProjectRegistrationTest extends TestCase
     public function test_user_cannot_edit_project_after_final_submission(): void
     {
         $user = User::factory()->create(['role_id' => 4]);
-        $session = CompetitionSession::create(['name' => 'Session 1', 'is_active' => true]);
+        $session = CompetitionSession::create(['name' => 'Session 1', 'is_active' => true, 'registration_mode' => 'open']);
         $category = Category::create(['session_id' => $session->id, 'code' => 'C1', 'name' => 'Tech']);
 
         $project = Project::create([

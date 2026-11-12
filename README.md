@@ -95,7 +95,7 @@ php artisan test
 > [!IMPORTANT]
 > The tests need **MySQL 8**. `phpunit.xml` defaults to SQLite `:memory:`, but eight migrations query `information_schema` and fail on SQLite. Create an empty test database (e.g. `CREATE DATABASE inotek_test;`) and point the test run at it with `DB_CONNECTION=mysql`, `DB_HOST`, `DB_PORT`, `DB_DATABASE=inotek_test`, `DB_USERNAME`, `DB_PASSWORD`. Set these as shell environment variables (or keep them in a `.env.testing` and export them): PHPUnit's `<env>` entries in `phpunit.xml` win over `.env.testing`, but do not overwrite variables that already exist in the environment. See the [developer guide](docs/development.md#13-running-tests-mysql).
 >
-> About 16 tests are known to fail because they have not been updated for recent behaviour changes (`CompetitionSessionTest`, `ProjectRegistrationTest`, `CategoryCrudTest`, `ProjectVerificationTest`, `NotificationSystemTest`). They are pending an update; treat failures outside those classes as real regressions.
+> All tests are expected to pass. Run `npm run build` first: Inertia page tests need `public/build/manifest.json`.
 
 ---
 

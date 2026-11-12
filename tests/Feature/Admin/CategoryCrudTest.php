@@ -56,8 +56,9 @@ class CategoryCrudTest extends TestCase
         ]);
 
         $response->assertRedirect(route('admin.categories.index'));
+        // Categories are a shared catalog: any submitted session_id is ignored.
         $this->assertDatabaseHas('categories', [
-            'session_id' => $session->id,
+            'session_id' => null,
             'code' => 'C1',
             'name' => 'Green Energy',
         ]);

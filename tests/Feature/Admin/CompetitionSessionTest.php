@@ -48,7 +48,9 @@ class CompetitionSessionTest extends TestCase
         $response = $this->actingAs($admin)->post(route('admin.sessions.store'), [
             'name' => 'Semester 1 2026/2027',
             'is_active' => true,
-            'r2_locked' => false,
+            'registration_mode' => 'open',
+            'session_starts_at' => '2026-01-01',
+            'session_ends_at' => '2026-12-31',
         ]);
 
         $response->assertRedirect(route('admin.sessions.index'));
@@ -73,7 +75,9 @@ class CompetitionSessionTest extends TestCase
         $response = $this->actingAs($admin)->post(route('admin.sessions.store'), [
             'name' => 'Session 2',
             'is_active' => true,
-            'r2_locked' => false,
+            'registration_mode' => 'open',
+            'session_starts_at' => '2026-01-01',
+            'session_ends_at' => '2026-12-31',
         ]);
 
         $response->assertRedirect(route('admin.sessions.index'));
@@ -115,7 +119,9 @@ class CompetitionSessionTest extends TestCase
         $response = $this->actingAs($admin)->put(route('admin.sessions.update', $session), [
             'name' => $session->name,
             'is_active' => false,
-            'r2_locked' => false,
+            'registration_mode' => 'open',
+            'session_starts_at' => '2026-01-01',
+            'session_ends_at' => '2026-12-31',
         ]);
 
         $response->assertRedirect(route('admin.sessions.index'));
@@ -135,7 +141,9 @@ class CompetitionSessionTest extends TestCase
         $response = $this->actingAs($admin)->put(route('admin.sessions.update', $session2), [
             'name' => $session2->name,
             'is_active' => true,
-            'r2_locked' => false,
+            'registration_mode' => 'open',
+            'session_starts_at' => '2026-01-01',
+            'session_ends_at' => '2026-12-31',
         ]);
 
         $response->assertRedirect(route('admin.sessions.index'));
@@ -152,7 +160,9 @@ class CompetitionSessionTest extends TestCase
         $response = $this->actingAs($admin)->post(route('admin.sessions.store'), [
             'name' => 'Inactive Session',
             'is_active' => false,
-            'r2_locked' => false,
+            'registration_mode' => 'open',
+            'session_starts_at' => '2026-01-01',
+            'session_ends_at' => '2026-12-31',
         ]);
 
         $response->assertRedirect(route('admin.sessions.index'));

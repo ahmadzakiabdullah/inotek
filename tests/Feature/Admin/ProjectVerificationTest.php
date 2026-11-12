@@ -132,17 +132,16 @@ class ProjectVerificationTest extends TestCase
         ]);
     }
 
-    public function test_admin_cannot_register_project_in_active_session_using_another_sessions_category(): void
+    public function test_admin_cannot_register_project_with_unknown_category(): void
     {
+        // Categories are shared across sessions, so only existence is enforced.
         $admin = User::factory()->create(['role_id' => 1]);
         $activeSession = CompetitionSession::create(['name' => 'Active', 'is_active' => true]);
-        $otherSession = CompetitionSession::create(['name' => 'Other', 'is_active' => false]);
-        $category = Category::create(['session_id' => $otherSession->id, 'code' => 'C2', 'name' => 'Other Category']);
         $student = User::factory()->create(['role_id' => 4]);
 
         $response = $this->actingAs($admin)->post(route('admin.approvals.storeProject'), [
             'user_id' => $student->id,
-            'category_id' => $category->id,
+            'category_id' => 999999,
             'title' => 'Mismatched project',
             'abstract' => 'Project abstract',
             'institution_type' => 'utem',

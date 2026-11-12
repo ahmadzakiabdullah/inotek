@@ -15,8 +15,7 @@ Disediakan berdasarkan audit kod pada 12 November 2026. Dokumen ini menyenaraika
 Semua perubahan kod berikut sudah di-commit (`8b5481b`) dan digabungkan ke `main` melalui PR #5 (`b79034c`). Server production kini berada pada branch `main`.
 
 **Pengesahan yang dibuat:**
-- Ujian penuh dijalankan pada salinan setempat dengan MySQL 8: 163 ujian, 147 lulus.
-- 16 kegagalan yang tinggal **sama persis** pada kod sebelum perubahan, jadi ia isu sedia ada (lihat "Ujian lapuk" di bawah).
+- Ujian penuh dijalankan pada salinan setempat dengan MySQL 8. Selepas 16 ujian lapuk dikemas kini (12 Nov), **kesemua 165 ujian lulus**.
 - Tiada regresi. 13 ujian baharu untuk item P0/P1 lulus semuanya.
 - PHPStan lulus pada fail yang diubah.
 
@@ -46,7 +45,7 @@ Semua perubahan kod berikut sudah di-commit (`8b5481b`) dan digabungkan ke `main
 - Migration `2026_11_02_000001_scope_rubric_mappings_to_sessions` gagal pada pangkalan data baharu (MySQL error 1553). Ia sudah dibetulkan. Production tidak terjejas kerana migration ini sudah dijalankan di sana.
 - 8 migration menggunakan `information_schema`, jadi ujian **mesti** dijalankan dengan MySQL. Tetapan `phpunit.xml` (SQLite) tidak akan berfungsi.
 
-**Ujian lapuk (sedia ada, perlu dikemas kini atau dibuang):** 16 ujian dalam `CompetitionSessionTest`, `ProjectRegistrationTest`, `CategoryCrudTest`, `ProjectVerificationTest` dan `NotificationSystemTest` gagal kerana:
+**Ujian lapuk (✅ dikemas kini 12 Nov):** 16 ujian dalam `CompetitionSessionTest`, `ProjectRegistrationTest`, `CategoryCrudTest`, `ProjectVerificationTest` dan `NotificationSystemTest` gagal kerana:
 - tidak menghantar `registration_mode` atau tarikh sesi yang kini diwajibkan; atau
 - masih menganggap kategori terikat pada sesi (kini kategori dikongsi antara sesi).
 

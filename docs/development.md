@@ -82,10 +82,9 @@ $env:DB_PASSWORD = ''
 php artisan test
 ```
 > [!NOTE]
-> About 16 tests currently fail because they have not been updated for recent
-> behaviour changes: `CompetitionSessionTest`, `ProjectRegistrationTest`,
-> `CategoryCrudTest`, `ProjectVerificationTest`, and `NotificationSystemTest`.
-> They are pending an update. Treat failures in any other class as regressions.
+> All tests are expected to pass (165 as of 12 November 2026). Inertia page tests
+> need `public/build/manifest.json`, so run `npm run build` (or copy the build
+> folder) first; otherwise they fail with "Not a valid Inertia response".
 
 ### 1.4 Legacy Data Import
 `inotek:import-legacy-competition` copies registrations and submitted scores from
@@ -222,7 +221,7 @@ Maintain clean code structures. Run these tools prior to committing modification
 `npm run lint:check`, `npm run format:check`, `npm run types:check`, and then
 `composer test` (which clears config, runs Pint in test mode, PHPStan, and
 `php artisan test`). The test step needs the MySQL test database from section
-1.3, and the known stale tests listed there are expected to fail until updated.
+1.3, and all tests are expected to pass.
 
 ---
 

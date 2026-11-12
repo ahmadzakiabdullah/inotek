@@ -79,7 +79,7 @@ Select Top 3, 5 or 10 projects per category for a second evaluation round, ensur
 - [ ] Store `rubric_id` on `scores` so each evaluation records the rubric it was graded against.
 - [ ] Move project authorization into a `ProjectPolicy`.
 - [ ] Replace the project status integer constants with a status enum.
-- [ ] Update the 16 stale feature tests to match current behaviour.
+- [x] Update the 16 stale feature tests to match current behaviour (all 165 tests pass, 12 November 2026).
 - [ ] Document/remove the MySQL requirement for running the test suite (tests currently require MySQL).
 
 ---

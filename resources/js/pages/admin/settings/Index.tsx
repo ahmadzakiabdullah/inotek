@@ -1,5 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
-import { Settings, Sparkles, Paintbrush, Globe, LayoutGrid, Check } from 'lucide-react';
+import { Settings, Sparkles, Paintbrush, Globe, LayoutGrid, Check, Wand2 } from 'lucide-react';
 import React from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 
 interface SettingsProps {
     currentSettings: {
@@ -20,7 +21,10 @@ interface SettingsProps {
         primary_color: string;
         date_format: string;
         timezone: string;
+        auto_assign_enabled: boolean;
+        auto_assign_judges_per_project: number;
     };
+    maxJudgesPerProject: number;
 }
 
 const fontList = [
@@ -62,13 +66,15 @@ const timezones = [
     { value: 'America/New_York', label: 'Eastern Time (America/New_York)' },
 ];
 
-export default function Index({ currentSettings }: SettingsProps) {
+export default function Index({ currentSettings, maxJudgesPerProject }: SettingsProps) {
     const { data, setData, post, processing, errors } = useForm({
         system_name: currentSettings.system_name,
         global_font: currentSettings.global_font,
         primary_color: currentSettings.primary_color,
         date_format: currentSettings.date_format,
         timezone: currentSettings.timezone,
+        auto_assign_enabled: currentSettings.auto_assign_enabled,
+        auto_assign_judges_per_project: currentSettings.auto_assign_judges_per_project,
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -271,6 +277,54 @@ export default function Index({ currentSettings }: SettingsProps) {
                                     </Select>
                                     {errors.timezone && (
                                         <p className="text-xs text-destructive">{errors.timezone}</p>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Section 4: Optional judging features */}
+                        <Card className="border border-border/50 bg-card/60 backdrop-blur-sm shadow-md">
+                            <CardHeader className="flex flex-row items-center gap-3 space-y-0 pb-3">
+                                <Wand2 className="h-5 w-5 text-primary" />
+                                <div>
+                                    <CardTitle className="text-base font-semibold">Judging Features</CardTitle>
+                                    <CardDescription>Turn optional judging tools on or off as needed.</CardDescription>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="space-y-1">
+                                        <label htmlFor="auto_assign_enabled" className="text-sm font-semibold text-foreground">
+                                            Automatic judge assignment
+                                        </label>
+                                        <p className="text-xs text-muted-foreground">
+                                            Shows an &ldquo;Auto-assign&rdquo; tool on the Judge Assignments page. It gives every project the set number
+                                            of judges, spreads the workload evenly, and skips judges with a conflict of interest.
+                                        </p>
+                                    </div>
+                                    <Switch
+                                        id="auto_assign_enabled"
+                                        checked={data.auto_assign_enabled}
+                                        onCheckedChange={(checked) => setData('auto_assign_enabled', checked)}
+                                    />
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label htmlFor="auto_assign_judges_per_project" className="text-sm font-semibold text-foreground">
+                                        Default judges per project
+                                    </label>
+                                    <Input
+                                        id="auto_assign_judges_per_project"
+                                        type="number"
+                                        min={1}
+                                        max={maxJudgesPerProject}
+                                        value={data.auto_assign_judges_per_project}
+                                        onChange={(e) => setData('auto_assign_judges_per_project', Number(e.target.value))}
+                                        disabled={!data.auto_assign_enabled}
+                                        className={`w-28 ${errors.auto_assign_judges_per_project ? 'border-destructive' : ''}`}
+                                    />
+                                    {errors.auto_assign_judges_per_project && (
+                                        <p className="text-xs text-destructive">{errors.auto_assign_judges_per_project}</p>
                                     )}
                                 </div>
                             </CardContent>

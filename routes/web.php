@@ -1,11 +1,13 @@
 <?php
 
+use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CompetitionSessionController;
 use App\Http\Controllers\Admin\JudgeAssignmentController;
 use App\Http\Controllers\Admin\JudgingNudgeController;
 use App\Http\Controllers\Admin\ProjectApprovalController;
+use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\Round2Controller;
 use App\Http\Controllers\Admin\RubricController;
@@ -132,6 +134,8 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         // Judge Assignments
         Route::get('assignments', [JudgeAssignmentController::class, 'index'])->name('assignments.index');
         Route::post('assignments', [JudgeAssignmentController::class, 'store'])->name('assignments.store');
+        // Must be registered before assignments/{assignment}.
+        Route::post('assignments/auto', [JudgeAssignmentController::class, 'autoAssign'])->name('assignments.auto');
         Route::delete('assignments/{assignment}', [JudgeAssignmentController::class, 'destroy'])->name('assignments.destroy');
 
         // Round 2 Shortlisting & Scoring
@@ -145,6 +149,13 @@ Route::middleware(['auth', 'verified', 'role:admin'])
 
         // Judge Reminders (Nudge)
         Route::post('judges/nudge', [JudgingNudgeController::class, 'nudge'])->name('judges.nudge');
+
+        // Reports & Export, Analytics
+        Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('reports/{type}.{format}', [ReportController::class, 'download'])
+            ->where(['type' => '[a-z-]+', 'format' => 'csv|pdf'])
+            ->name('reports.download');
+        Route::get('analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
     });
 
 require __DIR__.'/settings.php';

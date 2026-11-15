@@ -15,7 +15,27 @@ INOTEK uses **Semantic Versioning 2.0.0** (`vMajor.Minor.Patch`):
 
 ## 2. INOTEK Version History
 
-### [v1.7.0] - 2026-11-12 (Current Release)
+### [v1.8.0] - 2026-11-15 (Current Release)
+#### Added
+* **Reports & Export** (Admin → Reports & Analytics): official results by category, participants and supervisors, detailed judge scores, and judging progress for any session, as CSV (opens in Excel) or PDF. The results report is marked as a draft until Round 2 is finalized. Exports are recorded in the audit log.
+* **Automatic Judge Assignment** (optional, off by default): turn it on under System Settings → Judging Features. The Judge Assignments page then offers an Auto-assign tool that gives every approved (Round 1) or shortlisted (Round 2) project the chosen number of judges, spreads the workload evenly, keeps existing assignments, and skips conflicts of interest and Round 1 judges in Round 2. Projects it cannot fill are listed.
+* **Judges' Feedback for Participants**: once results are finalized, participants see each judge's comments and per-criterion scores for their project. Judges are anonymous ("Judge 1", "Judge 2"); best presenter nominations are not shown.
+* **Analytics** (Admin → Reports & Analytics): participation across sessions, projects by category and institution, score distribution by round, and judge scoring consistency (how far each judge scores above or below the other judges of the same projects).
+
+### [v1.7.1] - 2026-11-15
+#### Fixed
+* **Registration**: new accounts failed in production because legacy `users` columns such as `nama` were NOT NULL; they are now nullable.
+* **Messages**: success and error messages (toasts) were never shown on most admin pages, and refused actions such as a conflicting judge assignment were reported as successful.
+* **Session Dates**: dates showed one day early and the edit form lost them.
+* **Project Codes**: codes held by deleted projects are no longer reused (which caused errors on submit).
+* **Deleted Projects and Judges**: no longer break the judge dashboard or block Round 2.
+#### Changed
+* **Judges** see only their own scores on the staff leaderboard until results are finalized, and receive only the project details the scorecard shows.
+* **Lecturers and Judges** can no longer change their own email address (it decides supervised projects and conflict checks); an administrator can.
+* **Judge Assignments** that already have a score cannot be removed. Finalizing Round 2 is now safe against double clicks.
+* **Registration** is limited to 5 accounts per hour per network address. The last administrator cannot delete their own account.
+
+### [v1.7.0] - 2026-11-12
 #### Security
 * **Certificate Verification Privacy**: The public verify page now receives only names, project title/code, category and session. Student, team member and supervisor emails and phone numbers are no longer exposed.
 * **Results Confidentiality**: Award levels, scores and rankings stay hidden on the public leaderboard, home page and verify page until Round 2 results are locked. Achievement certificates cannot be downloaded before then (admins excepted).

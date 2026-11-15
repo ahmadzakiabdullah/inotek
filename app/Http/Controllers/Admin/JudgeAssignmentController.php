@@ -10,6 +10,7 @@ use App\Models\Score;
 use App\Models\User;
 use App\Notifications\SystemNotification;
 use App\Services\AuditLogger;
+use App\Services\JudgeAutoAssigner;
 use App\Services\ScoreCalculator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -39,6 +40,11 @@ class JudgeAssignmentController extends Controller
                 'assignments' => [],
                 'activeSession' => null,
                 'roundOneComplete' => false,
+                'autoAssign' => [
+                    'enabled' => JudgeAutoAssigner::isEnabled(),
+                    'judgesPerProject' => JudgeAutoAssigner::judgesPerProject(),
+                    'max' => JudgeAutoAssigner::MAX_JUDGES_PER_PROJECT,
+                ],
             ]);
         }
 
@@ -70,7 +76,99 @@ class JudgeAssignmentController extends Controller
             'assignments' => $assignments,
             'activeSession' => $activeSession,
             'roundOneComplete' => $roundOneComplete,
+            'autoAssign' => [
+                'enabled' => JudgeAutoAssigner::isEnabled(),
+                'judgesPerProject' => JudgeAutoAssigner::judgesPerProject(),
+                'max' => JudgeAutoAssigner::MAX_JUDGES_PER_PROJECT,
+            ],
         ]);
+    }
+
+    /**
+     * Assign judges in bulk so each project in the round has the requested
+     * number of judges, with the workload spread evenly.
+     */
+    public function autoAssign(Request $request, JudgeAutoAssigner $assigner): RedirectResponse
+    {
+        if (! JudgeAutoAssigner::isEnabled()) {
+            return $this->backWithError('Automatic judge assignment is turned off in System Settings.');
+        }
+
+        $activeSession = CompetitionSession::active();
+
+        if (! $activeSession) {
+            return $this->backWithError('No active competition session.');
+        }
+
+        $validated = $request->validate([
+            'round_no' => ['required', 'integer', 'in:1,2'],
+            'judges_per_project' => ['required', 'integer', 'min:1', 'max:'.JudgeAutoAssigner::MAX_JUDGES_PER_PROJECT],
+        ]);
+        $roundNo = (int) $validated['round_no'];
+
+        if ($roundNo === 1 && $this->calculator->isRoundOneLocked($activeSession->id)) {
+            return $this->backWithError('Round 1 is closed because Round 2 judging has started.');
+        }
+
+        if ($roundNo === 2) {
+            if ($activeSession->r2_locked) {
+                return $this->backWithError('Round 2 assignment is locked because Round 2 session has been closed.');
+            }
+
+            $hasRoundOneAssignments = JudgeAssignment::where('session_id', $activeSession->id)
+                ->where('round_no', 1)
+                ->exists();
+
+            if ($hasRoundOneAssignments && ! $this->calculator->isRoundOneComplete($activeSession->id)) {
+                return $this->backWithError('Round 2 assignments are unavailable until all Round 1 evaluations are completed.');
+            }
+        }
+
+        $result = $assigner->assign($activeSession, $roundNo, (int) $validated['judges_per_project']);
+        $createdCount = count($result['created']);
+
+        AuditLogger::log(
+            'AUTO_ASSIGN_JUDGES',
+            "Auto-assigned {$createdCount} judge assignment(s) for Round {$roundNo} ({$validated['judges_per_project']} judges per project, {$result['projects_considered']} project(s))."
+        );
+
+        // One notification per judge rather than one per project.
+        collect($result['created'])
+            ->groupBy(fn (array $item) => $item['judge']->id)
+            ->each(function ($items) use ($roundNo) {
+                try {
+                    $count = $items->count();
+                    $items->first()['judge']->notify(new SystemNotification(
+                        'New Judging Assignments',
+                        "You have been assigned {$count} new project(s) to evaluate for Round {$roundNo}.",
+                        '/dashboard/judge/evaluations',
+                        'info'
+                    ));
+                } catch (\Exception $e) {
+                    // Keep resilient
+                }
+            });
+
+        if ($result['projects_considered'] === 0) {
+            return $this->backWithError($roundNo === 2
+                ? 'There are no shortlisted projects to assign for Round 2.'
+                : 'There are no approved projects to assign in this session.');
+        }
+
+        if ($result['unfilled'] !== []) {
+            $codes = collect($result['unfilled'])
+                ->map(fn (array $item) => ($item['project']->pcode ?? $item['project']->title)." (short {$item['missing']})")
+                ->take(10)
+                ->implode(', ');
+
+            return $this->backWithError(
+                "Created {$createdCount} assignment(s), but not enough eligible judges for ".count($result['unfilled'])." project(s): {$codes}. Add judges or lower the number of judges per project."
+            );
+        }
+
+        return $this->backWithSuccess($createdCount === 0
+            ? 'Every project already has enough judges. No new assignments were needed.'
+            : "Created {$createdCount} judge assignment(s) for Round {$roundNo}.");
     }
 
     /**

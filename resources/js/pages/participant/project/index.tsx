@@ -21,6 +21,8 @@ import {
 } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
 import InputError from '@/components/input-error';
+import JudgesFeedback from '@/components/participant/judges-feedback';
+import type { FeedbackRound } from '@/components/participant/judges-feedback';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -87,6 +89,8 @@ interface Props {
     registrationOpen: boolean;
     categories: Category[];
     project: Project | null;
+    /** Released only after results are finalized; null before that. */
+    feedback: FeedbackRound[] | null;
 }
 
 export default function ProjectIndex({
@@ -94,6 +98,7 @@ export default function ProjectIndex({
     registrationOpen,
     categories,
     project,
+    feedback,
 }: Props) {
     const { auth } = usePage().props as any;
     const currentUser = auth?.user;
@@ -450,6 +455,8 @@ return;
                                 )}
                             </CardContent>
                         </Card>
+
+                        {feedback && <JudgesFeedback rounds={feedback} />}
 
                         {/* Project Details Cards */}
                         <div className="grid gap-6 md:grid-cols-3">

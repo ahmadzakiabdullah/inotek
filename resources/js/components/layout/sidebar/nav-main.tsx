@@ -174,6 +174,21 @@ export function getNavItems(userRole: string | null | undefined): NavGroup[] {
                     ],
                 },
                 {
+                    title: 'Reports & Analytics',
+                    href: '/dashboard/reports',
+                    icon: ChartPieIcon,
+                    items: [
+                        {
+                            title: 'Reports & Export',
+                            href: '/dashboard/reports',
+                        },
+                        {
+                            title: 'Analytics',
+                            href: '/dashboard/analytics',
+                        },
+                    ],
+                },
+                {
                     title: 'System Administration',
                     href: '/dashboard/admin-settings',
                     icon: SettingsIcon,

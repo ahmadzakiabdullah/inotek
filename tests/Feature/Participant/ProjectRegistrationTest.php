@@ -129,6 +129,42 @@ class ProjectRegistrationTest extends TestCase
         $this->assertDatabaseHas('projects', ['id' => $project->id, 'category_id' => $category->id, 'title' => 'Project 1']);
     }
 
+    public function test_project_can_be_updated_and_deleted_with_spoofed_post_for_iis(): void
+    {
+        $user = User::factory()->create(['role_id' => 4]);
+        $session = CompetitionSession::create(['name' => 'Session 1', 'is_active' => true, 'registration_mode' => 'open']);
+        $category = Category::create(['code' => 'C1', 'name' => 'Tech']);
+        $project = Project::create([
+            'session_id' => $session->id,
+            'category_id' => $category->id,
+            'user_id' => $user->id,
+            'title' => 'Project 1',
+            'abstract' => 'Sample',
+            'institution_type' => 'utem',
+            'status' => Project::STATUS_NEW,
+            'supervisor_name' => 'Super',
+            'supervisor_email' => 's@test.com',
+        ]);
+
+        // IIS rejects real PUT/DELETE, so the frontend posts with _method.
+        $this->actingAs($user)->post(route('projects.update', $project), [
+            '_method' => 'put',
+            'category_id' => $category->id,
+            'title' => 'Changed project',
+            'abstract' => 'Changed abstract',
+            'institution_type' => 'utem',
+            'supervisor_name' => 'Super',
+            'supervisor_email' => 's@test.com',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('projects', ['id' => $project->id, 'title' => 'Changed project']);
+
+        $this->actingAs($user)->post(route('projects.destroy', $project), ['_method' => 'delete'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSoftDeleted('projects', ['id' => $project->id]);
+    }
+
     public function test_user_cannot_save_team_members_if_category_disallows_team(): void
     {
         $user = User::factory()->create(['role_id' => 4]);

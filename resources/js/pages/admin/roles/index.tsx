@@ -159,7 +159,9 @@ export default function RolesIndex({ roles }: Props) {
 return;
 }
 
-        editForm.put(`/dashboard/roles/${selectedRole.id}`, {
+        // POST + _method: IIS rejects real PUT requests.
+        editForm.transform((data) => ({ ...data, _method: 'put' }));
+        editForm.post(`/dashboard/roles/${selectedRole.id}`, {
             onSuccess: () => {
                 setIsEditOpen(false);
                 setSelectedRole(null);
@@ -179,7 +181,9 @@ return;
 return;
 }
 
-        deleteForm.delete(`/dashboard/roles/${selectedRole.id}`, {
+        // POST + _method: IIS rejects real DELETE requests.
+        deleteForm.transform((data) => ({ ...data, _method: 'delete' }));
+        deleteForm.post(`/dashboard/roles/${selectedRole.id}`, {
             onSuccess: () => {
                 setIsDeleteOpen(false);
                 setSelectedRole(null);

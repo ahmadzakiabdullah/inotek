@@ -63,7 +63,9 @@ interface Props {
 }
 
 function formatDateOnly(value: string | null): string {
-    if (!value) return '-';
+    if (!value) {
+return '-';
+}
 
     // Session dates are serialized as plain `Y-m-d` strings (see the casts in
     // CompetitionSession). Never parse them with `new Date()`: the browser
@@ -184,7 +186,9 @@ return;
 return;
 }
 
-        deleteForm.delete(`/dashboard/sessions/${selectedSession.id}`, {
+        // POST + _method: IIS rejects real DELETE requests.
+        deleteForm.transform((data) => ({ ...data, _method: 'delete' }));
+        deleteForm.post(`/dashboard/sessions/${selectedSession.id}`, {
             onSuccess: () => {
                 setIsDeleteOpen(false);
                 setSelectedSession(null);

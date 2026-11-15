@@ -148,7 +148,9 @@ return;
 return;
 }
 
-        deleteForm.delete(`/dashboard/categories/${selectedCategory.id}`, {
+        // POST + _method: IIS rejects real DELETE requests.
+        deleteForm.transform((data) => ({ ...data, _method: 'delete' }));
+        deleteForm.post(`/dashboard/categories/${selectedCategory.id}`, {
             onSuccess: () => {
                 setIsDeleteOpen(false);
                 setSelectedCategory(null);

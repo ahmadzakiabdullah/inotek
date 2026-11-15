@@ -29,7 +29,8 @@ export default function ManagePasskeys(props: Props) {
     const passkeys = props.passkeys ?? [];
 
     const handleDelete = (id: number, onError: () => void) => {
-        router.delete(destroy.url(id), {
+        // POST + _method: IIS rejects real DELETE requests.
+        router.post(destroy.url(id), { _method: 'delete' }, {
             preserveScroll: true,
             onError,
         });

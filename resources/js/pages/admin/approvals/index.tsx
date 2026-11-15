@@ -778,6 +778,7 @@ return;
                                                                         }
                                                                         className="h-6 w-6 text-muted-foreground hover:text-primary"
                                                                         title="Override project code"
+                                                                        aria-label={`Override project code for ${project.title}`}
                                                                     >
                                                                         <Edit3 className="h-3 w-3" />
                                                                     </Button>}
@@ -905,6 +906,7 @@ return;
                                                                             }}
                                                                             className="h-8 w-8 text-emerald-500 hover:bg-emerald-500/10"
                                                                             title="Approve project"
+                                                                            aria-label={`Approve ${project.title}`}
                                                                         >
                                                                             <CheckCheck className="h-4 w-4" />
                                                                         </Button>
@@ -918,30 +920,14 @@ return;
                                                                             }
                                                                             className="h-8 w-8 text-amber-500 hover:bg-amber-500/10"
                                                                             title="Reject & Request Changes"
+                                                                            aria-label={`Reject ${project.title} and request changes`}
                                                                         >
                                                                             <XOctagon className="h-4 w-4" />
                                                                         </Button>
                                                                     </>
-                                                                ) : project.status ===
-                                                                      4 &&
-                                                                  (userRole ===
-                                                                      'admin' ||
-                                                                      userRole ===
-                                                                          'lecturer') ? (
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        onClick={() =>
-                                                                            handleOpenReject(
-                                                                                project,
-                                                                            )
-                                                                        }
-                                                                        className="h-8 w-8 text-amber-500 hover:bg-amber-500/10"
-                                                                        title="Reject & Send Back for Changes"
-                                                                    >
-                                                                        <XOctagon className="h-4 w-4" />
-                                                                    </Button>
                                                                 ) : (
+                                                                    // Only submitted projects can be rejected
+                                                                    // (ProjectApprovalController::reject).
                                                                     <span className="mr-2 text-xs text-muted-foreground italic opacity-60">
                                                                         Reviewed
                                                                     </span>
@@ -1857,6 +1843,7 @@ return;
                                                     size="icon"
                                                     onClick={() => removeTeamMember(index)}
                                                     className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                                                    aria-label={`Remove member ${index + 1}`}
                                                 >
                                                     <Trash2 className="h-3.5 w-3.5" />
                                                 </Button>

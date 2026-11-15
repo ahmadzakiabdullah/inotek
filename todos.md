@@ -9,14 +9,31 @@ Disediakan daripada semakan sistem pada 15 November 2026. Fail ini hanya untuk p
 **Aliran kerja:**
 - Buat satu branch, contohnya `fix/urgent-2026-11`.
 - Jalankan ujian penuh pada MySQL setempat. Jangan sekali-kali pada DB production, kerana `RefreshDatabase` akan memadam data.
-- `npm run build` dari `Z:` selepas setiap perubahan frontend.
-- Backup DB production sebelum `php artisan migrate --force`.
+- Build frontend di mesin dev, kemudian salin `public/build` ke server (`assets` dahulu, `manifest.json` paling akhir). `npm run build` terus melalui `Z:` sangat perlahan dan pernah tersekat.
+- Backup DB production sebelum `php artisan migrate --force`. Server tiada `mysqldump`; guna phpMyAdmin.
 
 ---
 
-## Status (dikemas kini 15 November 2026)
+## Status P1 (dikemas kini 15 November 2026)
 
-P0 #1–#3 siap dalam branch `fix/urgent-2026-11`. Semua 166 ujian lulus pada MySQL 8 setempat, dan `npm run build` berjaya. **Belum di-deploy ke production.**
+P1 #4–#13 siap dalam branch `fix/p1-2026-11`. Semua 177 ujian lulus (11 ujian baharu). Tiada migration.
+
+| # | Item | Pembetulan |
+|---|---|---|
+| 4 | Kod projek bertembung | `ProjectCodeGenerator` kini menggunakan `withTrashed()`. |
+| 5 | Projek/juri dipadam | Dashboard juri dan halaman penugasan admin mengabaikan penugasan bagi projek/juri yang dipadam. `isRoundOneComplete` juga mengabaikannya, jadi R2 tidak tersekat. Tiada data dipadam secara automatik. |
+| 6 | Dashboard juri ranap | Kunci prop `assignments` dibetulkan. |
+| 7 | Kuasa melalui e-mel | Pensyarah dan juri tidak boleh menukar e-mel sendiri; hanya admin (melalui Users). Medan e-mel di profil dijadikan baca-sahaja dengan penerangan. Konflik kepentingan disemak semula semasa juri menyimpan markah. `supervisor_id` jangka panjang masih belum dibuat. |
+| 8 | Markah lapuk selepas buka R1 | Penugasan yang sudah ada markah tidak boleh dipadam. R1 hanya boleh dibuka semula sebelum ada markah R2, jadi markah dan anugerah R2 tidak boleh tertinggal. |
+| 9 | Juri lihat markah juri lain | **Keputusan: markah sendiri sahaja.** Sebelum R2 dikunci, juri hanya nampak markah dan komen mereka sendiri di leaderboard; tiada purata, anugerah atau undian best presenter. Selepas dikunci, mereka nampak semua. |
+| 10 | Data berlebihan ke borang juri | Hanya medan yang dipaparkan dihantar; tiada e-mel/telefon, `admin_comments`, `certificate_hash` atau `award_level`. |
+| 11 | Ralat borang | Ralat `scores` dipaparkan di borang juri. Ralat `team_members.*` dipaparkan di borang peserta, beserta `aria-label`. |
+| 12 | Butang Reject pada projek lulus | Dibuang. `aria-label` ditambah pada butang ikon. |
+| 13 | Pengerasan kecil | Semakan sijil kini menyemak `r2_locked` dahulu. Finalize R2 menghantar keadaan sasaran. `ScoreUpdated` hanya menyiarkan `project_id`. Had 5 pendaftaran/jam setiap IP. Admin terakhir tidak boleh memadam akaun sendiri. |
+
+## Status P0 (dikemas kini 15 November 2026)
+
+P0 #1–#3 di-deploy ke production pada 15 Nov (PR #6). Migration dijalankan, dan pendaftaran disahkan berfungsi.
 
 | # | Item | Status | Nota |
 |---|---|---|---|
@@ -119,7 +136,7 @@ Senarai ini dijana dengan: `grep -rn "with('error'\|with('success'" app/Http/Con
 
 ## P1: Sebelum pusingan penjurian seterusnya
 
-### [ ] 4. Kod projek bertembung dengan projek yang telah dipadam (soft-delete)
+### [x] 4. Kod projek bertembung dengan projek yang telah dipadam (soft-delete)
 
 **Masalah:**
 - [ProjectCodeGenerator.php:22](app/Services/ProjectCodeGenerator.php#L22) menggunakan `Project::where(...)->exists()`. Skop SoftDeletes menyembunyikan rekod yang dipadam.
@@ -132,7 +149,7 @@ Senarai ini dijana dengan: `grep -rn "with('error'\|with('success'" app/Http/Con
 
 ---
 
-### [ ] 5. Projek atau juri yang di-soft-delete merosakkan penjurian
+### [x] 5. Projek atau juri yang di-soft-delete merosakkan penjurian
 
 **Masalah:**
 - [JudgeController.php:66-69](app/Http/Controllers/Judge/JudgeController.php#L66-L69): `$assignment->project` bernilai null, jadi dashboard juri memulangkan 500.
@@ -146,7 +163,7 @@ Senarai ini dijana dengan: `grep -rn "with('error'\|with('success'" app/Http/Con
 
 ---
 
-### [ ] 6. Dashboard juri ranap jika tiada sesi aktif
+### [x] 6. Dashboard juri ranap jika tiada sesi aktif
 
 [JudgeController.php:37-40](app/Http/Controllers/Judge/JudgeController.php#L37-L40) menghantar `'projects' => []`, tetapi [judge/Dashboard.tsx:49](resources/js/pages/judge/Dashboard.tsx#L49) membaca `assignments.length`.
 
@@ -154,7 +171,7 @@ Senarai ini dijana dengan: `grep -rn "with('error'\|with('success'" app/Http/Con
 
 ---
 
-### [ ] 7. Kuasa pensyarah bergantung pada `supervisor_email` (teks bebas)
+### [x] 7. Kuasa pensyarah bergantung pada `supervisor_email` (teks bebas)
 
 **Masalah:**
 - Pelajar boleh menaip e-mel mana-mana pensyarah dalam `supervisor_email`.
@@ -169,7 +186,7 @@ Senarai ini dijana dengan: `grep -rn "with('error'\|with('success'" app/Http/Con
 
 ---
 
-### [ ] 8. Buka semula Round 1 meninggalkan markah dan anugerah R2 yang lapuk
+### [x] 8. Buka semula Round 1 meninggalkan markah dan anugerah R2 yang lapuk
 
 **Masalah:**
 - `JudgeAssignmentController::destroy` ([JudgeAssignmentController.php:193-217](app/Http/Controllers/Admin/JudgeAssignmentController.php#L193-L217)) memadam penugasan tetapi tidak memadam markahnya.
@@ -182,7 +199,7 @@ Senarai ini dijana dengan: `grep -rn "with('error'\|with('success'" app/Http/Con
 
 ---
 
-### [ ] 9. Keputusan dasar: juri melihat markah juri lain sebelum keputusan diumumkan
+### [x] 9. Keputusan dasar: juri melihat markah juri lain sebelum keputusan diumumkan
 
 [LeaderboardController.php](app/Http/Controllers/LeaderboardController.php) (sekitar baris 61-63 dan 195-246) memberi juri akses kepada nama, markah, komen dan undian best presenter juri lain semasa penjurian masih berjalan. Ini boleh mempengaruhi penilaian.
 
@@ -191,7 +208,7 @@ Senarai ini dijana dengan: `grep -rn "with('error'\|with('success'" app/Http/Con
 
 ---
 
-### [ ] 10. Borang penilaian juri menerima data projek yang berlebihan
+### [x] 10. Borang penilaian juri menerima data projek yang berlebihan
 
 [JudgeController.php:134](app/Http/Controllers/Judge/JudgeController.php#L134) memanggil `$project->load(['category','teamMembers','user'])` dan menghantar seluruh model. Ini termasuk:
 - e-mel dan telefon peserta, ahli pasukan dan penyelia;
@@ -203,7 +220,7 @@ Senarai ini dijana dengan: `grep -rn "with('error'\|with('success'" app/Http/Con
 
 ---
 
-### [ ] 11. Ralat markah dan ahli pasukan tidak dipaparkan dalam borang
+### [x] 11. Ralat markah dan ahli pasukan tidak dipaparkan dalam borang
 
 - [EvaluationForm.tsx](resources/js/pages/judge/EvaluationForm.tsx) hanya memaparkan ralat `comments` dan `best_presenter`. Tambah paparan untuk `scores` dan `scores.*`.
 - [participant/project/index.tsx:972-1050](resources/js/pages/participant/project/index.tsx#L972-L1050):
@@ -213,7 +230,7 @@ Senarai ini dijana dengan: `grep -rn "with('error'\|with('success'" app/Http/Con
 
 ---
 
-### [ ] 12. Butang "Reject" pada projek yang sudah diluluskan memulangkan 403
+### [x] 12. Butang "Reject" pada projek yang sudah diluluskan memulangkan 403
 
 [approvals/index.tsx:925-940](resources/js/pages/admin/approvals/index.tsx#L925-L940) memaparkan butang ini untuk `status === 4`, tetapi `ProjectApprovalController::reject` ([ProjectApprovalController.php:226](app/Http/Controllers/Admin/ProjectApprovalController.php#L226)) hanya menerima projek berstatus SUBMITTED.
 
@@ -221,7 +238,7 @@ Senarai ini dijana dengan: `grep -rn "with('error'\|with('success'" app/Http/Con
 
 ---
 
-### [ ] 13. Pengerasan kecil (cepat dibuat)
+### [x] 13. Pengerasan kecil (cepat dibuat)
 
 - [ ] **Sijil pencapaian:** alihkan semakan `r2_locked` ke atas semakan `award_level` ([CertificateController.php:42-49](app/Http/Controllers/CertificateController.php#L42-L49)). Sekarang, respons yang berbeza (redirect atau 403) mendedahkan sama ada projek mendapat anugerah.
 - [ ] **Finalize R2:** `Round2Controller::lockToggle` ([Round2Controller.php:106](app/Http/Controllers/Admin/Round2Controller.php#L106)) perlu menerima keadaan sasaran yang eksplisit (`locked: true/false`), bukan toggle buta. Double-click sekarang akan mengunci, kemudian membuka semula.

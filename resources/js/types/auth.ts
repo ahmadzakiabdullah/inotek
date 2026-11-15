@@ -6,6 +6,8 @@ export type User = {
     avatar?: string;
     email_verified_at: string | null;
     two_factor_enabled?: boolean;
+    /** Role name shared by HandleInertiaRequests (admin, lecturer, judge, user). */
+    role?: string | null;
     created_at: string;
     updated_at: string;
     [key: string]: unknown;

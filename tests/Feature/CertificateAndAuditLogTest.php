@@ -108,21 +108,28 @@ class CertificateAndAuditLogTest extends TestCase
             'pcode' => 'C1-01',
         ]);
 
-        // 1. Owner cannot download achievement certificate if no award assigned
-        $response = $this->actingAs($this->student)
-            ->get(route('certificates.downloadAchievement', $this->project));
-        $response->assertSessionHasErrors(['award']);
-
-        // 2. Assign Gold award
-        $this->project->update(['award_level' => 'Gold']);
-
-        // 3. Owner cannot download it before the results are finalized
+        // 1. Before results are finalized the owner gets the same 403 with or
+        //    without an award, so the response cannot reveal whether one exists.
         $this->actingAs($this->student)
             ->get(route('certificates.downloadAchievement', $this->project))
             ->assertForbidden();
 
-        // 4. Owner can download achievement certificate once results are finalized
+        $this->project->update(['award_level' => 'Gold']);
+
+        $this->actingAs($this->student)
+            ->get(route('certificates.downloadAchievement', $this->project))
+            ->assertForbidden();
+
+        // 2. Once results are finalized, a project without an award gets an error
         $this->session->update(['r2_locked' => true]);
+        $this->project->update(['award_level' => null]);
+
+        $this->actingAs($this->student)
+            ->get(route('certificates.downloadAchievement', $this->project->fresh()))
+            ->assertSessionHasErrors(['award']);
+
+        // 3. Owner can download the achievement certificate for an awarded project
+        $this->project->update(['award_level' => 'Gold']);
         $response = $this->actingAs($this->student)
             ->get(route('certificates.downloadAchievement', $this->project->fresh()));
         $response->assertStatus(200);

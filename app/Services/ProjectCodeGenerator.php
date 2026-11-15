@@ -19,7 +19,7 @@ class ProjectCodeGenerator
         do {
             $code = $category->code.'-'.str_pad((string) $number, 2, '0', STR_PAD_LEFT);
             $number++;
-        } while (Project::where('session_id', $sessionId)->where('pcode', $code)->exists());
+        } while (Project::withTrashed()->where('session_id', $sessionId)->where('pcode', $code)->exists());
 
         return $code;
     }

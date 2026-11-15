@@ -95,7 +95,7 @@ class Round2Controller extends Controller
     /**
      * Finalize or reopen the Round 2 judging state.
      */
-    public function lockToggle(): RedirectResponse
+    public function lockToggle(Request $request): RedirectResponse
     {
         $activeSession = CompetitionSession::active();
 
@@ -103,7 +103,20 @@ class Round2Controller extends Controller
             return $this->backWithError('No active competition session.');
         }
 
-        $activeSession->r2_locked = ! $activeSession->r2_locked;
+        // The page sends the state it wants. Without it a double submit would
+        // finalize and then immediately reopen the results.
+        $validated = $request->validate(['locked' => ['sometimes', 'boolean']]);
+        $targetLocked = array_key_exists('locked', $validated)
+            ? (bool) $validated['locked']
+            : ! $activeSession->r2_locked;
+
+        if ($targetLocked === (bool) $activeSession->r2_locked) {
+            return $this->backWithSuccess($targetLocked
+                ? 'Round 2 judging is already finalized.'
+                : 'Round 2 judging is already open.');
+        }
+
+        $activeSession->r2_locked = $targetLocked;
         $activeSession->save();
 
         // Keep the historical action names for audit-log compatibility while

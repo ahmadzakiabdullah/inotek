@@ -39,13 +39,14 @@ class CertificateController extends Controller
             return back()->withErrors(['status' => 'Certificates are only available for approved projects.']);
         }
 
-        if (! $project->award_level) {
-            return back()->withErrors(['award' => 'This project has not been assigned an achievement award level.']);
-        }
-
-        // Awards stay confidential until the results are finalized.
+        // Awards stay confidential until the results are finalized. Check this
+        // before the award itself, so the response cannot reveal whether one exists.
         if (! $user->hasRole('admin') && ! $project->session?->r2_locked) {
             abort(403, 'Achievement certificates are available after the results are announced.');
+        }
+
+        if (! $project->award_level) {
+            return back()->withErrors(['award' => 'This project has not been assigned an achievement award level.']);
         }
 
         return $this->renderCertificate($project, 'pdf.achievement', 'Certificate_Achievement');

@@ -12,6 +12,7 @@ use App\Models\Rubric;
 use App\Models\RubricItem;
 use App\Models\Score;
 use App\Models\User;
+use App\Services\ScoreCalculator;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -648,5 +649,149 @@ class JudgeEvaluationTest extends TestCase
             'scores' => 'not-an-array',
             'round_no' => 1,
         ])->assertSessionHasErrors('scores');
+    }
+
+    public function test_judge_dashboard_renders_without_an_active_session(): void
+    {
+        $this->session->update(['is_active' => false]);
+
+        $this->actingAs($this->judge)->get(route('judge.evaluations.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->component('judge/Dashboard')->has('assignments', 0));
+    }
+
+    public function test_deleted_projects_do_not_break_judging(): void
+    {
+        $other = Project::create([
+            'session_id' => $this->session->id,
+            'category_id' => $this->category->id,
+            'user_id' => User::factory()->create(['role_id' => 4])->id,
+            'title' => 'Deleted Project',
+            'abstract' => 'Abstract',
+            'institution_type' => 'utem',
+            'status' => Project::STATUS_APPROVED,
+            'supervisor_name' => 'Supervisor B',
+            'supervisor_email' => 'b@utem.com',
+        ]);
+        foreach ([$this->project, $other] as $project) {
+            JudgeAssignment::create([
+                'project_id' => $project->id,
+                'judge_id' => $this->judge->id,
+                'session_id' => $this->session->id,
+                'round_no' => 1,
+            ]);
+        }
+        Score::create([
+            'project_id' => $this->project->id,
+            'judge_id' => $this->judge->id,
+            'session_id' => $this->session->id,
+            'round_no' => 1,
+            'total' => 70,
+            'score_details' => [],
+        ]);
+
+        $other->delete();
+
+        // The judge dashboard used to fail on the deleted project's assignment.
+        $this->actingAs($this->judge)->get(route('judge.evaluations.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->has('assignments', 1));
+        $this->actingAs($this->admin)->get(route('admin.assignments.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->has('assignments', 1));
+
+        // Its unscorable assignment must not keep Round 1 incomplete forever.
+        $this->assertTrue(app(ScoreCalculator::class)->isRoundOneComplete($this->session->id));
+    }
+
+    public function test_evaluation_form_receives_no_contact_details_or_unpublished_award(): void
+    {
+        $this->project->update(['award_level' => 'Gold', 'admin_comments' => 'Internal note']);
+        $this->project->teamMembers()->create(['name' => 'Member A', 'email' => 'member@example.com', 'phone' => '0123456789']);
+        JudgeAssignment::create([
+            'project_id' => $this->project->id,
+            'judge_id' => $this->judge->id,
+            'session_id' => $this->session->id,
+            'round_no' => 1,
+        ]);
+
+        $this->actingAs($this->judge)->get(route('judge.evaluations.show', $this->project).'?round=1')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('project.title', 'Innovative Project')
+                ->where('project.team_members.0.name', 'Member A')
+                ->missing('project.team_members.0.email')
+                ->missing('project.team_members.0.phone')
+                ->missing('project.user.email')
+                ->missing('project.supervisor_email')
+                ->missing('project.admin_comments')
+                ->missing('project.award_level')
+                ->missing('project.certificate_hash'));
+    }
+
+    public function test_conflict_of_interest_is_rechecked_when_scoring(): void
+    {
+        JudgeAssignment::create([
+            'project_id' => $this->project->id,
+            'judge_id' => $this->judge->id,
+            'session_id' => $this->session->id,
+            'round_no' => 1,
+        ]);
+        // The supervisor email now matches the judge, after the assignment was made.
+        $this->project->update(['supervisor_email' => $this->judge->email]);
+
+        $this->actingAs($this->judge)->post(route('judge.evaluations.store', $this->project), [
+            'scores' => [$this->item1->id => 5, $this->item2->id => 5],
+            'round_no' => 1,
+        ])->assertSessionHasErrors('error');
+
+        $this->assertDatabaseMissing('scores', ['judge_id' => $this->judge->id]);
+    }
+
+    public function test_admin_cannot_remove_an_assignment_that_already_has_a_score(): void
+    {
+        $assignment = JudgeAssignment::create([
+            'project_id' => $this->project->id,
+            'judge_id' => $this->judge->id,
+            'session_id' => $this->session->id,
+            'round_no' => 1,
+        ]);
+        Score::create([
+            'project_id' => $this->project->id,
+            'judge_id' => $this->judge->id,
+            'session_id' => $this->session->id,
+            'round_no' => 1,
+            'total' => 70,
+            'score_details' => [],
+        ]);
+
+        $this->actingAs($this->admin)->delete(route('admin.assignments.destroy', $assignment))
+            ->assertSessionHasErrors('error');
+        $this->assertDatabaseHas('judge_assignments', ['id' => $assignment->id]);
+
+        $unscored = JudgeAssignment::create([
+            'project_id' => $this->project->id,
+            'judge_id' => $this->judge2->id,
+            'session_id' => $this->session->id,
+            'round_no' => 1,
+        ]);
+
+        $this->actingAs($this->admin)->delete(route('admin.assignments.destroy', $unscored))
+            ->assertSessionHasNoErrors();
+        $this->assertDatabaseMissing('judge_assignments', ['id' => $unscored->id]);
+    }
+
+    public function test_round_2_lock_uses_the_requested_state_so_a_double_submit_is_harmless(): void
+    {
+        foreach ([1, 2] as $attempt) {
+            $this->actingAs($this->admin)
+                ->post(route('admin.round2.lockToggle'), ['locked' => true])
+                ->assertRedirect();
+        }
+
+        $this->assertTrue($this->session->refresh()->r2_locked);
+
+        $this->actingAs($this->admin)->post(route('admin.round2.lockToggle'), ['locked' => false]);
+        $this->assertFalse($this->session->refresh()->r2_locked);
     }
 }

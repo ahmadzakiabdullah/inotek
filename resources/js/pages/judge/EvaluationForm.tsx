@@ -47,15 +47,14 @@ interface Project {
         id: number;
         name: string;
     } | null;
+    // Judges receive names only; contact details are not sent to the scorecard.
     team_members: Array<{
         id: number;
         name: string;
-        email: string | null;
     }>;
     user?: {
         id: number;
         name: string;
-        email: string | null;
     } | null;
 }
 
@@ -106,6 +105,12 @@ export default function EvaluationForm({ project, rubric, existingScore, roundNo
         best_presenter: existingScore?.best_presenter ?? '',
         round_no: roundNo,
     });
+
+    // `scores` and `scores.<itemId>` errors are not tied to a single input.
+    const scoreErrors = Object.entries(errors as Record<string, string | undefined>)
+        .filter(([key, message]) => (key === 'scores' || key.startsWith('scores.') || key === 'round_no') && message)
+        .map(([, message]) => message as string)
+        .filter((message, index, all) => all.indexOf(message) === index);
 
     // Synchronize points state with form data scores
     useEffect(() => {
@@ -432,6 +437,15 @@ return;
 
                                         <InputError message={errors.best_presenter} />
                                     </div>
+
+                                    {/* Errors for the rubric scores (e.g. no rubric configured, or a score out of range). */}
+                                    {scoreErrors.length > 0 && (
+                                        <div role="alert" className="space-y-1 rounded-md border border-destructive/40 bg-destructive/5 p-3">
+                                            {scoreErrors.map((message) => (
+                                                <InputError key={message} message={message} />
+                                            ))}
+                                        </div>
+                                    )}
                                 </CardContent>
                                 <CardFooter className="border-t border-border/40 p-4 flex justify-between items-center">
                                     <span className="text-xs text-muted-foreground">Please make sure all criteria have been scored before submitting.</span>
@@ -503,7 +517,6 @@ return;
                                             {project.team_members.map((member) => (
                                                 <li key={member.id} className="flex items-center justify-between text-xs bg-background/30 px-3 py-1.5 rounded-md border border-border/20">
                                                     <span className="font-semibold">{member.name}</span>
-                                                    <span className="text-[10px] text-muted-foreground">{member.email || '-'}</span>
                                                 </li>
                                             ))}
                                         </ul>

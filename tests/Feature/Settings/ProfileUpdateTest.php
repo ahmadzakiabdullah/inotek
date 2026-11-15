@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Settings;
 
+use App\Models\Role;
 use App\Models\User;
+use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -42,6 +44,58 @@ class ProfileUpdateTest extends TestCase
         $this->assertSame('Test User', $user->name);
         $this->assertSame('test@example.com', $user->email);
         $this->assertNull($user->email_verified_at);
+    }
+
+    public function test_lecturers_and_judges_cannot_change_their_own_email(): void
+    {
+        $this->seed(RoleSeeder::class);
+
+        foreach (['lecturer', 'judge'] as $roleName) {
+            $user = User::factory()->create(['role_id' => Role::where('name', $roleName)->value('id')]);
+            $originalEmail = $user->email;
+
+            $this->actingAs($user)
+                ->patch(route('profile.update'), [
+                    'name' => 'Renamed',
+                    'username' => $user->username,
+                    'email' => 'someone-else@example.com',
+                ])
+                ->assertSessionHasErrors('email');
+
+            $this->assertSame($originalEmail, $user->refresh()->email);
+
+            // Other profile fields can still be changed.
+            $this->actingAs($user)
+                ->patch(route('profile.update'), [
+                    'name' => 'Renamed',
+                    'username' => $user->username,
+                    'email' => $originalEmail,
+                ])
+                ->assertSessionHasNoErrors();
+
+            $this->assertSame('Renamed', $user->refresh()->name);
+        }
+    }
+
+    public function test_the_only_admin_cannot_delete_their_own_account(): void
+    {
+        $this->seed(RoleSeeder::class);
+        $adminRoleId = Role::where('name', 'admin')->value('id');
+        $admin = User::factory()->create(['role_id' => $adminRoleId]);
+
+        $this->actingAs($admin)
+            ->delete(route('profile.destroy'), ['password' => 'password'])
+            ->assertSessionHasErrors('password');
+
+        $this->assertNotSoftDeleted($admin);
+
+        User::factory()->create(['role_id' => $adminRoleId]);
+
+        $this->actingAs($admin)
+            ->delete(route('profile.destroy'), ['password' => 'password'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSoftDeleted($admin);
     }
 
     public function test_email_verification_status_is_unchanged_when_the_email_address_is_unchanged()

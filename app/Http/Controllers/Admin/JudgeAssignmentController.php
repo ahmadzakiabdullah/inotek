@@ -219,7 +219,7 @@ class JudgeAssignmentController extends Controller
         // Check conflicts before the session-wide Round 1 completion gate so
         // the administrator receives the specific eligibility explanation.
         if ($roundNo === 2 && ! $this->calculator->isJudgeEligibleForRound2($projectId, $judgeId, $activeSession->id)) {
-            return $this->backWithError('This judge is not eligible for Round 2 because they evaluated this project in Round 1.');
+            return $this->backWithError('This judge is not eligible for Round 2 because they were assigned to or evaluated this project in Round 1.');
         }
 
         if ($roundNo === 2) {

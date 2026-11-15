@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Category;
+use App\Models\JudgeAssignment;
 use App\Models\Project;
 use App\Models\Rubric;
 use App\Models\Score;
@@ -114,14 +115,29 @@ class ScoreCalculator
      */
     public function isJudgeEligibleForRound2(int $projectId, int $judgeId, int $sessionId): bool
     {
-        // Check if the judge scored the project in Round 1
-        $existsInRound1 = Score::where('project_id', $projectId)
-            ->where('judge_id', $judgeId)
+        return ! in_array($judgeId, $this->roundOneJudgeIds($projectId, $sessionId), true);
+    }
+
+    /**
+     * Judges who were assigned to, or scored, the project in Round 1. Either
+     * one rules them out of Round 2 for that project: Round 2 needs a fresh
+     * view, and an assignment counts even before its score is submitted.
+     *
+     * @return array<int, int>
+     */
+    public function roundOneJudgeIds(int $projectId, int $sessionId): array
+    {
+        $assigned = JudgeAssignment::where('project_id', $projectId)
             ->where('session_id', $sessionId)
             ->where('round_no', 1)
-            ->exists();
+            ->pluck('judge_id');
 
-        return ! $existsInRound1;
+        $scored = Score::where('project_id', $projectId)
+            ->where('session_id', $sessionId)
+            ->where('round_no', 1)
+            ->pluck('judge_id');
+
+        return $assigned->merge($scored)->map(fn ($id) => (int) $id)->unique()->values()->all();
     }
 
     /**

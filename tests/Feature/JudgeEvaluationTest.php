@@ -339,7 +339,7 @@ class JudgeEvaluationTest extends TestCase
             'round_no' => 2,
         ]);
 
-        $response->assertSessionHasErrors(['error' => 'This judge is not eligible for Round 2 because they evaluated this project in Round 1.']);
+        $response->assertSessionHasErrors(['error' => 'This judge is not eligible for Round 2 because they were assigned to or evaluated this project in Round 1.']);
         $this->assertDatabaseMissing('judge_assignments', [
             'project_id' => $this->project->id,
             'judge_id' => $this->judge->id,
@@ -793,5 +793,53 @@ class JudgeEvaluationTest extends TestCase
 
         $this->actingAs($this->admin)->post(route('admin.round2.lockToggle'), ['locked' => false]);
         $this->assertFalse($this->session->refresh()->r2_locked);
+    }
+
+    public function test_a_round_1_assignment_alone_makes_a_judge_ineligible_for_round_2(): void
+    {
+        // Assigned in Round 1, no score yet.
+        JudgeAssignment::create([
+            'project_id' => $this->project->id,
+            'judge_id' => $this->judge->id,
+            'session_id' => $this->session->id,
+            'round_no' => 1,
+        ]);
+
+        $calculator = app(ScoreCalculator::class);
+        $this->assertFalse($calculator->isJudgeEligibleForRound2($this->project->id, $this->judge->id, $this->session->id));
+        $this->assertTrue($calculator->isJudgeEligibleForRound2($this->project->id, $this->judge2->id, $this->session->id));
+    }
+
+    public function test_round_1_judge_cannot_open_or_submit_a_round_2_evaluation_of_the_same_project(): void
+    {
+        // Simulate an inconsistent Round 2 assignment created outside the guarded
+        // paths (e.g. imported data): the scorecard must still refuse it.
+        foreach ([1, 2] as $round) {
+            JudgeAssignment::create([
+                'project_id' => $this->project->id,
+                'judge_id' => $this->judge->id,
+                'session_id' => $this->session->id,
+                'round_no' => $round,
+            ]);
+        }
+        Score::create([
+            'project_id' => $this->project->id,
+            'judge_id' => $this->judge->id,
+            'session_id' => $this->session->id,
+            'round_no' => 1,
+            'total' => 70,
+            'score_details' => [],
+        ]);
+
+        $this->actingAs($this->judge)
+            ->get(route('judge.evaluations.show', $this->project).'?round=2')
+            ->assertForbidden();
+
+        $this->actingAs($this->judge)->post(route('judge.evaluations.store', $this->project), [
+            'scores' => [$this->item1->id => 5, $this->item2->id => 5],
+            'round_no' => 2,
+        ])->assertSessionHasErrors('error');
+
+        $this->assertDatabaseMissing('scores', ['judge_id' => $this->judge->id, 'round_no' => 2]);
     }
 }

@@ -15,7 +15,15 @@ INOTEK uses **Semantic Versioning 2.0.0** (`vMajor.Minor.Patch`):
 
 ## 2. INOTEK Version History
 
-### [v1.8.0] - 2026-11-15 (Current Release)
+### [v1.9.0] - 2026-11-15 (Current Release)
+#### Changed
+* **Judge Assignments Workspace**: The Judge Assignments page is redesigned for large competitions. It shows one row per project with its judges as chips, a coverage summary (how many projects have no, too few or enough judges), search, category and coverage filters, and pages of 50 projects. Judges are added from a searchable picker that lists the least busy judges first and greys out ineligible judges with the reason (owner, supervisor, Round 1 judge). Several projects can be selected and given the same judges in one step; ineligible pairs are skipped and reported, and each judge receives one summary notification.
+* **Round 2 Judge Rule**: A judge who was assigned to a project in Round 1, or scored it, cannot be assigned to or score the same project in Round 2. This applies to manual, bulk and automatic assignment and to the judge's scorecard.
+#### Fixed
+* **Saving a Project Draft**: Participants could not save changes to their project ("405 Method Not Allowed") because the web server rejects `PUT` and `DELETE` requests. These requests (project update and delete, roles, categories, sessions, users, approval code changes, passkeys) are now sent as `POST` with Laravel method spoofing.
+* **Removing a Judge Assignment** uses a `POST` route for the same reason.
+
+### [v1.8.0] - 2026-11-15
 #### Added
 * **Reports & Export** (Admin → Reports & Analytics): official results by category, participants and supervisors, detailed judge scores, and judging progress for any session, as CSV (opens in Excel) or PDF. The results report is marked as a draft until Round 2 is finalized. Exports are recorded in the audit log.
 * **Automatic Judge Assignment** (optional, off by default): turn it on under System Settings → Judging Features. The Judge Assignments page then offers an Auto-assign tool that gives every approved (Round 1) or shortlisted (Round 2) project the chosen number of judges, spreads the workload evenly, keeps existing assignments, and skips conflicts of interest and Round 1 judges in Round 2. Projects it cannot fill are listed.

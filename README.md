@@ -6,7 +6,10 @@ INOTEK is a next-generation web application designed to manage innovation and te
 > This repository represents the modernized core codebase, consolidating the legacy procedural PHP system into a secure, single-page application framework.
 
 > [!NOTE]
-> Current operating model (October 2026): project, approval, score, and judging data belong to a competition session. Dashboard pages default to the active session. Categories are shared globally across sessions; project codes restart for each session. See [the PRD](docs/prd.md), [database reference](docs/database.md), and [changelog](docs/changelog.md).
+> Current operating model (November 2026, v1.9.0): project, approval, score, and judging data belong to a competition session. Dashboard pages default to the active session. Categories are shared globally across sessions; project codes restart for each session. See [the PRD](docs/prd.md), [database reference](docs/database.md), and [changelog](docs/changelog.md).
+
+> [!IMPORTANT]
+> Production runs on IIS, which rejects `PUT`, `PATCH` and `DELETE` requests before Laravel sees them. Frontend code must send these as `POST` with `_method` spoofing (`form.transform((d) => ({ ...d, _method: 'put' }))` then `form.post(...)`), or call a dedicated `POST` alias route. Wayfinder `.form()` helpers already do this.
 
 ---
 
@@ -18,6 +21,13 @@ INOTEK is a next-generation web application designed to manage innovation and te
 - 🛡️ **Role-Based Access Control**: Strict database-backed roles (`admin`, `lecturer`, `judge`, `user`) secured via the `RoleMiddleware` engine. Project registration and submission are limited to the participant role (`role:user`).
 - 👥 **Users CRUD Datatable**: Admin dashboard for complete account controls featuring client-side search, multi-column sorting, and pagination.
 - 🎛️ **Roles CRUD Dashboard**: Admin panel to add, edit, and safely delete custom roles. The system roles are protected by name (they cannot be renamed or deleted), and a role that still has users cannot be deleted. The same safeguard applies to competition sessions with projects and categories with projects.
+- 📝 **Project Registration & Approval**: Participants register a project (with team members where the category allows) and submit it; supervising lecturers and admins approve, return or cancel it.
+- ⚖️ **Two-Round Judging**: Dynamic rubrics per category and session, a Round 2 shortlist (top 3, 5 or 10 per category), conflict-of-interest checks, and a rule that a project's Round 1 judges cannot judge it in Round 2.
+- 🧑‍⚖️ **Judge Assignments Workspace**: One row per project with judge chips, coverage summary, filters, a searchable judge picker that explains why a judge is ineligible, bulk assignment, and optional automatic assignment with balanced workload.
+- 🏆 **Results, Awards & Certificates**: Results stay hidden until Round 2 is finalized. Participation and achievement certificates (PDF) carry a QR code for public verification.
+- 💬 **Judges' Feedback**: After results are finalized, participants see anonymous judge comments and per-criterion scores.
+- 📈 **Reports & Analytics**: CSV and PDF exports (official results, participants and supervisors, judge scores, judging progress) and charts for participation, categories, score distribution and judge scoring consistency.
+- 🔔 **Notifications, Audit Log & Settings**: Database notifications, broadcast announcements, judge nudges, an audit log of admin actions, and system settings (branding, timezone, judging features).
 
 ---
 
@@ -107,6 +117,12 @@ For detailed technical specifications and developer handbooks, refer to the docu
 * 🗄️ **[Database Schema Reference](docs/database.md)**: Entity Relationship Diagram (ERD) and detailed table definitions.
 * 🛠️ **[Developer & API Reference Guide](docs/development.md)**: Coding standards, testing instructions, optional WebSocket setup, and API endpoints.
 * 🗺️ **[Development Roadmap (TODOS)](docs/todos.md)**: Active task checklist and implementation gantt phases.
+
+Working notes in the repository root (Malay):
+
+* **[todos.md](todos.md)**: Status of the November 2026 urgent fixes and the list of remaining work.
+* **[fix.md](fix.md)**: Code audit of 12 November 2026 (historical; open items are carried into `todos.md`).
+* **[OLD.md](OLD.md)**: Archive snapshot of the legacy PHP system (June 2026).
 
 ## Changelog
 

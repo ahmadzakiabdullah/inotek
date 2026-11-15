@@ -2,6 +2,13 @@
 
 Disediakan berdasarkan audit kod pada 12 November 2026. Dokumen ini menyenaraikan isu yang ditemui, mengikut keutamaan, beserta cadangan pembetulan yang konkrit.
 
+> [!NOTE]
+> **Kemas kini 15 November 2026:** dokumen ini kini rekod sejarah. Status terkini dan kerja yang masih tinggal ada di [todos.md](todos.md) (bahagian "Status keseluruhan" dan "Seterusnya"). Sejak audit ini:
+> - **#5 dan #6 (SMTP, `MustVerifyEmail`)** masih belum dibuat.
+> - **P2 Prestasi:** semakan "Round 1 complete" kini satu query (`ScoreCalculator::isRoundOneComplete`). Item prestasi lain belum disentuh.
+> - **P3 Kebersihan kod:** helper toast kini satu tempat (`Controller::toast()`, `backWithError()`, `backWithSuccess()`), dan changelog di-escape sebelum dipaparkan (v1.7.0). Item lain belum dibuat.
+> - Penemuan baharu selepas audit ini (ralat 405 IIS, kolum lama `nama`, dan lain-lain) direkodkan dalam [todos.md](todos.md) dan [docs/changelog.md](docs/changelog.md).
+
 **Petunjuk keutamaan:**
 - **P0**: betulkan segera (kebocoran data atau keputusan)
 - **P1**: betulkan sebelum pusingan penjurian seterusnya
@@ -323,7 +330,7 @@ Gabungkan juga kod `downloadParticipation` dan `downloadAchievement` yang hampir
 - [x] Halaman verify sijil tidak mengandungi e-mel atau nombor telefon (`CertificateAndAuditLogTest`).
 - [x] Leaderboard awam dan laman utama tidak mendedahkan `award_level` atau ranking sebelum `r2_locked` (`PublicLeaderboardPrivacyTest`).
 - [x] Pensyarah tidak melihat markah/anugerah di leaderboard staf, dan halaman peserta/pensyarah tidak menerima `award_level`, sebelum `r2_locked` (`PublicLeaderboardPrivacyTest`, ditambah 12 Nov).
-- [ ] Sijil pencapaian disekat sebelum `r2_locked`.
+- [x] Sijil pencapaian disekat sebelum `r2_locked` (`CertificateAndAuditLogTest`, ditambah 15 Nov).
 - [x] Pensyarah atau juri tidak boleh mendaftar projek (`ProjectRegistrationTest`).
 - [x] Pensyarah tidak boleh meluluskan projek miliknya sendiri (`ProjectVerificationTest`).
 - [x] Juri yang ada konflik kepentingan tidak boleh ditugaskan (`JudgeEvaluationTest`).

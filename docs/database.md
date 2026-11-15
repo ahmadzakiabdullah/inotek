@@ -2,7 +2,7 @@
 
 This document outlines the database design, Entity Relationship Diagram (ERD), schema definitions, and constraints for the INOTEK system.
 
-_Last reviewed: 12 November 2026 (against `database/migrations` up to `2026_11_02_000001` and `app/Models`)._
+_Last reviewed: 15 November 2026 (against `database/migrations` up to `2026_11_15_000001` and `app/Models`, v1.9.0)._
 
 > [!NOTE]
 > Competition sessions live in `competition_sessions`. The `sessions` table (fresh installs) and `laravel_sessions` table (repaired by `2026_10_22_000002`) belong to Laravel's HTTP session driver and are unrelated to competition data.
@@ -226,6 +226,9 @@ Accounts list.
 | `created_at` / `updated_at` | Timestamp | Yes | Present on fresh installs only. Legacy user records do not necessarily have these columns; the User model does not write timestamps (`$timestamps = false`). |
 | `deleted_at` | Timestamp | Yes | Soft delete support. |
 
+> [!NOTE]
+> **Legacy columns**: The production `users` table still carries columns from the legacy PHP system (for example `nama`). Migration `2026_11_15_000001_make_legacy_user_columns_nullable` makes every such NOT NULL column without a default nullable, so new accounts can be created; types, collations and comments are kept and no data is changed. Columns owned by the application are not touched. The migration does nothing on fresh databases.
+
 ### 2.5 Table: `projects`
 Project details submitted by participants.
 | Column | Type | Nullable | Constraints & Description |
@@ -365,6 +368,9 @@ Key-value application settings.
 | `value` | Text | Yes | Setting value. |
 | `type` | Varchar(255) | No | Default: `string`. Value type hint for casting. |
 | `created_at` / `updated_at` | Timestamp | Yes | Standard record timestamps. |
+
+> [!NOTE]
+> **Keys in use**: branding and locale (`system_name`, `primary_color`, `global_font`, `date_format`, `timezone`) and judging features (`auto_assign_enabled`, default off; `auto_assign_judges_per_project`, default 3, maximum 10). Keys are created on first save, so no migration is needed for new settings.
 
 ### 2.14 Framework tables
 Managed by Laravel and its packages; not part of the competition domain.

@@ -40,4 +40,16 @@ class ScoreUpdated implements ShouldBroadcast
     {
         return 'score.updated';
     }
+
+    /**
+     * The leaderboard channel is public. Listeners only refetch the rankings,
+     * so send the project ID rather than the serialized project (which holds
+     * contact details, admin comments and the unpublished award level).
+     *
+     * @return array{project_id: int}
+     */
+    public function broadcastWith(): array
+    {
+        return ['project_id' => $this->project->id];
+    }
 }

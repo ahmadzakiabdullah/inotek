@@ -26,6 +26,8 @@ export default function Profile({
 }) {
     const { auth } = usePage<PageProps>().props;
     const getInitials = useInitials();
+    // Must match ProfileUpdateRequest::EMAIL_LOCKED_ROLES on the server.
+    const emailLocked = auth.user.role === 'lecturer' || auth.user.role === 'judge';
 
     return (
         <>
@@ -109,9 +111,17 @@ export default function Profile({
                                     defaultValue={auth.user.email}
                                     name="email"
                                     required
+                                    readOnly={emailLocked}
+                                    aria-describedby={emailLocked ? 'email-locked-hint' : undefined}
                                     autoComplete="username"
                                     placeholder="Email address"
                                 />
+
+                                {emailLocked && (
+                                    <p id="email-locked-hint" className="text-xs text-muted-foreground">
+                                        Your email address links you to supervised projects and judging checks. Contact an administrator to change it.
+                                    </p>
+                                )}
 
                                 <InputError
                                     className="mt-2"

@@ -127,12 +127,19 @@ class ScoreCalculator
     /**
      * Whether every Round 1 assignment in the session has a submitted score.
      * Returns false when there are no Round 1 assignments.
+     *
+     * Assignments of deleted projects or deleted judges are ignored: they can
+     * never be scored, and would otherwise block Round 2 indefinitely.
      */
     public function isRoundOneComplete(int $sessionId): bool
     {
         $assignments = DB::table('judge_assignments')
-            ->where('session_id', $sessionId)
-            ->where('round_no', 1);
+            ->join('projects', 'projects.id', '=', 'judge_assignments.project_id')
+            ->join('users', 'users.id', '=', 'judge_assignments.judge_id')
+            ->whereNull('projects.deleted_at')
+            ->whereNull('users.deleted_at')
+            ->where('judge_assignments.session_id', $sessionId)
+            ->where('judge_assignments.round_no', 1);
 
         if (! (clone $assignments)->exists()) {
             return false;

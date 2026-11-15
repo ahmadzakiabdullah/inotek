@@ -127,6 +127,10 @@ export default function ProjectIndex({
         team_members: initialTeamMembers,
     });
 
+    // Validation errors for a team member field arrive as `team_members.<index>.<field>`.
+    const memberError = (index: number, field: 'name' | 'email' | 'phone'): string | undefined =>
+        (form.errors as Record<string, string | undefined>)[`team_members.${index}.${field}`];
+
     const isTeamAllowed = useMemo(() => {
         if (!form.data.category_id) {
 return false;
@@ -993,9 +997,11 @@ return;
                                                                         )
                                                                     }
                                                                     placeholder="Member Name"
+                                                                    aria-label={`Team member ${idx + 1} name`}
                                                                     className="h-9 bg-background/50"
                                                                     required
                                                                 />
+                                                                <InputError message={memberError(idx, 'name')} />
                                                             </div>
                                                             <div className="grid flex-1 gap-1.5">
                                                                 <Input
@@ -1015,8 +1021,10 @@ return;
                                                                         )
                                                                     }
                                                                     placeholder="Email Address"
+                                                                    aria-label={`Team member ${idx + 1} email address`}
                                                                     className="h-9 bg-background/50"
                                                                 />
+                                                                <InputError message={memberError(idx, 'email')} />
                                                             </div>
                                                             <div className="grid flex-1 gap-1.5">
                                                                 <Input
@@ -1035,8 +1043,10 @@ return;
                                                                         )
                                                                     }
                                                                     placeholder="Phone Number"
+                                                                    aria-label={`Team member ${idx + 1} phone number`}
                                                                     className="h-9 bg-background/50"
                                                                 />
+                                                                <InputError message={memberError(idx, 'phone')} />
                                                             </div>
                                                             <Button
                                                                 type="button"
@@ -1048,6 +1058,7 @@ return;
                                                                     )
                                                                 }
                                                                 className="h-9 w-9 self-end text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                                                aria-label={`Remove team member ${idx + 1}`}
                                                             >
                                                                 <Trash2 className="h-4 w-4" />
                                                             </Button>
@@ -1063,6 +1074,7 @@ return;
                                                         here.
                                                     </p>
                                                 )}
+                                                <InputError message={form.errors.team_members} />
                                             </div>
                                         </TabsContent>
                                     )}

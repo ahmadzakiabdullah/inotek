@@ -50,6 +50,8 @@ export default function Round2Index({ shortlist, round2Scores, activeSession, li
             return;
         }
 
+        // Send the intended state so a double submit cannot lock and then unlock.
+        lockForm.transform(() => ({ locked: !activeSession?.r2_locked }));
         lockForm.post('/dashboard/round2/lock', {
             // The server sends the success or refusal message as a toast.
             onError: (err) => {

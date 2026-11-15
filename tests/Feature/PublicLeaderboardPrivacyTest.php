@@ -60,18 +60,52 @@ class PublicLeaderboardPrivacyTest extends TestCase
         $this->assertStringNotContainsString('Private judging comment', json_encode($response->json()));
     }
 
-    public function test_internal_leaderboard_keeps_judging_details(): void
+    public function test_internal_leaderboard_keeps_judging_details_for_admins(): void
     {
         [, $category, $project, $judge] = $this->makeScoredProject(false);
-        foreach ([1, 3] as $roleId) { // admin, judge
-            $staff = User::factory()->create(['role_id' => $roleId]);
+        $admin = User::factory()->create(['role_id' => 1]);
 
-            $this->actingAs($staff)->getJson(route('dashboard.leaderboard'))
-                ->assertOk()
-                ->assertJsonPath("leaderboardData.{$category->id}.0.username", $project->user->name)
-                ->assertJsonPath("leaderboardData.{$category->id}.0.judges.0.name", $judge->name)
-                ->assertJsonPath("leaderboardData.{$category->id}.0.judges.0.comments", 'Private judging comment');
-        }
+        $this->actingAs($admin)->getJson(route('dashboard.leaderboard'))
+            ->assertOk()
+            ->assertJsonPath("leaderboardData.{$category->id}.0.username", $project->user->name)
+            ->assertJsonPath("leaderboardData.{$category->id}.0.judges.0.name", $judge->name)
+            ->assertJsonPath("leaderboardData.{$category->id}.0.judges.0.comments", 'Private judging comment');
+    }
+
+    public function test_judges_see_only_their_own_scores_until_results_are_finalized(): void
+    {
+        [$session, $category, $project, $otherJudge] = $this->makeScoredProject(false);
+        $project->update(['award_level' => 'Gold']);
+        $judge = User::factory()->create(['role_id' => 3, 'name' => 'Viewing judge']);
+        Score::create([
+            'project_id' => $project->id,
+            'judge_id' => $judge->id,
+            'session_id' => $session->id,
+            'round_no' => 2,
+            'total' => 80,
+            'score_details' => [],
+            'comments' => 'My own comment',
+        ]);
+
+        $response = $this->actingAs($judge)->getJson(route('dashboard.leaderboard'))
+            ->assertOk()
+            ->assertJsonCount(1, "leaderboardData.{$category->id}.0.judges")
+            ->assertJsonPath("leaderboardData.{$category->id}.0.judges.0.name", 'Viewing judge')
+            ->assertJsonPath("leaderboardData.{$category->id}.0.judges.0.comments", 'My own comment')
+            ->assertJsonPath("leaderboardData.{$category->id}.0.award_level", null)
+            ->assertJsonMissingPath("leaderboardData.{$category->id}.0.avg_r1")
+            ->assertJsonMissingPath("leaderboardData.{$category->id}.0.final_score")
+            ->assertJsonMissingPath("leaderboardData.{$category->id}.0.best_presenter")
+            ->assertJsonMissingPath("leaderboardData.{$category->id}.0.username");
+
+        $this->assertStringNotContainsString($otherJudge->name, json_encode($response->json()));
+        $this->assertStringNotContainsString('Private judging comment', json_encode($response->json()));
+
+        $session->update(['r2_locked' => true]);
+
+        $this->actingAs($judge)->getJson(route('dashboard.leaderboard'))
+            ->assertJsonCount(2, "leaderboardData.{$category->id}.0.judges")
+            ->assertJsonPath("leaderboardData.{$category->id}.0.award_level", 'Gold');
     }
 
     public function test_lecturer_leaderboard_hides_results_until_round_two_is_finalized(): void

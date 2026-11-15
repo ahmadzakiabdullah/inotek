@@ -36,7 +36,7 @@ class JudgeController extends Controller
 
         if (! $activeSession) {
             return Inertia::render('judge/Dashboard', [
-                'projects' => [],
+                'assignments' => [],
                 'activeSession' => null,
                 'error' => 'No active competition session found at this time.',
             ]);
@@ -52,6 +52,8 @@ class JudgeController extends Controller
         ])
             ->where('judge_id', $judgeId)
             ->where('session_id', $activeSession->id)
+            // Skip assignments whose project has since been deleted.
+            ->whereHas('project')
             ->get();
 
         // Get existing scores submitted by this judge
@@ -130,8 +132,32 @@ class JudgeController extends Controller
             abort(404, 'Evaluation rubric not found for this project category.');
         }
 
+        $project->load(['category', 'teamMembers', 'user']);
+
         return Inertia::render('judge/EvaluationForm', [
-            'project' => $project->load(['category', 'teamMembers', 'user']),
+            // Only what the scorecard shows: no contact details, admin comments,
+            // certificate hash or unpublished award level.
+            'project' => [
+                'id' => $project->id,
+                'title' => $project->title,
+                'pcode' => $project->pcode,
+                'abstract' => $project->abstract,
+                'poster_url' => $project->poster_url,
+                'video_url' => $project->video_url,
+                'institution_type' => $project->institution_type,
+                'category' => $project->category ? [
+                    'id' => $project->category->id,
+                    'name' => $project->category->name,
+                ] : null,
+                'team_members' => $project->teamMembers->map(fn ($member) => [
+                    'id' => $member->id,
+                    'name' => $member->name,
+                ])->values()->all(),
+                'user' => $project->user ? [
+                    'id' => $project->user->id,
+                    'name' => $project->user->name,
+                ] : null,
+            ],
             'rubric' => $rubric,
             'existingScore' => $existingScore,
             'roundNo' => $roundNo,
@@ -165,6 +191,12 @@ class JudgeController extends Controller
 
         if (! $assignment || $project->status !== Project::STATUS_APPROVED) {
             return $this->backWithError('Evaluation not allowed for this project.');
+        }
+
+        // Re-check at scoring time: the check at assignment time can be outdated
+        // if the project's supervisor email changed since.
+        if ($this->calculator->hasConflictOfInterest($project, $request->user())) {
+            return $this->backWithError('You have a conflict of interest with this project (owner or supervisor) and cannot evaluate it.');
         }
 
         if ($this->isRoundLocked($roundNo, $activeSession)) {

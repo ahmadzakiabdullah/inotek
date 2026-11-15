@@ -55,11 +55,18 @@ class LeaderboardController extends Controller
             ->get();
 
         $isPublicResultsPublished = (bool) $activeSession->r2_locked;
-        // Lecturers supervise participants, so they only see scores, awards and
-        // judge comments once results are finalized; admins and judges always do.
+        // Scores, awards and judge comments are shown on the staff leaderboard to
+        // admins always, and to everyone else only once results are finalized.
         $user = $request->user();
-        $isAuthenticatedLeaderboard = $request->routeIs('dashboard.leaderboard')
-            && ($isPublicResultsPublished || $user?->hasRole('admin') || $user?->hasRole('judge'));
+        $isStaffLeaderboard = $request->routeIs('dashboard.leaderboard');
+        $isAuthenticatedLeaderboard = $isStaffLeaderboard
+            && ($isPublicResultsPublished || $user?->hasRole('admin'));
+
+        // Before results are finalized a judge sees only their own evaluations, so
+        // other judges' marks and comments cannot influence their scoring.
+        $ownScoresJudgeId = ($isStaffLeaderboard && ! $isAuthenticatedLeaderboard && $user?->hasRole('judge'))
+            ? $user->id
+            : null;
 
         // Keep judging details restricted to the authenticated staff leaderboard.
         $r1Averages = collect();
@@ -83,17 +90,18 @@ class LeaderboardController extends Controller
                 ->keyBy('project_id');
         }
 
-        if ($isAuthenticatedLeaderboard) {
+        if ($isAuthenticatedLeaderboard || $ownScoresJudgeId !== null) {
             $scoreDetails = DB::table('scores')
                 ->join('users', 'users.id', '=', 'scores.judge_id')
                 ->where('scores.session_id', $activeSession->id)
+                ->when($ownScoresJudgeId !== null, fn ($query) => $query->where('scores.judge_id', $ownScoresJudgeId))
                 ->select('scores.project_id', 'scores.round_no', 'scores.total', 'scores.best_presenter', 'scores.comments', 'scores.created_at', 'users.name as judge_name')
                 ->orderBy('scores.round_no')
                 ->get()
                 ->groupBy('project_id');
         }
 
-        $leaderboardData = $projects->map(function ($project) use ($r1Averages, $r2Averages, $scoreDetails, $isAuthenticatedLeaderboard, $isPublicResultsPublished) {
+        $leaderboardData = $projects->map(function ($project) use ($r1Averages, $r2Averages, $scoreDetails, $isAuthenticatedLeaderboard, $isPublicResultsPublished, $ownScoresJudgeId) {
             $r1 = $r1Averages->get($project->id);
             $r2 = $r2Averages->get($project->id);
 
@@ -103,7 +111,7 @@ class LeaderboardController extends Controller
             // Presence of a Round 2 score, not its numeric value, determines priority.
             $finalScore = $r2 ? $avgR2 : $avgR1;
 
-            $judges = $isAuthenticatedLeaderboard ? $scoreDetails->get($project->id, collect())->map(fn ($score) => [
+            $judges = ($isAuthenticatedLeaderboard || $ownScoresJudgeId !== null) ? $scoreDetails->get($project->id, collect())->map(fn ($score) => [
                 'name' => $score->judge_name,
                 'round' => (int) $score->round_no,
                 'score' => round((float) $score->total, 2),
@@ -137,6 +145,7 @@ class LeaderboardController extends Controller
                     'judges' => $judges,
                     'best_presenter' => $presenterVotes,
                 ] : []),
+                ...($ownScoresJudgeId !== null ? ['judges' => $judges] : []),
             ];
         });
 

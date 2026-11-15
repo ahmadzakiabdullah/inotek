@@ -7,7 +7,9 @@ use App\Models\CompetitionSession;
 use App\Models\Project;
 use App\Models\TeamMember;
 use App\Models\User;
+use App\Services\ProjectCodeGenerator;
 use Database\Seeders\RoleSeeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -139,5 +141,18 @@ class SoftDeletesTest extends TestCase
         $this->teamMember->restore();
         $this->assertFalse($this->teamMember->trashed());
         $this->assertNull($this->teamMember->deleted_at);
+    }
+
+    /**
+     * A trashed project still holds its code under the (session_id, pcode)
+     * unique index, so the generator must skip it instead of reusing it.
+     */
+    public function test_project_code_generator_skips_codes_of_deleted_projects(): void
+    {
+        $this->project->delete();
+
+        $code = DB::transaction(fn () => app(ProjectCodeGenerator::class)->next($this->session->id, $this->category->id));
+
+        $this->assertSame('C1-02', $code);
     }
 }

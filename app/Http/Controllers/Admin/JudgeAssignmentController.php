@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CompetitionSession;
 use App\Models\JudgeAssignment;
 use App\Models\Project;
+use App\Models\Score;
 use App\Models\User;
 use App\Notifications\SystemNotification;
 use App\Services\AuditLogger;
@@ -53,8 +54,12 @@ class JudgeAssignmentController extends Controller
             ->get();
 
         // Get all assignments for the active session
+        // Skip assignments whose project or judge has been deleted; the page
+        // reads both relations.
         $assignments = JudgeAssignment::with(['project.category', 'judge'])
             ->where('session_id', $activeSession->id)
+            ->whereHas('project')
+            ->whereHas('judge')
             ->get();
 
         $roundOneComplete = $this->calculator->isRoundOneComplete($activeSession->id);
@@ -201,6 +206,18 @@ class JudgeAssignmentController extends Controller
         // If Round 2 assignment and locked, block deletion
         if ($assignment->round_no === 2 && $activeSession->r2_locked) {
             return $this->backWithError('Round 2 assignment is locked and cannot be deleted.');
+        }
+
+        // A submitted score would stay in the averages (and keep a Round 2
+        // finalist ranked, with its award) after its assignment is gone.
+        $hasScore = Score::where('project_id', $assignment->project_id)
+            ->where('judge_id', $assignment->judge_id)
+            ->where('session_id', $assignment->session_id)
+            ->where('round_no', $assignment->round_no)
+            ->exists();
+
+        if ($hasScore) {
+            return $this->backWithError('This judge has already submitted a score for this assignment, so it cannot be removed.');
         }
 
         $judgeName = $assignment->judge->name ?? 'Unknown Judge';

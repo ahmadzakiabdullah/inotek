@@ -118,6 +118,10 @@ class JudgeController extends Controller
             abort(403, 'This project is not assigned to you for evaluation.');
         }
 
+        if ($roundNo === 2 && ! $this->calculator->isJudgeEligibleForRound2($project->id, $request->user()->id, $activeSession->id)) {
+            abort(403, 'You judged this project in Round 1, so you cannot evaluate it in Round 2.');
+        }
+
         $existingScore = Score::where('project_id', $project->id)
             ->where('judge_id', $judgeId)
             ->where('session_id', $activeSession->id)
@@ -197,6 +201,12 @@ class JudgeController extends Controller
         // if the project's supervisor email changed since.
         if ($this->calculator->hasConflictOfInterest($project, $request->user())) {
             return $this->backWithError('You have a conflict of interest with this project (owner or supervisor) and cannot evaluate it.');
+        }
+
+        // Defence in depth: assignment already enforces this, but a Round 2
+        // score must never come from a Round 1 judge of the same project.
+        if ($roundNo === 2 && ! $this->calculator->isJudgeEligibleForRound2($project->id, $request->user()->id, $activeSession->id)) {
+            return $this->backWithError('You judged this project in Round 1, so you cannot evaluate it in Round 2.');
         }
 
         if ($this->isRoundLocked($roundNo, $activeSession)) {

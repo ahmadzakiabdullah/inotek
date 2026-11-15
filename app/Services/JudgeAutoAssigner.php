@@ -76,11 +76,15 @@ class JudgeAutoAssigner
                 }
             }
 
-            // In Round 2, a judge who scored the project in Round 1 is not eligible.
-            $roundOneScorers = $roundNo === 2
-                ? Score::where('session_id', $session->id)->where('round_no', 1)->get(['project_id', 'judge_id'])
-                    ->groupBy('project_id')->map(fn (Collection $scores) => $scores->pluck('judge_id')->all())
-                : collect();
+            // In Round 2, a judge who was assigned to or scored the project in
+            // Round 1 is not eligible (same rule as ScoreCalculator::roundOneJudgeIds).
+            $roundOneJudges = collect();
+            if ($roundNo === 2) {
+                $roundOneJudges = JudgeAssignment::where('session_id', $session->id)->where('round_no', 1)->get(['project_id', 'judge_id'])
+                    ->concat(Score::where('session_id', $session->id)->where('round_no', 1)->get(['project_id', 'judge_id']))
+                    ->groupBy('project_id')
+                    ->map(fn (Collection $rows) => $rows->pluck('judge_id')->map(fn ($id) => (int) $id)->unique()->values()->all());
+            }
 
             $created = [];
             $unfilled = [];
@@ -98,7 +102,7 @@ class JudgeAutoAssigner
 
                 $candidates = $judges
                     ->reject(fn (User $judge) => in_array($judge->id, $current, true))
-                    ->reject(fn (User $judge) => in_array($judge->id, $roundOneScorers->get($project->id, []), true))
+                    ->reject(fn (User $judge) => in_array($judge->id, $roundOneJudges->get($project->id, []), true))
                     ->reject(fn (User $judge) => $this->calculator->hasConflictOfInterest($project, $judge))
                     ->sortBy(fn (User $judge) => [$load[$judge->id], $judge->id])
                     ->take($missing);

@@ -338,7 +338,7 @@ class JudgeEvaluationTest extends TestCase
             'round_no' => 2,
         ]);
 
-        $response->assertSessionHas('error', 'This judge is not eligible for Round 2 because they evaluated this project in Round 1.');
+        $response->assertSessionHasErrors(['error' => 'This judge is not eligible for Round 2 because they evaluated this project in Round 1.']);
         $this->assertDatabaseMissing('judge_assignments', [
             'project_id' => $this->project->id,
             'judge_id' => $this->judge->id,
@@ -409,7 +409,7 @@ class JudgeEvaluationTest extends TestCase
             'round_no' => 2,
         ]);
 
-        $response->assertSessionHas('error', 'Round 2 assignments are limited to projects shortlisted from Round 1.');
+        $response->assertSessionHasErrors(['error' => 'Round 2 assignments are limited to projects shortlisted from Round 1.']);
         $this->assertDatabaseMissing('judge_assignments', [
             'project_id' => $outsideProject->id,
             'judge_id' => $this->judge2->id,
@@ -481,7 +481,7 @@ class JudgeEvaluationTest extends TestCase
 
         $response = $this->actingAs($this->admin)->post(route('admin.round2.shortlistLimit'), ['limit' => 3]);
 
-        $response->assertSessionHas('error', 'Remove Round 2 assignments outside the new shortlist before changing its size.');
+        $response->assertSessionHasErrors(['error' => 'Remove Round 2 assignments outside the new shortlist before changing its size.']);
         $this->assertSame(5, $this->session->fresh()->round2_shortlist_limit);
     }
 
@@ -491,7 +491,7 @@ class JudgeEvaluationTest extends TestCase
             'award_level' => 'Gold',
         ]);
 
-        $response->assertSessionHas('error', 'Awards can only be assigned to projects shortlisted for Round 2.');
+        $response->assertSessionHasErrors(['error' => 'Awards can only be assigned to projects shortlisted for Round 2.']);
         $this->assertDatabaseMissing('projects', ['id' => $this->project->id, 'award_level' => 'Gold']);
     }
 
@@ -510,7 +510,7 @@ class JudgeEvaluationTest extends TestCase
             'award_level' => 'Gold',
         ]);
 
-        $response->assertSessionHas('error', 'An award can only be assigned after the project has a Round 2 evaluation.');
+        $response->assertSessionHasErrors(['error' => 'An award can only be assigned after the project has a Round 2 evaluation.']);
         $this->assertDatabaseMissing('projects', ['id' => $this->project->id, 'award_level' => 'Gold']);
     }
 
@@ -567,7 +567,7 @@ class JudgeEvaluationTest extends TestCase
         $response = $this->actingAs($this->judge)
             ->post(route('judge.evaluations.store', $this->project), $postData);
 
-        $response->assertSessionHas('error', 'Round 2 evaluation has been locked and cannot be modified.');
+        $response->assertSessionHasErrors(['error' => 'Round 2 evaluation has been locked and cannot be modified.']);
         $this->assertDatabaseMissing('scores', [
             'project_id' => $this->project->id,
             'judge_id' => $this->judge->id,
@@ -607,7 +607,7 @@ class JudgeEvaluationTest extends TestCase
             'round_no' => 1,
         ]);
 
-        $response->assertSessionHas('error', 'Round 1 evaluation is closed because Round 2 judging has started.');
+        $response->assertSessionHasErrors(['error' => 'Round 1 evaluation is closed because Round 2 judging has started.']);
         $this->assertDatabaseMissing('scores', ['project_id' => $this->project->id, 'round_no' => 1]);
     }
 
@@ -621,7 +621,11 @@ class JudgeEvaluationTest extends TestCase
             'round_no' => 1,
         ]);
 
-        $response->assertSessionHas('error', 'This judge has a conflict of interest with the project (owner or supervisor).');
+        $response->assertSessionHasErrors(['error' => 'This judge has a conflict of interest with the project (owner or supervisor).']);
+        // The refusal must also reach the admin as a toast, not only as a hidden session key.
+        $response->assertSessionHas('inertia.flash_data', [
+            'toast' => ['type' => 'error', 'message' => 'This judge has a conflict of interest with the project (owner or supervisor).'],
+        ]);
         $this->assertDatabaseMissing('judge_assignments', ['judge_id' => $supervisorJudge->id]);
     }
 

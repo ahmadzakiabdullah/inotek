@@ -81,6 +81,6 @@ class JudgingNudgeController extends Controller
 
         $msg = __("Successfully sent evaluation reminders to {$nudgeCount} pending judges.");
 
-        return back()->with('success', $msg);
+        return $this->backWithSuccess($msg);
     }
 }

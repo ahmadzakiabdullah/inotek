@@ -39,8 +39,8 @@ export default function Index() {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         post('/dashboard/announcements', {
+            // The server sends the success message as a toast.
             onSuccess: () => {
-                toast.success('Announcement broadcasted in real-time!');
                 reset('title', 'message');
             },
             onError: () => {

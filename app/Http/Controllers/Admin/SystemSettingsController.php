@@ -54,6 +54,6 @@ class SystemSettingsController extends Controller
             "Admin '{$adminName}' updated system settings: Name='{$validated['system_name']}', Font='{$validated['global_font']}', Color='{$validated['primary_color']}', Timezone='{$validated['timezone']}'"
         );
 
-        return back()->with('success', 'System configurations updated successfully in real-time!');
+        return $this->backWithSuccess('System configurations updated successfully in real-time!');
     }
 }

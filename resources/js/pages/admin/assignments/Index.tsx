@@ -116,14 +116,15 @@ export default function AssignmentsIndex({ projects, judges, assignments, active
         // Delay submission slightly to allow useForm data state to sync
         setTimeout(() => {
             form.post('/dashboard/assignments', {
+                // The server sends the success or refusal message as a toast.
                 onSuccess: () => {
-                    toast.success('Judge assigned successfully!');
                     setSelectedProject('');
                     setSelectedJudge('');
                 },
                 onError: (err) => {
-                    const message = err.error || 'Failed to assign judge. Check conflicts.';
-                    toast.error(message);
+                    if (!err.error) {
+                        toast.error('Failed to assign judge. Check the selected project and judge.');
+                    }
                 }
             });
         }, 100);
@@ -135,11 +136,10 @@ return;
 }
 
         deleteForm.delete(`/dashboard/assignments/${id}`, {
-            onSuccess: () => {
-                toast.success('Judge assignment deleted successfully.');
-            },
             onError: (err) => {
-                toast.error(err.error || 'Failed to delete assignment.');
+                if (!err.error) {
+                    toast.error('Failed to delete assignment.');
+                }
             }
         });
     };

@@ -147,7 +147,7 @@ class JudgeController extends Controller
         $activeSession = CompetitionSession::active();
 
         if (! $activeSession) {
-            return back()->with('error', 'No active competition session.');
+            return $this->backWithError('No active competition session.');
         }
 
         $judgeId = auth()->id();
@@ -164,11 +164,11 @@ class JudgeController extends Controller
             ->first();
 
         if (! $assignment || $project->status !== Project::STATUS_APPROVED) {
-            return back()->with('error', 'Evaluation not allowed for this project.');
+            return $this->backWithError('Evaluation not allowed for this project.');
         }
 
         if ($this->isRoundLocked($roundNo, $activeSession)) {
-            return back()->with('error', $roundNo === 1
+            return $this->backWithError($roundNo === 1
                 ? 'Round 1 evaluation is closed because Round 2 judging has started.'
                 : 'Round 2 evaluation has been locked and cannot be modified.');
         }
@@ -260,7 +260,7 @@ class JudgeController extends Controller
             // Keep resilient
         }
 
-        return redirect()->route('judge.evaluations.index')->with('success', 'Evaluation has been saved successfully.');
+        return $this->backWithSuccess('Evaluation has been saved successfully.', redirect()->route('judge.evaluations.index'));
     }
 
     /**

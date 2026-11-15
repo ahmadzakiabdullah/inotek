@@ -1,5 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
-import { Users, Plus, Trash2, Search, AlertCircle, Calendar, Sparkles, Filter } from 'lucide-react';
+import { Users, Plus, Trash2, Search, AlertCircle, Calendar, Sparkles, Filter, Wand2 } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
 import { toast } from 'sonner';
 import InputError from '@/components/input-error';
@@ -63,9 +63,105 @@ interface Props {
     assignments: Assignment[];
     activeSession: CompetitionSession | null;
     roundOneComplete: boolean;
+    autoAssign: {
+        enabled: boolean;
+        judgesPerProject: number;
+        max: number;
+    };
 }
 
-export default function AssignmentsIndex({ projects, judges, assignments, activeSession, roundOneComplete }: Props) {
+function AutoAssignCard({
+    defaultJudgesPerProject,
+    max,
+    roundOneComplete,
+    roundTwoLocked,
+    judgeCount,
+}: {
+    defaultJudgesPerProject: number;
+    max: number;
+    roundOneComplete: boolean;
+    roundTwoLocked: boolean;
+    judgeCount: number;
+}) {
+    const autoForm = useForm({
+        round_no: '1',
+        judges_per_project: defaultJudgesPerProject,
+    });
+    const roundTwoUnavailable = autoForm.data.round_no === '2' && (!roundOneComplete || roundTwoLocked);
+
+    const handleAutoAssign = (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!window.confirm(
+            `Assign judges automatically so every ${autoForm.data.round_no === '2' ? 'shortlisted' : 'approved'} project has ${autoForm.data.judges_per_project} judge(s) in Round ${autoForm.data.round_no}? Existing assignments are kept.`,
+        )) {
+            return;
+        }
+
+        // The server sends the result (including projects it could not fill) as a toast.
+        autoForm.post('/dashboard/assignments/auto', { preserveScroll: true });
+    };
+
+    return (
+        <Card className="border border-primary/30 bg-card/60 backdrop-blur-sm shadow-md">
+            <CardHeader>
+                <CardTitle className="text-lg font-bold flex items-center gap-2">
+                    <Wand2 className="h-5 w-5 text-primary" />
+                    Auto-assign Judges
+                </CardTitle>
+                <CardDescription>
+                    Gives every project the chosen number of judges, spreading the workload evenly across all {judgeCount} judge(s) and skipping conflicts of interest.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <form onSubmit={handleAutoAssign} className="space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="auto-round">Evaluation Round</Label>
+                        <select
+                            id="auto-round"
+                            value={autoForm.data.round_no}
+                            onChange={(e) => autoForm.setData('round_no', e.target.value)}
+                            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                        >
+                            <option value="1">Round 1 (all approved projects)</option>
+                            <option value="2">Round 2 (shortlisted projects)</option>
+                        </select>
+                        <InputError message={autoForm.errors.round_no} />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="auto-count">Judges per project</Label>
+                        <input
+                            id="auto-count"
+                            type="number"
+                            min={1}
+                            max={max}
+                            value={autoForm.data.judges_per_project}
+                            onChange={(e) => autoForm.setData('judges_per_project', Number(e.target.value))}
+                            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                        />
+                        <InputError message={autoForm.errors.judges_per_project} />
+                    </div>
+
+                    {roundTwoUnavailable && (
+                        <p className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-600 dark:text-amber-400">
+                            {roundTwoLocked
+                                ? 'Round 2 has been finalized, so its assignments cannot change.'
+                                : 'Round 2 is unavailable until every Round 1 evaluation is complete.'}
+                        </p>
+                    )}
+
+                    <Button type="submit" disabled={autoForm.processing || roundTwoUnavailable} className="w-full gap-2">
+                        <Wand2 className="h-4 w-4" />
+                        {autoForm.processing ? 'Assigning...' : 'Auto-assign'}
+                    </Button>
+                </form>
+            </CardContent>
+        </Card>
+    );
+}
+
+export default function AssignmentsIndex({ projects, judges, assignments, activeSession, roundOneComplete, autoAssign }: Props) {
     const [searchTerm, setSearchTerm] = useState('');
     const [roundFilter, setRoundFilter] = useState<'all' | '1' | '2'>('all');
     const [selectedProject, setSelectedProject] = useState<string>('');
@@ -270,6 +366,16 @@ return;
                                     </form>
                                 </CardContent>
                             </Card>
+
+                            {autoAssign.enabled && (
+                                <AutoAssignCard
+                                    defaultJudgesPerProject={autoAssign.judgesPerProject}
+                                    max={autoAssign.max}
+                                    roundOneComplete={roundOneComplete}
+                                    roundTwoLocked={activeSession.r2_locked}
+                                    judgeCount={judges.length}
+                                />
+                            )}
                         </div>
 
                         {/* Assignments List Card */}

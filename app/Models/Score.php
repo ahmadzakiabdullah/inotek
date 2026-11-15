@@ -4,7 +4,21 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $project_id
+ * @property int $judge_id
+ * @property int $session_id
+ * @property int $round_no
+ * @property float $total
+ * @property array<int|string, int|float|string>|null $score_details
+ * @property string|null $comments
+ * @property string|null $best_presenter
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ */
 class Score extends Model
 {
     protected $table = 'scores';

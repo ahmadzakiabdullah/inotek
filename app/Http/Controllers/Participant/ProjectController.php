@@ -9,6 +9,7 @@ use App\Models\CompetitionSession;
 use App\Models\Project;
 use App\Models\User;
 use App\Notifications\SystemNotification;
+use App\Services\ParticipantFeedback;
 use App\Services\ProjectCodeGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,7 +26,7 @@ class ProjectController extends Controller
     /**
      * Display the participant's project dashboard/form.
      */
-    public function index(): Response
+    public function index(ParticipantFeedback $feedback): Response
     {
         $activeSession = CompetitionSession::active();
 
@@ -46,6 +47,8 @@ class ProjectController extends Controller
             'registrationOpen' => (bool) ($activeSession?->isRegistrationOpen()),
             'categories' => $categories,
             'project' => $project,
+            // Judges' feedback is released together with the results.
+            'feedback' => ($project && $activeSession?->r2_locked) ? $feedback->forProject($project) : null,
         ]);
     }
 

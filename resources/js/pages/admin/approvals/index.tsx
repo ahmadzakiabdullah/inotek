@@ -434,7 +434,9 @@ return;
 return;
 }
 
-        editCodeForm.put(`/dashboard/approvals/${editCodeProject.id}/code`, {
+        // POST + _method: IIS rejects real PUT requests.
+        editCodeForm.transform((data) => ({ ...data, _method: 'put' }));
+        editCodeForm.post(`/dashboard/approvals/${editCodeProject.id}/code`, {
             onSuccess: () => {
                 setEditCodeProject(null);
                 editCodeForm.reset();
@@ -444,7 +446,10 @@ return;
 
     const handleEditProjectSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!editingProject) return;
+
+        if (!editingProject) {
+return;
+}
 
         editProjectForm.post(`/dashboard/approvals/${editingProject.id}/update`, {
             preserveScroll: true,
@@ -878,6 +883,7 @@ return;
                                                                             const confirmed = window.confirm(
                                                                                 `Delete "${project.title}"? It will be removed from active project lists. Scores, judge assignments and team records will be retained.`,
                                                                             );
+
                                                                             if (confirmed) {
                                                                                 router.post(`/dashboard/approvals/${project.id}/delete`, {}, { preserveScroll: true });
                                                                             }
@@ -1243,7 +1249,9 @@ return;
             <Dialog
                 open={!!editingProject}
                 onOpenChange={(open) => {
-                    if (!open) setEditingProject(null);
+                    if (!open) {
+setEditingProject(null);
+}
                 }}
             >
                 <DialogContent className="max-h-[90dvh] w-[calc(100vw-2rem)] max-w-4xl overflow-y-auto">

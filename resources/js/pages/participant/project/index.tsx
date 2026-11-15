@@ -184,13 +184,16 @@ return false;
 
         if (project) {
             // Update mode
-            form.put(`/dashboard/projects/${project.id}`, {
+            // POST + _method: IIS rejects real PUT requests.
+            form.transform((data) => ({ ...data, _method: 'put' }));
+            form.post(`/dashboard/projects/${project.id}`, {
                 onSuccess: () => {
                     setIsEditing(false);
                 },
             });
         } else {
             // Create mode
+            form.transform((data) => data);
             form.post('/dashboard/projects', {
                 onSuccess: () => {
                     setIsEditing(false);
@@ -223,7 +226,10 @@ return;
                 'Are you absolutely sure you want to delete this project draft? This cannot be undone.',
             )
         ) {
-            router.delete(`/dashboard/projects/${project.id}`);
+            // POST + _method: IIS rejects real DELETE requests.
+            router.post(`/dashboard/projects/${project.id}`, {
+                _method: 'delete',
+            });
         }
     };
 

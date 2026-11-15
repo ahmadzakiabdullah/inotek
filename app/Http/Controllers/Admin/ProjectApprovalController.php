@@ -110,7 +110,7 @@ class ProjectApprovalController extends Controller
 
         $activeSession = CompetitionSession::active();
         if (! $activeSession) {
-            return back()->with('error', 'No active competition session found.');
+            return $this->backWithError('No active competition session found.');
         }
 
         $validated = $request->validate([

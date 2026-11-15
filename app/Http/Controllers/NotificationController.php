@@ -79,6 +79,6 @@ class NotificationController extends Controller
             "Admin '{$senderName}' broadcasted announcement: '{$validated['title']}' to target '{$validated['target_role']}'"
         );
 
-        return back()->with('success', 'Announcement has been broadcasted successfully in real-time!');
+        return $this->backWithSuccess('Announcement has been broadcasted successfully in real-time!');
     }
 }

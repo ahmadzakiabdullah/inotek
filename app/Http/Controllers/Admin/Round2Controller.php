@@ -68,7 +68,7 @@ class Round2Controller extends Controller
         $activeSession = CompetitionSession::active();
 
         if (! $activeSession) {
-            return back()->with('error', 'No active competition session.');
+            return $this->backWithError('No active competition session.');
         }
 
         $shortlistedProjectIds = $this->calculator->getRound1Shortlist(
@@ -83,13 +83,13 @@ class Round2Controller extends Controller
             ->all();
 
         if (array_diff($existingRoundTwoProjectIds, $shortlistedProjectIds) !== []) {
-            return back()->with('error', 'Remove Round 2 assignments outside the new shortlist before changing its size.');
+            return $this->backWithError('Remove Round 2 assignments outside the new shortlist before changing its size.');
         }
 
         $activeSession->round2_shortlist_limit = $validated['limit'];
         $activeSession->save();
 
-        return back()->with('success', 'Round 2 shortlist size updated.');
+        return $this->backWithSuccess('Round 2 shortlist size updated.');
     }
 
     /**
@@ -100,7 +100,7 @@ class Round2Controller extends Controller
         $activeSession = CompetitionSession::active();
 
         if (! $activeSession) {
-            return back()->with('error', 'No active competition session.');
+            return $this->backWithError('No active competition session.');
         }
 
         $activeSession->r2_locked = ! $activeSession->r2_locked;
@@ -119,7 +119,7 @@ class Round2Controller extends Controller
             ? 'Round 2 judging has been finalized successfully.'
             : 'Round 2 judging has been reopened successfully.';
 
-        return back()->with('success', $statusMessage);
+        return $this->backWithSuccess($statusMessage);
     }
 
     /**
@@ -142,14 +142,14 @@ class Round2Controller extends Controller
         )->flatten()->pluck('id')->map(fn ($id) => (int) $id)->all();
 
         if (! in_array($project->id, $shortlistedProjectIds, true)) {
-            return back()->with('error', 'Awards can only be assigned to projects shortlisted for Round 2.');
+            return $this->backWithError('Awards can only be assigned to projects shortlisted for Round 2.');
         }
 
         if ($validated['award_level'] !== 'None' && ! $project->scores()
             ->where('session_id', $activeSession->id)
             ->where('round_no', 2)
             ->exists()) {
-            return back()->with('error', 'An award can only be assigned after the project has a Round 2 evaluation.');
+            return $this->backWithError('An award can only be assigned after the project has a Round 2 evaluation.');
         }
 
         $award = $validated['award_level'] === 'None' ? null : $validated['award_level'];
@@ -162,6 +162,6 @@ class Round2Controller extends Controller
             "Assigned award '".($award ?? 'None')."' to project '{$project->title}'"
         );
 
-        return back()->with('success', 'Award assigned successfully.');
+        return $this->backWithSuccess('Award assigned successfully.');
     }
 }

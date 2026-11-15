@@ -73,10 +73,8 @@ export default function Index({ currentSettings }: SettingsProps) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        // The server sends the success message as a toast.
         post('/dashboard/admin-settings', {
-            onSuccess: () => {
-                toast.success('System settings updated successfully in real-time!');
-            },
             onError: () => {
                 toast.error('Failed to update system settings.');
             }

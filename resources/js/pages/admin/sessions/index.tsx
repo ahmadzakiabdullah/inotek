@@ -65,8 +65,9 @@ interface Props {
 function formatDateOnly(value: string | null): string {
     if (!value) return '-';
 
-    // Laravel serializes date casts as UTC ISO strings. Read the calendar date
-    // portion directly so the browser timezone cannot shift it by one day.
+    // Session dates are serialized as plain `Y-m-d` strings (see the casts in
+    // CompetitionSession). Never parse them with `new Date()`: the browser
+    // timezone would shift the calendar day.
     const date = value.slice(0, 10);
     const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
 

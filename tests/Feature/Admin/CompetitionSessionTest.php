@@ -41,6 +41,30 @@ class CompetitionSessionTest extends TestCase
         $response->assertInertia(fn ($page) => $page->component('admin/sessions/index'));
     }
 
+    public function test_session_dates_are_sent_to_the_page_as_plain_calendar_dates(): void
+    {
+        // A UTC ISO string (2026-11-14T16:00:00Z) showed 15 Nov as 14 Nov and
+        // left the edit form's <input type="date"> fields empty.
+        $admin = User::factory()->create(['role_id' => 1]);
+        CompetitionSession::create([
+            'name' => 'Date Session',
+            'is_active' => true,
+            'registration_mode' => 'scheduled',
+            'session_starts_at' => '2026-11-15',
+            'session_ends_at' => '2026-12-31',
+            'registration_opens_at' => '2026-11-01',
+            'registration_closes_at' => '2026-11-14',
+        ]);
+
+        $this->actingAs($admin)->get(route('admin.sessions.index'))
+            ->assertInertia(fn ($page) => $page
+                ->where('sessions.0.session_starts_at', '2026-11-15')
+                ->where('sessions.0.session_ends_at', '2026-12-31')
+                ->where('sessions.0.registration_opens_at', '2026-11-01')
+                ->where('sessions.0.registration_closes_at', '2026-11-14')
+                ->etc());
+    }
+
     public function test_admin_can_create_session(): void
     {
         $admin = User::factory()->create(['role_id' => 1]);

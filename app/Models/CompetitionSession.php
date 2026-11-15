@@ -23,10 +23,10 @@ class CompetitionSession extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
-        'session_starts_at' => 'date',
-        'session_ends_at' => 'date',
-        'registration_opens_at' => 'date',
-        'registration_closes_at' => 'date',
+        'session_starts_at' => 'date:Y-m-d',
+        'session_ends_at' => 'date:Y-m-d',
+        'registration_opens_at' => 'date:Y-m-d',
+        'registration_closes_at' => 'date:Y-m-d',
         'r2_locked' => 'boolean',
         'round2_shortlist_limit' => 'integer',
     ];

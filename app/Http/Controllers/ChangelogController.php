@@ -39,7 +39,7 @@ class ChangelogController extends Controller
     {
         Cache::forget('system.changelog');
 
-        return back()->with('success', 'Changelog cache cleared successfully!');
+        return $this->backWithSuccess('Changelog cache cleared successfully!');
     }
 
     /**

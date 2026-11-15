@@ -51,15 +51,11 @@ export default function Round2Index({ shortlist, round2Scores, activeSession, li
         }
 
         lockForm.post('/dashboard/round2/lock', {
-            onSuccess: () => {
-                toast.success(
-                    activeSession?.r2_locked
-                        ? 'Round 2 judging reopened.'
-                        : 'Round 2 judging finalized.'
-                );
-            },
-            onError: () => {
-                toast.error('Error toggling Round 2 lock status.');
+            // The server sends the success or refusal message as a toast.
+            onError: (err) => {
+                if (!err.error) {
+                    toast.error('Error toggling Round 2 lock status.');
+                }
             }
         });
     };
@@ -96,8 +92,13 @@ export default function Round2Index({ shortlist, round2Scores, activeSession, li
                                     value={currentLimit}
                                     onChange={(e) => {
                                         const limit = Number(e.target.value);
+                                        const previousLimit = currentLimit;
                                         setCurrentLimit(limit);
-                                        router.post('/dashboard/round2/shortlist-limit', { limit }, { preserveScroll: true });
+                                        router.post('/dashboard/round2/shortlist-limit', { limit }, {
+                                            preserveScroll: true,
+                                            // Revert the dropdown if the server refuses the new size.
+                                            onError: () => setCurrentLimit(previousLimit),
+                                        });
                                     }}
                                     className="rounded-md border border-border bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
                                 >

@@ -136,6 +136,9 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         Route::post('assignments', [JudgeAssignmentController::class, 'store'])->name('assignments.store');
         // Must be registered before assignments/{assignment}.
         Route::post('assignments/auto', [JudgeAssignmentController::class, 'autoAssign'])->name('assignments.auto');
+        Route::post('assignments/bulk', [JudgeAssignmentController::class, 'bulk'])->name('assignments.bulk');
+        // IIS may reject DELETE before Laravel receives the request.
+        Route::post('assignments/{assignment}/delete', [JudgeAssignmentController::class, 'destroy'])->name('assignments.delete');
         Route::delete('assignments/{assignment}', [JudgeAssignmentController::class, 'destroy'])->name('assignments.destroy');
 
         // Round 2 Shortlisting & Scoring

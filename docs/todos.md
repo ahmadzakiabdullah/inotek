@@ -3,7 +3,7 @@
 This document outlines the roadmap, plans, and checklist for developing the new INOTEK system based on the legacy PHP application, gap requirements, and system refinements.
 
 > [!NOTE]
-> Status reviewed 12 November 2026. The checklist records implementation work;
+> Status reviewed 15 November 2026 (v1.9.0). The checklist records implementation work;
 > deployment-specific setup and remaining work are called out separately.
 
 ---
@@ -48,7 +48,7 @@ Select Top 3, 5 or 10 projects per category for a second evaluation round, ensur
 - [x] Develop query logic in `ScoreCalculator` to average Round 1 scores:
   - Select Top N projects (where N is configurable: 3, 5 or 10) grouped by `category_id`.
 - [x] Build Admin UI to view the qualified Round 2 shortlist and assign Round 2 judges.
-- [x] Implement validation rule: Block assignment if the judge already evaluated the same project in Round 1.
+- [x] Implement validation rule: block Round 2 assignment (manual, bulk and automatic) and Round 2 scoring for any judge who was assigned to or scored the same project in Round 1.
 - [x] Implement Round 2 locking (`r2_locked` inside the active session).
 - [x] Auto-lock Round 1 once any Round 2 assignment exists (delete Round 2 assignments to reopen).
 - [x] Allow Round 2 assignments only after all Round 1 evaluations are complete (and only for shortlisted projects).
@@ -79,8 +79,27 @@ Select Top 3, 5 or 10 projects per category for a second evaluation round, ensur
 - [ ] Store `rubric_id` on `scores` so each evaluation records the rubric it was graded against.
 - [ ] Move project authorization into a `ProjectPolicy`.
 - [ ] Replace the project status integer constants with a status enum.
-- [x] Update the 16 stale feature tests to match current behaviour (all 165 tests pass, 12 November 2026).
-- [ ] Document/remove the MySQL requirement for running the test suite (tests currently require MySQL).
+- [x] Update the 16 stale feature tests to match current behaviour (all 165 tests pass, 12 November 2026; 197 as of 15 November 2026).
+- [x] Document the MySQL requirement for running the test suite (README and developer guide section 1.3).
+- [ ] Remove the MySQL requirement (eight migrations query `information_schema`).
+- [ ] Remove stale extension lines from the server `php.ini` (`php_gd2.dll`, `php_xmlrpc.dll`), which print startup warnings.
+- [ ] Re-enable ESLint rules `react-hooks/exhaustive-deps` and `no-unused-vars`, and clear the 33 pre-existing `tsc` errors (tiptap, chart, calendar).
+
+### 10. November 2026 Releases (v1.7.1 – v1.9.0)
+- [x] Urgent fixes P0/P1 from the 15 November review (see [todos.md](../todos.md) in the repository root): legacy `users` columns, toasts, session dates, project codes, deleted projects/judges, judge data exposure, own-scores-only leaderboard for judges, email lock for lecturers/judges, registration throttle.
+- [x] Reports & Export (CSV/PDF) and Analytics.
+- [x] Optional automatic judge assignment with balanced workload.
+- [x] Anonymous judges' feedback for participants after results are finalized.
+- [x] Judge Assignments workspace (coverage, filters, searchable picker, bulk assign).
+- [x] `POST` + `_method` for every update/delete the frontend sends, because IIS rejects `PUT`/`DELETE`.
+
+### 11. Next Candidates
+- [ ] Judge Assignments phase 2: a "By Judge" view (one row per judge with workload and assigned projects).
+- [ ] Link projects to a verified supervisor account (`supervisor_id`) instead of the free-text `supervisor_email`.
+- [ ] Lock rubric edits while a round is being scored.
+- [ ] Regenerate the project code when a returned project changes category.
+- [ ] Warn about ties at the Round 2 shortlist cut-off.
+- [ ] Database constraint for "one project per participant per session".
 
 ---
 
@@ -142,5 +161,5 @@ These are recommended high-premium enhancements to improve user engagement, syst
 - [x] Prevent data loss: If a user or project is deleted accidentally, admins can restore it from the backend instead of corrupting historical evaluation records.
 
 ### 5. Admin Audit Log Viewer
-- [x] Create a read-only logging dashboard at `/admin/audit-logs` mapping system actions.
+- [x] Create a read-only logging dashboard at `/dashboard/audit-logs` mapping system actions.
 - [x] Filter actions (e.g., "Reset Data", "Category Added", "Project Approved") showing timestamp, IP address, and the user who executed the action.

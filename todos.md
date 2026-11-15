@@ -10,7 +10,25 @@ Disediakan daripada semakan sistem pada 15 November 2026. Fail ini hanya untuk p
 - Buat satu branch, contohnya `fix/urgent-2026-11`.
 - Jalankan ujian penuh pada MySQL setempat. Jangan sekali-kali pada DB production, kerana `RefreshDatabase` akan memadam data.
 - Build frontend di mesin dev, kemudian salin `public/build` ke server (`assets` dahulu, `manifest.json` paling akhir). `npm run build` terus melalui `Z:` sangat perlahan dan pernah tersekat.
-- Backup DB production sebelum `php artisan migrate --force`. Server tiada `mysqldump`; guna phpMyAdmin.
+- Backup DB production sebelum `php artisan migrate --force`. Server tiada `mysqldump`; guna phpMyAdmin. Jalankan migrate sebagai langkah berasingan, hanya selepas backup disahkan.
+- IIS menolak `PUT`/`PATCH`/`DELETE` (ralat 405). Frontend mesti menghantar `POST` dengan `_method`, atau guna route alias `POST`. Butiran di [docs/development.md](docs/development.md) seksyen 2.4.
+
+---
+
+## Status keseluruhan (dikemas kini 15 November 2026)
+
+Semua item P0 dan P1 dalam fail ini sudah siap dan di-deploy ke production. Versi semasa: **v1.9.0**. Semua 197 ujian lulus.
+
+| PR | Versi | Kandungan | Migration |
+|---|---|---|---|
+| #6 | v1.7.1 | P0 #1–#3: kolum lama `users`, toast, tarikh sesi | Ya (sudah dijalankan) |
+| #7 | v1.7.1 | P1 #4–#13 | Tiada |
+| #8 | v1.8.0 | Modul baharu: Laporan & Eksport (CSV/PDF), auto-assign juri (boleh on/off), maklum balas juri kepada peserta (tanpa nama), Analitik | Tiada |
+| #9 | v1.9.0 | Juri R1 bagi sesuatu projek tidak boleh ditugaskan atau memberi markah projek yang sama di R2 | Tiada |
+| #10 | v1.9.0 | Reka bentuk semula halaman Judge Assignments (ruang kerja ikut projek, carian, penapis, bulk assign) | Tiada |
+| #11 | v1.9.0 | Ralat 405 semasa simpan draf projek: semua `PUT`/`DELETE` kini dihantar sebagai `POST` + `_method` | Tiada |
+
+Kerja yang masih tinggal disenaraikan di bahagian [Seterusnya](#seterusnya) di hujung fail ini.
 
 ---
 
@@ -203,8 +221,8 @@ Senarai ini dijana dengan: `grep -rn "with('error'\|with('success'" app/Http/Con
 
 [LeaderboardController.php](app/Http/Controllers/LeaderboardController.php) (sekitar baris 61-63 dan 195-246) memberi juri akses kepada nama, markah, komen dan undian best presenter juri lain semasa penjurian masih berjalan. Ini boleh mempengaruhi penilaian.
 
-- [ ] Dapatkan keputusan pihak urus setia.
-- [ ] Jika tidak dibenarkan: buang pengecualian `judge`, atau tunjukkan hanya markah juri itu sendiri sehingga `r2_locked`.
+- [x] Dapatkan keputusan pihak urus setia. Keputusan: markah sendiri sahaja.
+- [x] Tunjukkan hanya markah juri itu sendiri sehingga `r2_locked`.
 
 ---
 
@@ -240,30 +258,41 @@ Senarai ini dijana dengan: `grep -rn "with('error'\|with('success'" app/Http/Con
 
 ### [x] 13. Pengerasan kecil (cepat dibuat)
 
-- [ ] **Sijil pencapaian:** alihkan semakan `r2_locked` ke atas semakan `award_level` ([CertificateController.php:42-49](app/Http/Controllers/CertificateController.php#L42-L49)). Sekarang, respons yang berbeza (redirect atau 403) mendedahkan sama ada projek mendapat anugerah.
-- [ ] **Finalize R2:** `Round2Controller::lockToggle` ([Round2Controller.php:106](app/Http/Controllers/Admin/Round2Controller.php#L106)) perlu menerima keadaan sasaran yang eksplisit (`locked: true/false`), bukan toggle buta. Double-click sekarang akan mengunci, kemudian membuka semula.
-- [ ] **Siaran markah:** tambah `broadcastWith()` dalam [ScoreUpdated.php](app/Events/ScoreUpdated.php) yang memulangkan `['project_id' => …]` sahaja, sebelum broadcasting diaktifkan.
-- [ ] **Throttle:** tambah had kadar pada route pendaftaran Fortify.
-- [ ] **Admin terakhir:** halang admin terakhir daripada memadam akaun sendiri melalui halaman profil ([Settings/ProfileController.php:49](app/Http/Controllers/Settings/ProfileController.php#L49)).
+- [x] **Sijil pencapaian:** alihkan semakan `r2_locked` ke atas semakan `award_level` ([CertificateController.php:42-49](app/Http/Controllers/CertificateController.php#L42-L49)). Sekarang, respons yang berbeza (redirect atau 403) mendedahkan sama ada projek mendapat anugerah.
+- [x] **Finalize R2:** `Round2Controller::lockToggle` ([Round2Controller.php:106](app/Http/Controllers/Admin/Round2Controller.php#L106)) perlu menerima keadaan sasaran yang eksplisit (`locked: true/false`), bukan toggle buta. Double-click sekarang akan mengunci, kemudian membuka semula.
+- [x] **Siaran markah:** tambah `broadcastWith()` dalam [ScoreUpdated.php](app/Events/ScoreUpdated.php) yang memulangkan `['project_id' => …]` sahaja, sebelum broadcasting diaktifkan.
+- [x] **Throttle:** tambah had kadar pada route pendaftaran Fortify.
+- [x] **Admin terakhir:** halang admin terakhir daripada memadam akaun sendiri melalui halaman profil ([Settings/ProfileController.php:49](app/Http/Controllers/Settings/ProfileController.php#L49)).
 
 ---
 
 ## Selepas semua di atas
 
-- [ ] Jalankan ujian penuh pada MySQL setempat dan pastikan semua lulus. Tambah ujian baharu untuk #1–#8.
-- [ ] `npm run build` dari `Z:`.
-- [ ] Backup DB production, kemudian `php artisan migrate --force`.
+- [x] Jalankan ujian penuh pada MySQL setempat dan pastikan semua lulus. Ujian baharu ditambah untuk #1–#8 (kini 197 ujian, semua lulus).
+- [x] Build frontend di mesin dev dan salin `public/build` ke server (bukan `npm run build` dari `Z:`).
+- [x] Backup DB production (phpMyAdmin), kemudian `php artisan migrate --force`.
 - [ ] Ujian manual di production:
-  - daftar akaun;
-  - tugaskan juri yang ada konflik kepentingan (mesti nampak mesej ralat);
-  - edit sesi;
-  - dashboard juri.
-- [ ] Kemas kini `docs/changelog.md` dan tandakan item dalam fail ini.
+  - [x] daftar akaun (disahkan 15 Nov);
+  - [ ] simpan draf projek peserta selepas pembetulan 405 (nampak berjaya pada 15 Nov; semak `updated_at` projek 407 untuk pengesahan);
+  - [ ] tugaskan juri yang ada konflik kepentingan (mesti nampak mesej ralat);
+  - [ ] edit sesi (tarikh mesti terisi dan betul);
+  - [ ] dashboard juri;
+  - [ ] halaman Judge Assignments baharu: tambah/buang juri, bulk assign.
+- [x] Kemas kini `docs/changelog.md` dan tandakan item dalam fail ini.
 
-**Untuk kemudian (tidak segera):**
-- edit rubrik semasa pusingan berjalan;
-- tukar kategori selepas projek dipulangkan tetap mengekalkan kod lama;
-- seri pada had shortlist;
-- kekangan DB "satu projek setiap peserta setiap sesi";
-- SMTP dan queue worker, kemudian `MustVerifyEmail`;
-- aktifkan semula peraturan ESLint (`exhaustive-deps`, `no-unused-vars`).
+---
+
+## Seterusnya
+
+Tidak segera. Senarai yang sama dalam bahasa Inggeris ada di [docs/todos.md](docs/todos.md) seksyen 9 dan 11.
+
+- [ ] Judge Assignments fasa 2: paparan "Ikut Juri" (satu baris setiap juri, dengan beban kerja dan projek yang ditugaskan).
+- [ ] `supervisor_id` (FK ke `users`) yang disahkan, menggantikan `supervisor_email` teks bebas.
+- [ ] Halang edit rubrik semasa pusingan sedang dinilai.
+- [ ] Jana semula kod projek apabila projek yang dipulangkan bertukar kategori.
+- [ ] Amaran seri pada had shortlist R2.
+- [ ] Kekangan DB "satu projek setiap peserta setiap sesi".
+- [ ] SMTP dan queue worker, kemudian `MustVerifyEmail`.
+- [ ] Buang baris extension lapuk dalam `php.ini` server (`php_gd2.dll`, `php_xmlrpc.dll`) yang menyebabkan amaran semasa PHP bermula.
+- [ ] Aktifkan semula peraturan ESLint (`exhaustive-deps`, `no-unused-vars`) dan bersihkan 33 ralat `tsc` sedia ada.
+- [ ] Ralat CORS daripada firewall Fortinet (`cookiesession…`, `about:srcdoc`) semasa simpan projek: nampaknya tidak menghalang simpanan. Jika ia mula menyekat, minta PTM semak polisi FortiWeb untuk `/dashboard/*`.

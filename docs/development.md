@@ -82,7 +82,7 @@ $env:DB_PASSWORD = ''
 php artisan test
 ```
 > [!NOTE]
-> All tests are expected to pass (165 as of 12 November 2026). Inertia page tests
+> All tests are expected to pass (197 as of 15 November 2026). Inertia page tests
 > need `public/build/manifest.json`, so run `npm run build` (or copy the build
 > folder) first; otherwise they fail with "Not a valid Inertia response".
 
@@ -169,16 +169,46 @@ Before deployment, confirm:
 - Reverb credentials and a supervised `php artisan reverb:start` process if enabled.
 - `npm run build` after every frontend change (from a mapped drive, not a UNC path).
 
-Release flow on the server:
-```bash
-git pull
-composer install --no-dev --optimize-autoloader
-php artisan migrate --force   # after a database backup
-php artisan optimize
-npm run build
-```
+Release flow used for production (`inotek.utem.edu.my`, IIS, code served from
+the git working tree on `\\10.1.2.22\e\events\inotek`):
 
-### 2.4 Queue Workers
+1. Work and test in a separate clone on the developer machine (MySQL test
+   database, section 1.3). Never point the tests at the production database:
+   `RefreshDatabase` wipes it.
+2. Run `npm run build` in that clone, then push a branch, open a pull request
+   and merge it into `main`.
+3. On the server share: `git pull --ff-only`.
+4. Copy the clone's `public/build` to the server: `public/build/assets` first,
+   `public/build/manifest.json` **last**, so the live manifest never points at
+   files that are not there yet. Building directly on the share is slow and has
+   hung.
+5. Only when the release has migrations: back up the database in phpMyAdmin
+   (the server has no `mysqldump`), confirm the backup, and only then run
+   `php artisan migrate --force` on the server as a separate step.
+6. `php artisan optimize` if configuration or routes changed, and clear the
+   changelog cache from `/dashboard/changelog` after a version bump.
+
+Run `composer install --no-dev --optimize-autoloader` on the server only when
+`composer.lock` changed.
+
+### 2.4 IIS and HTTP methods
+IIS rejects `PUT`, `PATCH` and `DELETE` with `405 Method Not Allowed` before the
+request reaches Laravel. Frontend code must therefore:
+- send updates and deletes as `POST` with Laravel method spoofing, for example
+  `form.transform((data) => ({ ...data, _method: 'put' }))` followed by
+  `form.post(url)`, or `router.post(url, { _method: 'delete' })`; or
+- call a dedicated `POST` alias route (for example `admin.assignments.delete`,
+  `admin.rubrics.update`, `admin.categories.save`).
+
+Wayfinder `.form()` helpers already add `?_method=…` and are safe. Feature tests
+use real `PUT`/`DELETE`, so they do not catch this; add a test that posts with
+`_method` when introducing a new update or delete action.
+
+The site sits behind the university's Fortinet firewall (it sets a
+`cookiesession1` cookie). Console errors mentioning `cookiesession…` or an
+`about:srcdoc` iframe come from the firewall, not from INOTEK.
+
+### 2.5 Queue Workers
 System notifications are queued for database and broadcast delivery. Audit log writes
 and certificate PDF generation run during the request, and judging reminder emails are
 sent synchronously by the admin action. Run a worker to deliver queued notifications:
@@ -256,9 +286,19 @@ the Round 1 average).
 
 The authenticated staff leaderboard (`GET /dashboard/leaderboard`, roles `admin`,
 `lecturer`, `judge`) additionally returns participant names, judge names, individual
-scores, comments, and presenter votes. Admins and judges always see these details;
-lecturers see them only after `r2_locked`, and before that get the same restricted
-view as the public board.
+scores, comments, and presenter votes. Admins always see these details. Judges
+see only their own scores and comments (no averages, awards or presenter votes)
+until `r2_locked`. Lecturers see them only after `r2_locked`, and before that get
+the same restricted view as the public board.
+
+### 4.3 Admin Report Downloads
+Authenticated admin-only downloads used by the Reports & Export page.
+- **Endpoint**: `GET /dashboard/reports/{type}.{format}`
+- **Parameters**:
+  - `type`: `results`, `participants`, `judge-scores` or `judging-status`.
+  - `format`: `csv` (UTF-8 with BOM, opens in Excel) or `pdf`.
+  - `session_id` (query, required): the competition session to report on.
+- Each download is recorded in the audit log.
 
 ### 4.2 Verify Certificate Authenticity
 Public verification endpoint mapped to certificate QR codes.

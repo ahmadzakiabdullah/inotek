@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\EmailLog;
 use App\Notifications\SystemNotification;
 use App\Services\AuditLogger;
 use App\Services\EmailNotifications;
@@ -82,6 +83,7 @@ class EmailSettingsController extends Controller
             ), ['mail']);
         } catch (Throwable $e) {
             report($e);
+            EmailLog::record(EmailNotifications::TEST, (string) $user->email, 'Test Email', EmailLog::STATUS_FAILED, $e->getMessage());
 
             return $this->backWithError('The test email could not be sent: '.$e->getMessage());
         }

@@ -43,6 +43,11 @@ class CompetitionNotifier
             '/dashboard/approvals',
             'info',
             mailEvent: 'project_submitted',
+            mailData: [
+                'participant_name' => $studentName,
+                'project_title' => $project->title,
+                'project_code' => $project->pcode,
+            ],
         );
 
         $supervisor = User::whereRaw('LOWER(email) = ?', [$email])->first();
@@ -86,6 +91,7 @@ class CompetitionNotifier
                 '/dashboard/projects',
                 'success',
                 mailEvent: 'results_published',
+                mailData: ['session_name' => $session->name],
             ));
         }
 

@@ -2,6 +2,7 @@ import { Head, router, useForm } from '@inertiajs/react';
 import { AlertTriangle, CheckCircle2, Mail, MailCheck, Send, Server, ToggleRight } from 'lucide-react';
 import React, { useState } from 'react';
 import { toast } from 'sonner';
+import EmailTabs from '@/components/email-tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -93,6 +94,8 @@ export default function Index({ status, settings }: Props) {
                         In-app notifications are always sent. Choose which of them are also sent by email.
                     </p>
                 </div>
+
+                <EmailTabs active="settings" />
 
                 <div className="grid gap-6 md:grid-cols-5">
                     {/* Settings (3 cols) */}

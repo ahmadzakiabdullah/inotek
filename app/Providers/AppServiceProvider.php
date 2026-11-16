@@ -4,9 +4,12 @@ namespace App\Providers;
 
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\EmailLogRecorder;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
+use Illuminate\Mail\Events\MessageSent;
+use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -55,6 +58,10 @@ class AppServiceProvider extends ServiceProvider
                 $event->user->id
             );
         });
+
+        // Email log (Email & Notifications → Logs)
+        Event::listen(MessageSent::class, [EmailLogRecorder::class, 'messageSent']);
+        Event::listen(JobFailed::class, [EmailLogRecorder::class, 'jobFailed']);
 
         // Listen for logout events to log to audit logs
         Event::listen(Logout::class, function (Logout $event) {

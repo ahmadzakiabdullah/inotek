@@ -15,7 +15,16 @@ INOTEK uses **Semantic Versioning 2.0.0** (`vMajor.Minor.Patch`):
 
 ## 2. INOTEK Version History
 
-### [v1.10.0] - 2026-11-16 (Current Release)
+### [v1.11.0] - 2026-11-16 (Current Release)
+#### Added
+* **Email Templates** (Email & Notifications → Templates): edit the subject and message of each notification email with placeholders such as `{name}`, `{project_title}` and `{project_code}`, see a live preview with sample values, and reset to the default text. Unknown placeholders are rejected. The greeting, button and signature stay the same for every email.
+* **Email Log** (Email & Notifications → Logs): every email the mail server accepted, and queued emails that failed after all retries, with time, recipient, type, subject, status and error. Search and filter by status or type; totals for the last 30 days.
+#### Changed
+* The default email texts are slightly reworded (for example, the returned-project email now asks the participant to update and resubmit).
+#### Database
+* New table `email_logs` (migration `2026_11_16_000001_create_email_logs_table`).
+
+### [v1.10.0] - 2026-11-16
 #### Added
 * **Email & Notifications** (Admin → System Administration → Email & Notifications, `/dashboard/email`): a master switch for notification emails, a switch per event, the delivery status (mail server, sender, notifications waiting in the queue, failed jobs, and a warning when the queue worker seems stopped), and a "Send Test Email" button.
 * **Notification Emails**: notifications can now also be sent by email: judge assigned, project submitted (to the supervisor, even without an account), project approved, project returned for editing, results published (once per session, when Round 2 is finalized), and evaluation submitted (to administrators, off by default). Every email shares one layout with a button back to INOTEK.

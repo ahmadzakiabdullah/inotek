@@ -3,11 +3,13 @@
 namespace App\Mail;
 
 use App\Models\User;
+use App\Services\EmailLogRecorder;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Mail\Mailables\Headers;
 use Illuminate\Queue\SerializesModels;
 
 class JudgeNudgeMail extends Mailable
@@ -37,6 +39,14 @@ class JudgeNudgeMail extends Mailable
         return new Envelope(
             subject: 'Reminder: Pending INOTEK Project Evaluations',
         );
+    }
+
+    /**
+     * Label the email for the email log.
+     */
+    public function headers(): Headers
+    {
+        return new Headers(text: [EmailLogRecorder::EVENT_HEADER => 'judge_reminder']);
     }
 
     /**

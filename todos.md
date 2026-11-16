@@ -294,7 +294,7 @@ Tidak segera. Senarai yang sama dalam bahasa Inggeris ada di [docs/todos.md](doc
 - [ ] Kekangan DB "satu projek setiap peserta setiap sesi".
 - [x] SMTP (relay UTeM, 15 Nov) dan queue worker (tugasan berjadual "INOTEK Queue Worker", 15 Nov).
 - [x] Halaman Email & Notifications (`/dashboard/email`) dan e-mel untuk notifikasi (v1.10.0, Fasa 1).
-- [ ] Email & Notifications Fasa 2: template boleh disunting (`/dashboard/email/templates`) dan log e-mel (`/dashboard/email/logs`).
+- [x] Email & Notifications Fasa 2: template boleh disunting (`/dashboard/email/templates`) dan log e-mel (`/dashboard/email/logs`), v1.11.0.
 - [ ] `MustVerifyEmail`: tandakan akaun sedia ada sebagai disahkan dahulu, kemudian aktifkan.
 - [ ] Buang baris extension lapuk dalam `php.ini` server (`php_gd2.dll`, `php_xmlrpc.dll`) yang menyebabkan amaran semasa PHP bermula.
 - [ ] Aktifkan semula peraturan ESLint (`exhaustive-deps`, `no-unused-vars`) dan bersihkan 33 ralat `tsc` sedia ada.

@@ -297,6 +297,12 @@ class JudgeController extends Controller
                     '/dashboard/assignments',
                     'success',
                     mailEvent: 'score_submitted',
+                    mailData: [
+                        'judge_name' => $judgeName,
+                        'project_title' => $project->title,
+                        'project_code' => $project->pcode,
+                        'round' => $roundNo,
+                    ],
                 ));
             }
         } catch (\Exception $e) {

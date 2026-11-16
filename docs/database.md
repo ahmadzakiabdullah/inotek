@@ -2,7 +2,7 @@
 
 This document outlines the database design, Entity Relationship Diagram (ERD), schema definitions, and constraints for the INOTEK system.
 
-_Last reviewed: 15 November 2026 (against `database/migrations` up to `2026_11_15_000001` and `app/Models`, v1.9.0)._
+_Last reviewed: 16 November 2026 (against `database/migrations` up to `2026_11_16_000001` and `app/Models`, v1.11.0)._
 
 > [!NOTE]
 > Competition sessions live in `competition_sessions`. The `sessions` table (fresh installs) and `laravel_sessions` table (repaired by `2026_10_22_000002`) belong to Laravel's HTTP session driver and are unrelated to competition data.
@@ -370,9 +370,24 @@ Key-value application settings.
 | `created_at` / `updated_at` | Timestamp | Yes | Standard record timestamps. |
 
 > [!NOTE]
-> **Keys in use**: branding and locale (`system_name`, `primary_color`, `global_font`, `date_format`, `timezone`) and judging features (`auto_assign_enabled`, default off; `auto_assign_judges_per_project`, default 3, maximum 10), email (`mail_enabled`, default on; `mail_event_{event}` per event, see `EmailNotifications::EVENTS`), and `results_notified_session_{id}`, set once the "results published" notification has gone out for a session. Keys are created on first save, so no migration is needed for new settings.
+> **Keys in use**: branding and locale (`system_name`, `primary_color`, `global_font`, `date_format`, `timezone`) and judging features (`auto_assign_enabled`, default off; `auto_assign_judges_per_project`, default 3, maximum 10), email (`mail_enabled`, default on; `mail_event_{event}` per event, see `EmailNotifications::EVENTS`), email templates (`mail_template_{event}`, JSON with `subject` and `body`; absent means the default text), and `results_notified_session_{id}`, set once the "results published" notification has gone out for a session. Keys are created on first save, so no migration is needed for new settings.
 
-### 2.14 Framework tables
+### 2.14 Table: `email_logs`
+One row per email recipient (migration `2026_11_16_000001`). Written by `EmailLogRecorder` when the mail server accepts an email (`MessageSent`) or a queued notification email fails after all retries (`JobFailed`), and by the test email and judge reminder when they fail. Shown on `/dashboard/email/logs`.
+| Column | Type | Nullable | Constraints & Description |
+| :--- | :--- | :--- | :--- |
+| `id` | BigInt | No | Primary Key, Auto-increment. |
+| `event` | Varchar(50) | Yes | Email type: an `EmailNotifications::EVENTS` key, `announcement`, `judge_reminder`, `test`, or `other` (e.g. password reset). Taken from the `X-INOTEK-Event` header. |
+| `recipient` | Varchar(255) | No | Recipient email address. |
+| `subject` | Varchar(255) | Yes | Email subject. |
+| `status` | Varchar(10) | No | `sent` or `failed`. |
+| `error` | Text | Yes | Error message for failed emails. |
+| `created_at` | Timestamp | Yes | When it was sent or failed. No `updated_at`. |
+
+> [!NOTE]
+> **Indexes**: `[status, created_at]`, `[event, created_at]` and `recipient`. Rows are not pruned automatically.
+
+### 2.15 Framework tables
 Managed by Laravel and its packages; not part of the competition domain.
 | Table | Purpose |
 | :--- | :--- |

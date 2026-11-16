@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Console\Commands\PruneOldRecords;
 use App\Http\Controllers\Controller;
 use App\Models\EmailLog;
 use App\Notifications\SystemNotification;
@@ -10,6 +11,8 @@ use App\Services\EmailNotifications;
 use App\Services\EmailTemplates;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
@@ -28,6 +31,7 @@ class EmailSettingsController extends Controller
     {
         return Inertia::render('admin/email/Index', [
             'status' => $this->deliveryStatus(),
+            'maintenance' => $this->maintenanceStatus(),
             'settings' => [
                 'enabled' => EmailNotifications::enabled(),
                 'events' => EmailNotifications::events(),
@@ -114,6 +118,68 @@ class EmailSettingsController extends Controller
         AuditLogger::log('SEND_TEST_EMAIL', "Sent a test email to {$user->email}");
 
         return $this->backWithSuccess("Test email sent to {$user->email}. Check the inbox and the spam folder.");
+    }
+
+    /**
+     * Put every failed job back on the queue; the worker picks them up
+     * within a minute.
+     */
+    public function retryFailed(): RedirectResponse
+    {
+        $count = $this->failedJobCount();
+
+        if ($count === 0) {
+            return $this->backWithError('There are no failed jobs to retry.');
+        }
+
+        Artisan::call('queue:retry', ['id' => ['all']]);
+        AuditLogger::log('RETRY_FAILED_JOBS', "Retried {$count} failed queue job(s)");
+
+        return $this->backWithSuccess("{$count} failed job(s) put back on the queue. They are retried within a minute; check the Logs tab.");
+    }
+
+    /**
+     * Delete every failed job without retrying it.
+     */
+    public function discardFailed(): RedirectResponse
+    {
+        $count = $this->failedJobCount();
+
+        if ($count === 0) {
+            return $this->backWithError('There are no failed jobs to discard.');
+        }
+
+        Artisan::call('queue:flush');
+        AuditLogger::log('DISCARD_FAILED_JOBS', "Discarded {$count} failed queue job(s)");
+
+        return $this->backWithSuccess("{$count} failed job(s) discarded.");
+    }
+
+    private function failedJobCount(): int
+    {
+        return Schema::hasTable('failed_jobs') ? DB::table('failed_jobs')->count() : 0;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function maintenanceStatus(): array
+    {
+        $lastRun = PruneOldRecords::lastRun();
+        $at = $lastRun ? Carbon::parse($lastRun['at']) : null;
+
+        return [
+            'last_run_at' => $at?->toIso8601String(),
+            'last_run_human' => $at?->diffForHumans(),
+            'deleted' => $lastRun['deleted'] ?? null,
+            // It runs daily at 03:00, so more than two days means the scheduler is not running.
+            'overdue' => $at !== null && $at->lt(now()->subDays(2)),
+            'retention' => [
+                'email_logs' => PruneOldRecords::EMAIL_LOG_DAYS,
+                'notifications' => PruneOldRecords::READ_NOTIFICATION_DAYS,
+                'failed_jobs' => PruneOldRecords::FAILED_JOB_DAYS,
+            ],
+        ];
     }
 
     /**

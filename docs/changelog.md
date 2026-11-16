@@ -15,7 +15,14 @@ INOTEK uses **Semantic Versioning 2.0.0** (`vMajor.Minor.Patch`):
 
 ## 2. INOTEK Version History
 
-### [v1.11.1] - 2026-11-16 (Current Release)
+### [v1.12.0] - 2026-11-16 (Current Release)
+#### Added
+* **Retry Failed Emails**: when notifications fail after all tries, Email & Notifications → Settings shows "Retry all" and "Discard" buttons. Both are recorded in the audit log.
+* **Automatic Cleanup**: every day at 03:00 the system deletes email log rows older than 180 days, read notifications older than 90 days and failed jobs older than 30 days. Audit logs, projects and scores are never deleted. The Settings tab shows when the cleanup last ran.
+#### Operations
+* The cleanup needs a second scheduled task, "INOTEK Scheduler", running `php artisan schedule:run` every minute (see docs/development.md §2.6).
+
+### [v1.11.1] - 2026-11-16
 #### Changed
 * **Email Branding**: emails show the UTeM logo instead of the Laravel logo, and end with "© {year} INOTEK · Universiti Teknikal Malaysia Melaka" instead of "© Laravel. All rights reserved." The footer can be edited under Email & Notifications → Settings → Email Branding. The logo is `public/images/email-logo.png` (PNG, because most email clients do not show SVG).
 

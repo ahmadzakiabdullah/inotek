@@ -232,6 +232,25 @@ php artisan queue:work --stop-when-empty --tries=3
 php artisan queue:failed     # list
 php artisan queue:flush      # delete all failed jobs
 ```
+The same retry and discard actions are buttons under Email & Notifications → Settings →
+Delivery Status whenever failed jobs exist.
+
+### 2.6 Scheduler and Automatic Cleanup
+`routes/console.php` schedules `inotek:prune` daily at 03:00. It deletes email log rows
+older than 180 days, read notifications older than 90 days and failed jobs older than
+30 days. Audit logs, projects and scores are never deleted. A second scheduled task runs
+the Laravel scheduler every minute:
+```powershell
+schtasks /Create /TN "INOTEK Scheduler" /SC MINUTE /MO 1 /RU "webpool-iis\web" /RP * /F /TR "E:\PHP\php-8.4.16\php.exe E:\events\inotek\artisan schedule:run"
+schtasks /Query /TN "INOTEK Scheduler" /V /FO LIST
+```
+The same password rule applies as for the queue worker. Run or preview the cleanup by hand:
+```bash
+php artisan inotek:prune --dry-run   # counts only
+php artisan inotek:prune
+```
+The Automatic Cleanup card on the Email & Notifications page shows the last run and warns
+when the cleanup has not run for two days.
 
 ---
 

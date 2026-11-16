@@ -102,6 +102,8 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         Route::get('email', [EmailSettingsController::class, 'index'])->name('email.index');
         Route::post('email', [EmailSettingsController::class, 'update'])->name('email.update');
         Route::post('email/test', [EmailSettingsController::class, 'test'])->name('email.test');
+        Route::post('email/failed/retry', [EmailSettingsController::class, 'retryFailed'])->name('email.failed.retry');
+        Route::post('email/failed/discard', [EmailSettingsController::class, 'discardFailed'])->name('email.failed.discard');
         Route::get('email/logs', [EmailLogController::class, 'index'])->name('email.logs');
         Route::get('email/templates', [EmailTemplateController::class, 'index'])->name('email.templates.index');
         Route::get('email/templates/{event}', [EmailTemplateController::class, 'edit'])->where('event', '[a-z-]+')->name('email.templates.edit');

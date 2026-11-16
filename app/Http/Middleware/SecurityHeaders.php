@@ -25,7 +25,9 @@ class SecurityHeaders
         $headers->set('X-Content-Type-Options', 'nosniff', false);
         $headers->set('Referrer-Policy', 'strict-origin-when-cross-origin', false);
 
-        if ($request->isSecure() && app()->isProduction()) {
+        // The firewall reaches IIS over plain HTTP, so the request itself never looks
+        // secure; visitors always use the https APP_URL.
+        if (app()->isProduction() && str_starts_with((string) config('app.url'), 'https://')) {
             $headers->set('Strict-Transport-Security', 'max-age=31536000', false);
         }
 

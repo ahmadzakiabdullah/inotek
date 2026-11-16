@@ -15,7 +15,15 @@ INOTEK uses **Semantic Versioning 2.0.0** (`vMajor.Minor.Patch`):
 
 ## 2. INOTEK Version History
 
-### [v1.12.0] - 2026-11-16 (Current Release)
+### [v1.12.1] - 2026-11-16 (Current Release)
+#### Security
+* **Security Headers**: every page now tells browsers not to show INOTEK inside other websites (clickjacking), not to guess file types, and to use HTTPS only. The PHP version is no longer announced.
+* **Real Visitor IP**: the campus firewall (10.1.2.9) is trusted to pass on the visitor's address. Before this, every visitor looked like the firewall, so the registration limit (5 accounts per hour per address) applied to the whole campus at once and the audit log showed the firewall's address.
+* **Email Links**: project titles, names and comments typed by users can no longer turn into clickable links in notification emails (for example "[Sign in here](fake site)").
+* **Poster and Video Links**: links from older data are only shown when they are normal web links, never `javascript:` or `data:` links.
+* **Dependencies**: Laravel 13.42, Symfony 8.1 patches, league/commonmark, flysystem, Tiptap 3.30.5 and Zod 4.6.7, fixing all reported advisories (`composer audit` and `npm audit --omit=dev` are clean).
+
+### [v1.12.0] - 2026-11-16
 #### Added
 * **Retry Failed Emails**: when notifications fail after all tries, Email & Notifications → Settings shows "Retry all" and "Discard" buttons. Both are recorded in the audit log.
 * **Automatic Cleanup**: every day at 03:00 the system deletes email log rows older than 180 days, read notifications older than 90 days and failed jobs older than 30 days. Audit logs, projects and scores are never deleted. The Settings tab shows when the cleanup last ran.

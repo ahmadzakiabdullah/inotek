@@ -24,7 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // only that address, and only its client IP and scheme headers, so rate
         // limits and audit logs see the real visitor.
         $middleware->trustProxies(
-            at: array_values(array_filter(array_map('trim', explode(',', (string) env('TRUSTED_PROXIES', '10.1.2.9'))))),
+            at: ['10.1.2.9'],
             headers: Request::HEADER_X_FORWARDED_FOR | Request::HEADER_X_FORWARDED_PROTO,
         );
 

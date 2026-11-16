@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Mail\JudgeNudgeMail;
 use App\Models\CompetitionSession;
+use App\Models\EmailLog;
 use App\Models\JudgeAssignment;
 use App\Models\Score;
 use App\Services\AuditLogger;
@@ -79,6 +80,7 @@ class JudgingNudgeController extends Controller
                     $nudgeCount++;
                 } catch (\Throwable $e) {
                     report($e);
+                    EmailLog::record('judge_reminder', (string) $judge->email, 'Reminder: Pending INOTEK Project Evaluations', EmailLog::STATUS_FAILED, $e->getMessage());
                     $failedCount++;
                 }
             }

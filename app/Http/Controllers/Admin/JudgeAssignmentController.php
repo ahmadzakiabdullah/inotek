@@ -443,6 +443,10 @@ class JudgeAssignmentController extends Controller
                     '/dashboard/judge/evaluations',
                     'info',
                     mailEvent: 'judge_assigned',
+                    mailData: [
+                        'projects' => $count === 1 ? '1 project' : "{$count} projects",
+                        'round' => $roundNo,
+                    ],
                 ));
             } catch (\Exception $e) {
                 // Keep resilient

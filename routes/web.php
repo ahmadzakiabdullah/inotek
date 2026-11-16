@@ -4,7 +4,9 @@ use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CompetitionSessionController;
+use App\Http\Controllers\Admin\EmailLogController;
 use App\Http\Controllers\Admin\EmailSettingsController;
+use App\Http\Controllers\Admin\EmailTemplateController;
 use App\Http\Controllers\Admin\JudgeAssignmentController;
 use App\Http\Controllers\Admin\JudgingNudgeController;
 use App\Http\Controllers\Admin\ProjectApprovalController;
@@ -100,6 +102,12 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         Route::get('email', [EmailSettingsController::class, 'index'])->name('email.index');
         Route::post('email', [EmailSettingsController::class, 'update'])->name('email.update');
         Route::post('email/test', [EmailSettingsController::class, 'test'])->name('email.test');
+        Route::get('email/logs', [EmailLogController::class, 'index'])->name('email.logs');
+        Route::get('email/templates', [EmailTemplateController::class, 'index'])->name('email.templates.index');
+        Route::get('email/templates/{event}', [EmailTemplateController::class, 'edit'])->where('event', '[a-z-]+')->name('email.templates.edit');
+        Route::post('email/templates/{event}', [EmailTemplateController::class, 'update'])->where('event', '[a-z-]+')->name('email.templates.update');
+        Route::post('email/templates/{event}/reset', [EmailTemplateController::class, 'reset'])->where('event', '[a-z-]+')->name('email.templates.reset');
+        Route::post('email/templates/{event}/preview', [EmailTemplateController::class, 'preview'])->where('event', '[a-z-]+')->name('email.templates.preview');
     });
 
 Route::middleware(['auth', 'verified', 'role:admin,lecturer'])

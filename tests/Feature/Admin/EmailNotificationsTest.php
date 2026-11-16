@@ -111,7 +111,8 @@ class EmailNotificationsTest extends TestCase
     public function test_mail_message_uses_the_shared_layout(): void
     {
         $user = User::factory()->create(['role_id' => 4, 'name' => 'Aminah']);
-        $mail = (new SystemNotification('Project Approved', "Your project 'Smart Farm' has been approved.", '/dashboard/projects', 'success', mailEvent: 'project_approved'))
+        $mail = (new SystemNotification('Project Approved', "Your project 'Smart Farm' has been approved.", '/dashboard/projects', 'success',
+            mailEvent: 'project_approved', mailData: ['project_title' => 'Smart Farm', 'project_code' => 'ICT-01']))
             ->toMail($user);
 
         $this->assertStringStartsWith('Project Approved | ', (string) $mail->subject);

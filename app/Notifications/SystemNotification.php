@@ -2,9 +2,9 @@
 
 namespace App\Notifications;
 
-use App\Models\Setting;
 use App\Models\User;
 use App\Services\EmailNotifications;
+use App\Services\EmailTemplates;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\AnonymousNotifiable;
@@ -33,9 +33,18 @@ class SystemNotification extends Notification implements ShouldQueue
     protected ?string $mailEvent = null;
 
     /**
-     * Create a new notification instance.
+     * Values for the email template placeholders (see EmailTemplates).
+     *
+     * @var array<string, string|int|null>
      */
-    public function __construct(string $title, string $message, ?string $actionUrl = null, string $type = 'info', ?string $avatar = null, ?string $mailEvent = null)
+    protected array $mailData = [];
+
+    /**
+     * Create a new notification instance.
+     *
+     * @param  array<string, string|int|null>  $mailData
+     */
+    public function __construct(string $title, string $message, ?string $actionUrl = null, string $type = 'info', ?string $avatar = null, ?string $mailEvent = null, array $mailData = [])
     {
         $this->title = $title;
         $this->message = $message;
@@ -43,6 +52,7 @@ class SystemNotification extends Notification implements ShouldQueue
         $this->type = $type;
         $this->avatar = $avatar;
         $this->mailEvent = $mailEvent;
+        $this->mailData = $mailData;
     }
 
     /**
@@ -80,22 +90,27 @@ class SystemNotification extends Notification implements ShouldQueue
     }
 
     /**
-     * Every email shares the same layout: greeting, message, one button.
+     * Every email shares the same layout. Events with a template use the
+     * admin-editable subject and message; others (announcements, the test
+     * email) use the notification's own title and message.
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $systemName = (string) Setting::get('system_name', config('app.name', 'INOTEK'));
         $url = $this->actionUrl && $this->actionUrl !== '#' ? url($this->actionUrl) : url('/dashboard');
         $name = $notifiable instanceof User ? trim((string) $notifiable->name) : '';
 
-        $mail = (new MailMessage)
-            ->subject("{$this->title} | {$systemName}")
-            ->greeting($name !== '' ? "Hello {$name}," : 'Hello,')
-            ->line($this->message)
-            ->action("Open {$systemName}", $url)
-            ->salutation("Regards,  \n{$systemName}");
+        if ($this->mailEvent !== null && EmailTemplates::exists($this->mailEvent)) {
+            return EmailTemplates::render($this->mailEvent, $this->mailData, $name, $url);
+        }
 
-        return $this->type === 'error' ? $mail->error() : $mail;
+        return EmailTemplates::mailMessage(
+            "{$this->title} | ".EmailTemplates::systemName(),
+            EmailTemplates::paragraphs($this->message) ?: [$this->message],
+            $name,
+            $url,
+            $this->mailEvent,
+            $this->type === 'error',
+        );
     }
 
     /**
@@ -110,6 +125,11 @@ class SystemNotification extends Notification implements ShouldQueue
             'read_at' => null,
             'created_at' => now()->toIso8601String(),
         ]);
+    }
+
+    public function mailEvent(): ?string
+    {
+        return $this->mailEvent;
     }
 
     private function hasMailAddress(object $notifiable): bool

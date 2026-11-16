@@ -201,6 +201,7 @@ class ProjectApprovalController extends Controller
                         '/dashboard/projects',
                         'success',
                         mailEvent: 'project_approved',
+                        mailData: ['project_title' => $project->title, 'project_code' => $project->pcode],
                     ));
                 } catch (\Exception $e) {
                     report($e);
@@ -246,6 +247,11 @@ class ProjectApprovalController extends Controller
                 '/dashboard/projects',
                 'warning',
                 mailEvent: 'project_returned',
+                mailData: [
+                    'project_title' => $project->title,
+                    'project_code' => $project->pcode,
+                    'comments' => $validated['admin_comments'],
+                ],
             ));
         } catch (\Exception $e) {
             report($e);

@@ -129,6 +129,8 @@ Admin registers project ──> [STATUS_APPROVED] (4)       (direct approval)
 - Judge reminders (nudge) are refused while the master switch is off. Password reset emails are always sent.
 - The test email goes to the signed-in admin immediately, whatever the switches say.
 - SMTP settings stay in the server `.env` and are shown read-only.
+- **Templates** (`/dashboard/email/templates`): admins edit the subject and message of each event email, using only the placeholders offered for that event; the greeting ("Hello {name},"), the button back to INOTEK and the signature are fixed. A live preview uses sample values. Announcements and the test email have no template.
+- **Log** (`/dashboard/email/logs`): one row per recipient for every email the mail server accepted, and for queued notification emails that failed after all retries.
 
 ---
 

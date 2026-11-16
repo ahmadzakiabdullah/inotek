@@ -1,9 +1,10 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import { BellRing, Send, Sparkles, CheckCircle2, AlertTriangle, Info, XCircle } from 'lucide-react';
 import React from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import {
     Select,
@@ -28,12 +29,13 @@ const typeBgClasses: Record<string, string> = {
     error: 'bg-rose-500/10 border-rose-500/20 text-rose-900 dark:text-rose-100',
 };
 
-export default function Index() {
+export default function Index({ emailEnabled = false }: { emailEnabled?: boolean }) {
     const { data, setData, post, processing, reset, errors } = useForm({
         title: '',
         message: '',
         target_role: 'all',
         type: 'info',
+        send_email: false,
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -141,6 +143,34 @@ export default function Index() {
                                                     <SelectItem value="error">Critical Error (Red)</SelectItem>
                                                 </SelectContent>
                                             </Select>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-start gap-3 rounded-md border border-border/60 p-3">
+                                        <Checkbox
+                                            id="send_email"
+                                            checked={data.send_email}
+                                            disabled={!emailEnabled}
+                                            onCheckedChange={(checked) => setData('send_email', checked === true)}
+                                            className="mt-0.5"
+                                        />
+                                        <div className="space-y-0.5">
+                                            <label htmlFor="send_email" className="text-sm font-semibold text-foreground">
+                                                Also send by email
+                                            </label>
+                                            <p className="text-xs text-muted-foreground">
+                                                {emailEnabled ? (
+                                                    'Every recipient also receives this announcement by email.'
+                                                ) : (
+                                                    <>
+                                                        Email is turned off. Turn it on under{' '}
+                                                        <Link href="/dashboard/email" className="underline">
+                                                            Email &amp; Notifications
+                                                        </Link>
+                                                        .
+                                                    </>
+                                                )}
+                                            </p>
                                         </div>
                                     </div>
 

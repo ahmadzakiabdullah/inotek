@@ -73,7 +73,7 @@ Select Top 3, 5 or 10 projects per category for a second evaluation round, ensur
 - [x] Set up automatic event listeners to log critical admin actions (resets, status changes, rubric edits) to the `audit_logs` table.
 
 ### 9. Deployment Setup & Hardening (Remaining Work)
-- [ ] Configure SMTP mail delivery and run a queue worker (mail currently uses `MAIL_MAILER=log`).
+- [x] Configure SMTP mail delivery (UTeM relay) and run a queue worker (Windows scheduled task), 15 November 2026.
 - [ ] Enforce email verification (`MustVerifyEmail` on the `User` model).
 - [ ] Switch critical foreign keys to `restrictOnDelete` to protect historical evaluation records.
 - [ ] Store `rubric_id` on `scores` so each evaluation records the rubric it was graded against.

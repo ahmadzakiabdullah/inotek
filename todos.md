@@ -292,7 +292,10 @@ Tidak segera. Senarai yang sama dalam bahasa Inggeris ada di [docs/todos.md](doc
 - [ ] Jana semula kod projek apabila projek yang dipulangkan bertukar kategori.
 - [ ] Amaran seri pada had shortlist R2.
 - [ ] Kekangan DB "satu projek setiap peserta setiap sesi".
-- [ ] SMTP dan queue worker, kemudian `MustVerifyEmail`.
+- [x] SMTP (relay UTeM, 15 Nov) dan queue worker (tugasan berjadual "INOTEK Queue Worker", 15 Nov).
+- [x] Halaman Email & Notifications (`/dashboard/email`) dan e-mel untuk notifikasi (v1.10.0, Fasa 1).
+- [ ] Email & Notifications Fasa 2: template boleh disunting (`/dashboard/email/templates`) dan log e-mel (`/dashboard/email/logs`).
+- [ ] `MustVerifyEmail`: tandakan akaun sedia ada sebagai disahkan dahulu, kemudian aktifkan.
 - [ ] Buang baris extension lapuk dalam `php.ini` server (`php_gd2.dll`, `php_xmlrpc.dll`) yang menyebabkan amaran semasa PHP bermula.
 - [ ] Aktifkan semula peraturan ESLint (`exhaustive-deps`, `no-unused-vars`) dan bersihkan 33 ralat `tsc` sedia ada.
 - [ ] Ralat CORS daripada firewall Fortinet (`cookiesession…`, `about:srcdoc`) semasa simpan projek: nampaknya tidak menghalang simpanan. Jika ia mula menyekat, minta PTM semak polisi FortiWeb untuk `/dashboard/*`.

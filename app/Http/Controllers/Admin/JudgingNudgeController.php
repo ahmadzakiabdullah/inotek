@@ -8,6 +8,7 @@ use App\Models\CompetitionSession;
 use App\Models\JudgeAssignment;
 use App\Models\Score;
 use App\Services\AuditLogger;
+use App\Services\EmailNotifications;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -23,6 +24,10 @@ class JudgingNudgeController extends Controller
 
         if (! $activeSession) {
             return back()->withErrors(['session' => 'No active competition session found.']);
+        }
+
+        if (! EmailNotifications::enabled()) {
+            return $this->backWithError('Email notifications are turned off. Turn them on under Email & Notifications to send reminders.');
         }
 
         // Get all judge assignments for the active session
@@ -61,15 +66,26 @@ class JudgingNudgeController extends Controller
         }
 
         $nudgeCount = 0;
+        $failedCount = 0;
 
         foreach ($pendingGrouped as $pendingData) {
             $judge = $pendingData['user'];
             $projects = $pendingData['projects'];
 
             if ($judge && $judge->email) {
-                Mail::to($judge->email)->send(new JudgeNudgeMail($judge, $projects));
-                $nudgeCount++;
+                // One unreachable address must not stop the other reminders.
+                try {
+                    Mail::to($judge->email)->send(new JudgeNudgeMail($judge, $projects));
+                    $nudgeCount++;
+                } catch (\Throwable $e) {
+                    report($e);
+                    $failedCount++;
+                }
             }
+        }
+
+        if ($failedCount > 0) {
+            return $this->backWithError("Sent reminders to {$nudgeCount} judges, but {$failedCount} could not be sent. Check the mail server.");
         }
 
         if ($nudgeCount > 0) {

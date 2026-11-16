@@ -198,6 +198,10 @@ export function getNavItems(userRole: string | null | undefined): NavGroup[] {
                             href: '/dashboard/admin-settings',
                         },
                         {
+                            title: 'Email & Notifications',
+                            href: '/dashboard/email',
+                        },
+                        {
                             title: 'System Audit Logs',
                             href: '/dashboard/audit-logs',
                         },

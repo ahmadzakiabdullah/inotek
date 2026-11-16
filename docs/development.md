@@ -159,10 +159,11 @@ Before deployment, confirm:
 - `APP_ENV=production`, `APP_DEBUG=false`, a generated `APP_KEY`, and HTTPS.
 - Database credentials, `SESSION_SECURE_COOKIE=true`, and a non-local mail transport.
 - Logging: `LOG_LEVEL=warning`, `LOG_STACK=daily`, `LOG_DAILY_DAYS=30`.
-- **Outstanding:** SMTP (`MAIL_MAILER=smtp` plus `MAIL_*` credentials) and a
-  `php artisan queue:work --tries=3` worker installed as a Windows service (e.g.
-  with NSSM) are not set up yet. `MustVerifyEmail` is deliberately disabled until
-  mail delivery works.
+- Mail (set up 15 November 2026): `MAIL_MAILER=smtp`, `MAIL_HOST=10.1.3.16`,
+  `MAIL_PORT=25`, no TLS and no authentication (UTeM relay `smtp01.utem.edu`),
+  `MAIL_FROM_ADDRESS="webmaster@utem.edu.my"`. Check delivery from
+  `/dashboard/email` → Send Test Email. `MustVerifyEmail` is still disabled.
+- Queue worker: see section 2.5.
 - On first production seeding, provide `INOTEK_BOOTSTRAP_ADMIN_EMAIL` and a unique `INOTEK_BOOTSTRAP_ADMIN_PASSWORD` of at least 16 characters through the deployment secret store. The seeder creates only this bootstrap admin in production; demo accounts and competition fixtures are limited to local/testing.
 - `php artisan storage:link`, migrations, and a continuously running queue worker.
 - Scheduled tasks, failed-job monitoring, database backups, and log rotation.
@@ -209,15 +210,28 @@ The site sits behind the university's Fortinet firewall (it sets a
 `about:srcdoc` iframe come from the firewall, not from INOTEK.
 
 ### 2.5 Queue Workers
-System notifications are queued for database and broadcast delivery. Audit log writes
-and certificate PDF generation run during the request, and judging reminder emails are
-sent synchronously by the admin action. Run a worker to deliver queued notifications:
-```bash
-php artisan queue:work --queue=default
+System notifications (`SystemNotification`) are queued (`QUEUE_CONNECTION=database`)
+for the database, broadcast and, when enabled, mail channels. Audit log writes,
+certificate PDF generation, judge reminder emails and the test email run during the
+request. Without a worker, notifications wait in the `jobs` table and never arrive.
+
+In production a Windows scheduled task runs the worker every minute; each run
+processes what is waiting and exits:
+```powershell
+schtasks /Create /TN "INOTEK Queue Worker" /SC MINUTE /MO 1 /RU "webpool-iis\web" /RP * /F /TR "E:\PHP\php-8.4.16\php.exe E:\events\inotek\artisan queue:work --stop-when-empty --tries=3 --max-time=50"
+schtasks /Query /TN "INOTEK Queue Worker" /V /FO LIST   # Last Result: 0 means OK
 ```
-> [!IMPORTANT]
-> Ensure `QUEUE_CONNECTION=database` (or another configured queue connection) and that
-> the queue tables have been migrated. Monitor failed jobs in production.
+The task runs as `webpool-iis\web` with its stored password (the account cannot create
+SYSTEM tasks). **If that account's password changes, recreate the task with the new
+password**, or notifications stop again. The Email & Notifications page warns when a
+queued notification has waited more than five minutes.
+
+Process the queue by hand, or clear permanently failed jobs:
+```bash
+php artisan queue:work --stop-when-empty --tries=3
+php artisan queue:failed     # list
+php artisan queue:flush      # delete all failed jobs
+```
 
 ---
 

@@ -7,6 +7,7 @@ use App\Models\CompetitionSession;
 use App\Models\JudgeAssignment;
 use App\Models\Project;
 use App\Services\AuditLogger;
+use App\Services\CompetitionNotifier;
 use App\Services\ScoreCalculator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -127,6 +128,14 @@ class Round2Controller extends Controller
             : "Reopened Round 2 judging for session: '{$activeSession->name}'";
 
         AuditLogger::log($action, $description);
+
+        if ($activeSession->r2_locked) {
+            try {
+                app(CompetitionNotifier::class)->resultsPublished($activeSession);
+            } catch (\Exception $e) {
+                report($e);
+            }
+        }
 
         $statusMessage = $activeSession->r2_locked
             ? 'Round 2 judging has been finalized successfully.'

@@ -9,6 +9,7 @@ use App\Models\CompetitionSession;
 use App\Models\Project;
 use App\Models\User;
 use App\Notifications\SystemNotification;
+use App\Services\CompetitionNotifier;
 use App\Services\ParticipantFeedback;
 use App\Services\ProjectCodeGenerator;
 use Illuminate\Http\RedirectResponse;
@@ -170,6 +171,12 @@ class ProjectController extends Controller
             }
         } catch (\Exception $e) {
             // Keep app resilient if queue/broadcasting is misconfigured
+        }
+
+        try {
+            app(CompetitionNotifier::class)->projectSubmitted($project->loadMissing('user'));
+        } catch (\Exception $e) {
+            report($e);
         }
 
         $msg = __('Project submitted successfully.');

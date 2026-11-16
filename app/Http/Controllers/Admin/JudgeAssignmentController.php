@@ -441,7 +441,8 @@ class JudgeAssignmentController extends Controller
                         ? "You have been assigned a new project to evaluate for Round {$roundNo}."
                         : "You have been assigned {$count} new projects to evaluate for Round {$roundNo}.",
                     '/dashboard/judge/evaluations',
-                    'info'
+                    'info',
+                    mailEvent: 'judge_assigned',
                 ));
             } catch (\Exception $e) {
                 // Keep resilient

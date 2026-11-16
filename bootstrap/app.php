@@ -3,6 +3,7 @@
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RoleMiddleware;
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -18,6 +19,16 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
+
+        // Every request reaches IIS through the campus firewall (10.1.2.9). Trust
+        // only that address, and only its client IP and scheme headers, so rate
+        // limits and audit logs see the real visitor.
+        $middleware->trustProxies(
+            at: ['10.1.2.9'],
+            headers: Request::HEADER_X_FORWARDED_FOR | Request::HEADER_X_FORWARDED_PROTO,
+        );
+
+        $middleware->append(SecurityHeaders::class);
 
         $middleware->web(append: [
             HandleAppearance::class,

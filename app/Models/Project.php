@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\SafeLink;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -62,6 +63,9 @@ class Project extends Model
 
     protected $casts = [
         'status' => 'integer',
+        // Legacy links shown as <a href>: never javascript: or data: URLs.
+        'poster_url' => SafeLink::class,
+        'video_url' => SafeLink::class,
     ];
 
     /**

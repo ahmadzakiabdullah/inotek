@@ -205,6 +205,19 @@ Wayfinder `.form()` helpers already add `?_method=…` and are safe. Feature tes
 use real `PUT`/`DELETE`, so they do not catch this; add a test that posts with
 `_method` when introducing a new update or delete action.
 
+**Firewall and client IP.** Every request reaches IIS through the campus firewall at
+`10.1.2.9`. `bootstrap/app.php` trusts only that address, and only its
+`X-Forwarded-For` and `X-Forwarded-Proto` headers, so rate limits and audit logs see
+the visitor's real IP. If the firewall address changes, update it there.
+
+**Security headers.** `App\Http\Middleware\SecurityHeaders` adds `X-Frame-Options`,
+`X-Content-Type-Options`, `Referrer-Policy` and (on HTTPS in production)
+`Strict-Transport-Security` to every Laravel response, and removes `X-Powered-By`.
+
+**Dependency checks.** Run `composer audit` and `npm audit --omit=dev` before a release.
+After `composer.lock` changes, run `composer install --no-dev --optimize-autoloader`
+in `E:\events\inotek` on the server.
+
 The site sits behind the university's Fortinet firewall (it sets a
 `cookiesession1` cookie). Console errors mentioning `cookiesession…` or an
 `about:srcdoc` iframe come from the firewall, not from INOTEK.

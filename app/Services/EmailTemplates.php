@@ -221,7 +221,7 @@ final class EmailTemplates
         $systemName = self::systemName();
         $mail = (new MailMessage)
             ->subject($subject)
-            ->greeting($recipientName !== '' ? "Hello {$recipientName}," : 'Hello,');
+            ->greeting($recipientName !== '' ? 'Hello '.self::escapeLinks($recipientName).',' : 'Hello,');
 
         foreach ($paragraphs as $paragraph) {
             // Keep single line breaks inside a paragraph.
@@ -249,14 +249,26 @@ final class EmailTemplates
     {
         $template = self::get($event);
         $values = ['name' => $recipientName, 'system_name' => self::systemName()] + $values;
+        // The body is Markdown, so typed values must not turn into links there.
+        $bodyValues = array_map(fn ($value) => self::escapeLinks((string) $value), $values);
 
         return self::mailMessage(
             self::fill($template['subject'], $values),
-            self::paragraphs(self::fill($template['body'], $values)),
+            self::paragraphs(self::fill($template['body'], $bodyValues)),
             $recipientName,
             $url,
             $event,
         );
+    }
+
+    /**
+     * Stop text typed by users (project titles, names, comments) from becoming
+     * a Markdown link or image, e.g. "[Sign in here](https://fake-site)".
+     * HTML is already escaped by the mail views.
+     */
+    public static function escapeLinks(string $text): string
+    {
+        return strtr($text, ['\\' => '\\\\', '[' => '\\[', ']' => '\\]']);
     }
 
     /**

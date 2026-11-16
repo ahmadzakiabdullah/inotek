@@ -15,7 +15,11 @@ INOTEK uses **Semantic Versioning 2.0.0** (`vMajor.Minor.Patch`):
 
 ## 2. INOTEK Version History
 
-### [v1.11.0] - 2026-11-16 (Current Release)
+### [v1.11.1] - 2026-11-16 (Current Release)
+#### Changed
+* **Email Branding**: emails show the UTeM logo instead of the Laravel logo, and end with "© {year} INOTEK · Universiti Teknikal Malaysia Melaka" instead of "© Laravel. All rights reserved." The footer can be edited under Email & Notifications → Settings → Email Branding. The logo is `public/images/email-logo.png` (PNG, because most email clients do not show SVG).
+
+### [v1.11.0] - 2026-11-16
 #### Added
 * **Email Templates** (Email & Notifications → Templates): edit the subject and message of each notification email with placeholders such as `{name}`, `{project_title}` and `{project_code}`, see a live preview with sample values, and reset to the default text. Unknown placeholders are rejected. The greeting, button and signature stay the same for every email.
 * **Email Log** (Email & Notifications → Logs): every email the mail server accepted, and queued emails that failed after all retries, with time, recipient, type, subject, status and error. Search and filter by status or type; totals for the last 30 days.

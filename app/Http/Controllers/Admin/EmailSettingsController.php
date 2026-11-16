@@ -7,10 +7,12 @@ use App\Models\EmailLog;
 use App\Notifications\SystemNotification;
 use App\Services\AuditLogger;
 use App\Services\EmailNotifications;
+use App\Services\EmailTemplates;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Throwable;
@@ -29,6 +31,12 @@ class EmailSettingsController extends Controller
             'settings' => [
                 'enabled' => EmailNotifications::enabled(),
                 'events' => EmailNotifications::events(),
+                'footer' => EmailTemplates::footer(),
+            ],
+            'branding' => [
+                'logo_url' => asset('images/email-logo.png'),
+                'default_footer' => EmailTemplates::DEFAULT_FOOTER,
+                'max_footer' => EmailTemplates::MAX_FOOTER,
             ],
         ]);
     }
@@ -41,7 +49,22 @@ class EmailSettingsController extends Controller
             'enabled' => ['required', 'boolean'],
             'events' => ['sometimes', 'array:'.implode(',', $keys)],
             'events.*' => ['boolean'],
+            'footer' => ['nullable', 'string', 'max:'.EmailTemplates::MAX_FOOTER],
         ]);
+
+        $footer = (string) ($validated['footer'] ?? '');
+        preg_match_all('/\{([a-z_]+)\}/', $footer, $matches);
+        $unknown = array_diff($matches[1], ['year', 'system_name']);
+
+        if ($unknown !== []) {
+            throw ValidationException::withMessages([
+                'footer' => 'Unknown placeholder: {'.implode('}, {', $unknown).'}. The footer can use {year} and {system_name}.',
+            ]);
+        }
+
+        if ($request->has('footer')) {
+            EmailTemplates::saveFooter($footer);
+        }
 
         /** @var array<string, bool> $events */
         $events = array_map(fn ($value) => (bool) $value, $validated['events'] ?? []);

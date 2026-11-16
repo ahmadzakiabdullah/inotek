@@ -107,6 +107,38 @@ class EmailTemplatesAndLogsTest extends TestCase
             ->assertSee('Please add the supervisor', false);
     }
 
+    public function test_emails_use_the_utem_logo_and_footer_not_laravel_branding(): void
+    {
+        $user = User::factory()->create(['role_id' => 4]);
+        $html = (string) (new SystemNotification('Project Approved', 'Text', '/dashboard/projects', 'success',
+            mailEvent: 'project_approved', mailData: ['project_title' => 'Smart Farm', 'project_code' => 'ICT-01']))
+            ->toMail($user)->render();
+
+        $this->assertStringContainsString(asset('images/email-logo.png'), $html);
+        $this->assertStringContainsString('© '.date('Y').' '.EmailTemplates::systemName().' · Universiti Teknikal Malaysia Melaka', $html);
+        $this->assertStringNotContainsString('laravel.com/img', $html);
+        $this->assertStringNotContainsString('Laravel. All rights reserved', $html);
+    }
+
+    public function test_admin_can_change_the_footer(): void
+    {
+        $this->actingAs($this->admin)->post(route('admin.email.update'), [
+            'enabled' => true,
+            'footer' => 'Sekretariat {system_name}, FTKEK UTeM {year}',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame('Sekretariat '.EmailTemplates::systemName().', FTKEK UTeM '.date('Y'), EmailTemplates::footerText());
+
+        $this->actingAs($this->admin)->post(route('admin.email.update'), [
+            'enabled' => true,
+            'footer' => 'Hak cipta {tahun}',
+        ])->assertSessionHasErrors('footer');
+
+        // An empty footer goes back to the default.
+        $this->actingAs($this->admin)->post(route('admin.email.update'), ['enabled' => true, 'footer' => '']);
+        $this->assertSame(EmailTemplates::DEFAULT_FOOTER, EmailTemplates::footer());
+    }
+
     public function test_sent_emails_are_logged_with_their_type(): void
     {
         $user = User::factory()->create(['role_id' => 4, 'email' => 'student@example.com']);

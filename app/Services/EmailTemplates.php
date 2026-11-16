@@ -21,6 +21,13 @@ final class EmailTemplates
 
     public const MAX_BODY = 5000;
 
+    public const SETTING_FOOTER = 'mail_footer';
+
+    public const MAX_FOOTER = 300;
+
+    /** Placeholders: {year}, {system_name}. */
+    public const DEFAULT_FOOTER = '© {year} {system_name} · Universiti Teknikal Malaysia Melaka';
+
     /**
      * Placeholders every template can use.
      *
@@ -177,6 +184,30 @@ final class EmailTemplates
     public static function systemName(): string
     {
         return (string) Setting::get('system_name', config('app.name', 'INOTEK'));
+    }
+
+    /**
+     * The saved footer text, with placeholders still in it.
+     */
+    public static function footer(): string
+    {
+        $footer = trim((string) Setting::get(self::SETTING_FOOTER, ''));
+
+        return $footer !== '' ? $footer : self::DEFAULT_FOOTER;
+    }
+
+    public static function saveFooter(?string $footer): void
+    {
+        $footer = trim((string) $footer);
+        Setting::set(self::SETTING_FOOTER, $footer === self::DEFAULT_FOOTER ? '' : $footer);
+    }
+
+    /**
+     * The footer line every email ends with, placeholders filled.
+     */
+    public static function footerText(): string
+    {
+        return self::fill(self::footer(), ['year' => date('Y'), 'system_name' => self::systemName()]);
     }
 
     /**

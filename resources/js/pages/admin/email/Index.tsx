@@ -1,11 +1,12 @@
 import { Head, router, useForm } from '@inertiajs/react';
-import { AlertTriangle, CheckCircle2, Mail, MailCheck, Send, Server, ToggleRight } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ImageIcon, Mail, MailCheck, Send, Server, ToggleRight } from 'lucide-react';
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 import EmailTabs from '@/components/email-tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 
 interface DeliveryStatus {
@@ -36,6 +37,12 @@ interface Props {
     settings: {
         enabled: boolean;
         events: EmailEvent[];
+        footer: string;
+    };
+    branding: {
+        logo_url: string;
+        default_footer: string;
+        max_footer: number;
     };
 }
 
@@ -48,10 +55,11 @@ function StatusRow({ label, children }: { label: string; children: React.ReactNo
     );
 }
 
-export default function Index({ status, settings }: Props) {
-    const { data, setData, post, processing } = useForm({
+export default function Index({ status, settings, branding }: Props) {
+    const { data, setData, post, processing, errors } = useForm({
         enabled: settings.enabled,
         events: Object.fromEntries(settings.events.map((event) => [event.key, event.enabled])) as Record<string, boolean>,
+        footer: settings.footer,
     });
     const [sendingTest, setSendingTest] = useState(false);
 
@@ -160,6 +168,57 @@ export default function Index({ status, settings }: Props) {
                                         />
                                     </div>
                                 ))}
+                            </CardContent>
+                        </Card>
+
+                        <Card className="border border-border/50 bg-card/60 shadow-md backdrop-blur-sm">
+                            <CardHeader className="flex flex-row items-center gap-3 space-y-0 pb-3">
+                                <ImageIcon className="h-5 w-5 text-primary" />
+                                <div>
+                                    <CardTitle className="text-base font-semibold">Email Branding</CardTitle>
+                                    <CardDescription>The logo at the top and the line at the bottom of every email.</CardDescription>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="space-y-1.5">
+                                    <span className="text-sm font-semibold text-foreground">Logo</span>
+                                    <div className="flex items-center justify-center rounded-md border border-border/60 bg-white p-3">
+                                        <img src={branding.logo_url} alt="Email logo" className="h-14 w-auto" />
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                        The UTeM logo, as a PNG because most email clients do not show SVG images. To change it,
+                                        replace <code>public/images/email-logo.png</code> on the server (about 400 × 230 pixels).
+                                    </p>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label htmlFor="mail_footer" className="text-sm font-semibold text-foreground">
+                                        Footer
+                                    </label>
+                                    <Input
+                                        id="mail_footer"
+                                        value={data.footer}
+                                        maxLength={branding.max_footer}
+                                        onChange={(e) => setData('footer', e.target.value)}
+                                        aria-invalid={errors.footer ? true : undefined}
+                                        className={errors.footer ? 'border-destructive' : ''}
+                                    />
+                                    {errors.footer && <p className="text-xs text-destructive">{errors.footer}</p>}
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <p className="text-xs text-muted-foreground">
+                                            Placeholders: <code>{'{year}'}</code>, <code>{'{system_name}'}</code>. Leave empty for the default.
+                                        </p>
+                                        {data.footer !== branding.default_footer && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setData('footer', branding.default_footer)}
+                                                className="text-xs text-primary underline"
+                                            >
+                                                Use default
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
                             </CardContent>
                         </Card>
 

@@ -199,7 +199,8 @@ class ProjectApprovalController extends Controller
                         'Project Approved',
                         "Your project '{$project->title}' ({$project->pcode}) has been approved.",
                         '/dashboard/projects',
-                        'success'
+                        'success',
+                        mailEvent: 'project_approved',
                     ));
                 } catch (\Exception $e) {
                     report($e);
@@ -243,7 +244,8 @@ class ProjectApprovalController extends Controller
                 'Project Returned for Editing',
                 "Your project '{$project->title}' has been returned for correction. Reason: {$validated['admin_comments']}",
                 '/dashboard/projects',
-                'warning'
+                'warning',
+                mailEvent: 'project_returned',
             ));
         } catch (\Exception $e) {
             report($e);

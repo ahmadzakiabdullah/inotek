@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CompetitionSessionController;
+use App\Http\Controllers\Admin\EmailSettingsController;
 use App\Http\Controllers\Admin\JudgeAssignmentController;
 use App\Http\Controllers\Admin\JudgingNudgeController;
 use App\Http\Controllers\Admin\ProjectApprovalController;
@@ -94,6 +95,11 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         // System Settings
         Route::get('admin-settings', [SystemSettingsController::class, 'index'])->name('settings.index');
         Route::post('admin-settings', [SystemSettingsController::class, 'update'])->name('settings.update');
+
+        // Email & Notifications
+        Route::get('email', [EmailSettingsController::class, 'index'])->name('email.index');
+        Route::post('email', [EmailSettingsController::class, 'update'])->name('email.update');
+        Route::post('email/test', [EmailSettingsController::class, 'test'])->name('email.test');
     });
 
 Route::middleware(['auth', 'verified', 'role:admin,lecturer'])

@@ -295,7 +295,8 @@ class JudgeController extends Controller
                     'Project Evaluation Submitted',
                     "Judge '{$judgeName}' has submitted evaluation for project '{$project->title}' ({$project->pcode}) in Round {$roundNo}.",
                     '/dashboard/assignments',
-                    'success'
+                    'success',
+                    mailEvent: 'score_submitted',
                 ));
             }
         } catch (\Exception $e) {

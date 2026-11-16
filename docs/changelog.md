@@ -15,7 +15,18 @@ INOTEK uses **Semantic Versioning 2.0.0** (`vMajor.Minor.Patch`):
 
 ## 2. INOTEK Version History
 
-### [v1.9.0] - 2026-11-15 (Current Release)
+### [v1.10.0] - 2026-11-16 (Current Release)
+#### Added
+* **Email & Notifications** (Admin → System Administration → Email & Notifications, `/dashboard/email`): a master switch for notification emails, a switch per event, the delivery status (mail server, sender, notifications waiting in the queue, failed jobs, and a warning when the queue worker seems stopped), and a "Send Test Email" button.
+* **Notification Emails**: notifications can now also be sent by email: judge assigned, project submitted (to the supervisor, even without an account), project approved, project returned for editing, results published (once per session, when Round 2 is finalized), and evaluation submitted (to administrators, off by default). Every email shares one layout with a button back to INOTEK.
+* **Announcements by Email**: Broadcast Alerts has an "Also send by email" option.
+* **Results Published Notification**: participants now get an in-app notification (and email) when results are finalized.
+#### Changed
+* **Judge Reminders** are refused while email is turned off, and one undeliverable address no longer stops the other reminders.
+#### Operations
+* Production mail now goes through the UTeM SMTP relay, and a scheduled task ("INOTEK Queue Worker") processes queued notifications every minute. Before this, in-app notifications waited in the queue and were never delivered.
+
+### [v1.9.0] - 2026-11-15
 #### Changed
 * **Judge Assignments Workspace**: The Judge Assignments page is redesigned for large competitions. It shows one row per project with its judges as chips, a coverage summary (how many projects have no, too few or enough judges), search, category and coverage filters, and pages of 50 projects. Judges are added from a searchable picker that lists the least busy judges first and greys out ineligible judges with the reason (owner, supervisor, Round 1 judge). Several projects can be selected and given the same judges in one step; ineligible pairs are skipped and reported, and each judge receives one summary notification.
 * **Round 2 Judge Rule**: A judge who was assigned to a project in Round 1, or scored it, cannot be assigned to or score the same project in Round 2. This applies to manual, bulk and automatic assignment and to the judge's scorecard.

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Notifications\SystemNotification;
 use App\Services\AuditLogger;
+use App\Services\EmailNotifications;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -37,7 +38,9 @@ class NotificationController extends Controller
      */
     public function createAnnouncement(): Response
     {
-        return Inertia::render('admin/announcements/Index');
+        return Inertia::render('admin/announcements/Index', [
+            'emailEnabled' => EmailNotifications::enabled(),
+        ]);
     }
 
     /**
@@ -50,6 +53,7 @@ class NotificationController extends Controller
             'message' => 'required|string|max:500',
             'target_role' => 'required|string|in:all,admin,lecturer,judge,user',
             'type' => 'required|string|in:info,success,warning,error',
+            'send_email' => 'sometimes|boolean',
         ]);
 
         $query = User::query();
@@ -67,7 +71,8 @@ class NotificationController extends Controller
                     $validated['title'],
                     $validated['message'],
                     '#',
-                    $validated['type']
+                    $validated['type'],
+                    mailEvent: ($validated['send_email'] ?? false) ? EmailNotifications::ANNOUNCEMENT : null,
                 ));
             } catch (\Exception $e) {
                 // Keep resilient
@@ -76,7 +81,7 @@ class NotificationController extends Controller
 
         AuditLogger::log(
             'BROADCAST_ANNOUNCEMENT',
-            "Admin '{$senderName}' broadcasted announcement: '{$validated['title']}' to target '{$validated['target_role']}'"
+            "Admin '{$senderName}' broadcasted announcement: '{$validated['title']}' to target '{$validated['target_role']}'".(($validated['send_email'] ?? false) ? ' (also by email)' : '')
         );
 
         return $this->backWithSuccess('Announcement has been broadcasted successfully in real-time!');

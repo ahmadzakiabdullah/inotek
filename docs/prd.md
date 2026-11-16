@@ -122,6 +122,14 @@ Admin registers project ──> [STATUS_APPROVED] (4)       (direct approval)
 - **Reports** (CSV with Excel-compatible encoding, or PDF), for any session: official results by category, participants and supervisors, detailed judge scores, and judging progress. The results report is marked as a draft until `r2_locked`. Exports are recorded in the audit log, and CSV cells are protected against spreadsheet formula injection.
 - **Analytics**: participation across sessions, projects by category and institution, score distribution by round, and judge scoring consistency (how far each judge scores above or below the other judges of the same projects).
 
+### 2.12 Email Notifications
+- In-app notifications are always sent. Admins choose on `/dashboard/email` which are also emailed: a master switch (default on) and one switch per event.
+- Events and default state: judge assigned (on, one email per judge per assignment action), project submitted (on, to the supervisor email on the project, even without an account), project approved (on), project returned for editing (on, includes the reviewer's comments), results published (on, sent once per session to owners of approved projects when Round 2 is finalized), evaluation submitted (off, to administrators).
+- Announcements are emailed only when the admin ticks "Also send by email", and only while the master switch is on.
+- Judge reminders (nudge) are refused while the master switch is off. Password reset emails are always sent.
+- The test email goes to the signed-in admin immediately, whatever the switches say.
+- SMTP settings stay in the server `.env` and are shown read-only.
+
 ---
 
 ## 3. Non-Functional Requirements
@@ -164,6 +172,7 @@ Each user role has a tailored navigation menu and dashboard specific to their ta
     - `Analytics`: Competition charts (section 2.11).
   - System Administration:
     - `System Settings`: Application settings, including Judging Features (automatic judge assignment).
+    - `Email & Notifications`: Email switches, delivery status and test email (section 2.12).
     - `System Audit Logs`: Activity logger view.
     - `Broadcast Alerts`: Send manual announcements.
 

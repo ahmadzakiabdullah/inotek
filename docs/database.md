@@ -370,7 +370,7 @@ Key-value application settings.
 | `created_at` / `updated_at` | Timestamp | Yes | Standard record timestamps. |
 
 > [!NOTE]
-> **Keys in use**: branding and locale (`system_name`, `primary_color`, `global_font`, `date_format`, `timezone`) and judging features (`auto_assign_enabled`, default off; `auto_assign_judges_per_project`, default 3, maximum 10). Keys are created on first save, so no migration is needed for new settings.
+> **Keys in use**: branding and locale (`system_name`, `primary_color`, `global_font`, `date_format`, `timezone`) and judging features (`auto_assign_enabled`, default off; `auto_assign_judges_per_project`, default 3, maximum 10), email (`mail_enabled`, default on; `mail_event_{event}` per event, see `EmailNotifications::EVENTS`), and `results_notified_session_{id}`, set once the "results published" notification has gone out for a session. Keys are created on first save, so no migration is needed for new settings.
 
 ### 2.14 Framework tables
 Managed by Laravel and its packages; not part of the competition domain.

@@ -14,7 +14,9 @@ use Illuminate\Support\Facades\Schema;
  */
 class BackfillLegacyBestPresenter extends Command
 {
-    protected $signature = 'inotek:backfill-legacy-presenters {--commit : Write the nominations (default is a preview)}';
+    protected $signature = 'inotek:backfill-legacy-presenters
+        {--session= : ID of the competition session that all legacy nominations belong to (default: match legacy sessions by name)}
+        {--commit : Write the nominations (default is a preview)}';
 
     protected $description = 'Copy Best Presenter nominations from the legacy score table into imported scores that have none.';
 
@@ -40,22 +42,50 @@ class BackfillLegacyBestPresenter extends Command
             ->where('best_presenter', '<>', '')
             ->get(['session_id', 'pcode', 'juri', 'round_no', 'best_presenter']);
 
-        // Same matching as inotek:import-legacy-competition: session by name,
-        // project by session and code, judge by username.
-        // Match names in PHP, not with a SQL join: in production the two name
-        // columns use different collations, which MySQL refuses to compare.
-        $targetIdsByName = DB::table('competition_sessions')->pluck('id', 'name');
-        $sessionIds = DB::table('sessions')
+        $legacySessionNames = DB::table('sessions')
             ->whereIn('id', $legacyScores->pluck('session_id')->unique()->values())
-            ->pluck('name', 'id')
-            ->map(fn ($name) => $targetIdsByName[$name] ?? null)
-            ->filter();
+            ->pluck('name', 'id');
+
+        $requestedSession = $this->option('session');
+
+        if ($requestedSession !== null && ! is_numeric($requestedSession)) {
+            $this->error('--session must be a competition session ID (a number).');
+
+            return self::FAILURE;
+        }
+
+        if (is_numeric($requestedSession)) {
+            // The legacy system sometimes recorded scores under whichever session
+            // was active at the time, not the one they belong to. --session sends
+            // every legacy nomination to one competition session instead.
+            $targetId = DB::table('competition_sessions')->where('id', (int) $requestedSession)->value('id');
+
+            if ($targetId === null) {
+                $this->error("Competition session ID {$requestedSession} does not exist.");
+
+                return self::FAILURE;
+            }
+
+            $sessionIds = $legacySessionNames->map(fn () => (int) $targetId);
+        } else {
+            // Same matching as inotek:import-legacy-competition: session by name.
+            // Names are matched in PHP, not with a SQL join: in production the two
+            // name columns use different collations, which MySQL refuses to compare.
+            $targetIdsByName = DB::table('competition_sessions')->pluck('id', 'name');
+            $sessionIds = $legacySessionNames
+                ->map(fn ($name) => $targetIdsByName[$name] ?? null)
+                ->filter();
+        }
+
+        // Project by session and code, judge by username.
         $judgeIds = DB::table('users')->whereNotNull('username')->pluck('id', 'username');
 
         $values = $legacyScores->countBy(fn ($row) => trim((string) $row->best_presenter));
         $updates = [];
         $unmatched = 0;
         $alreadySet = 0;
+        /** @var array<string, array{0:int,1:int}> $bySession [matched, unmatched] per legacy session name */
+        $bySession = [];
 
         foreach ($legacyScores as $legacy) {
             $sessionId = $sessionIds[$legacy->session_id] ?? null;
@@ -72,6 +102,10 @@ class BackfillLegacyBestPresenter extends Command
                 ->where('round_no', max(1, (int) $legacy->round_no))
                 ->first(['id', 'best_presenter']);
 
+            $legacyName = (string) ($legacySessionNames[$legacy->session_id] ?? "ID {$legacy->session_id}");
+            $bySession[$legacyName] ??= [0, 0];
+            $bySession[$legacyName][$score === null ? 1 : 0]++;
+
             if ($score === null) {
                 $unmatched++;
             } elseif (filled($score->best_presenter)) {
@@ -87,6 +121,9 @@ class BackfillLegacyBestPresenter extends Command
             ['Already have a nomination (left as is)', $alreadySet],
             ['No matching imported score', $unmatched],
         ]);
+
+        $this->line('By legacy session:');
+        $this->table(['Legacy session', 'Matched', 'No match'], collect($bySession)->map(fn ($counts, $name) => [$name, ...$counts])->values()->all());
 
         $this->line('Legacy best_presenter values (most common first):');
         $this->table(['Value', 'Count'], $values->sortDesc()->take(15)->map(fn ($count, $value) => [$value, $count])->values()->all());

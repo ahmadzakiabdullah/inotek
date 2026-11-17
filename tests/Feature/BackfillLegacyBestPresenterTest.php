@@ -101,4 +101,37 @@ class BackfillLegacyBestPresenterTest extends TestCase
         $this->assertSame('Ali', $empty->fresh()->best_presenter);
         $this->assertSame('Already chosen', $kept->fresh()->best_presenter);
     }
+
+    public function test_session_option_sends_nominations_from_a_mislabelled_legacy_session_to_the_given_session(): void
+    {
+        $session = CompetitionSession::create(['name' => 'Sesi 1/2026', 'is_active' => true, 'r2_locked' => false]);
+        CompetitionSession::create(['name' => 'Sesi 2/2026', 'is_active' => false, 'r2_locked' => false]);
+        // The legacy system recorded these scores while "Sesi 2/2026" was active.
+        DB::table('sessions')->insert(['id' => 'legacy-4', 'name' => 'Sesi 2/2026', 'payload' => '', 'last_activity' => 0]);
+        $category = Category::create(['session_id' => $session->id, 'code' => 'C1', 'name' => 'Technology']);
+        $judge = User::factory()->create(['role_id' => 3, 'username' => 'juri1']);
+        $project = Project::create([
+            'session_id' => $session->id,
+            'category_id' => $category->id,
+            'user_id' => User::factory()->create(['role_id' => 4])->id,
+            'pcode' => 'GT-01',
+            'title' => 'Solar',
+            'abstract' => 'Abstract',
+            'institution_type' => 'utem',
+            'status' => Project::STATUS_APPROVED,
+            'supervisor_name' => 'Supervisor',
+            'supervisor_email' => 'supervisor@example.com',
+        ]);
+        $score = Score::create(['project_id' => $project->id, 'judge_id' => $judge->id, 'session_id' => $session->id, 'round_no' => 1, 'total' => 70, 'score_details' => []]);
+        DB::table('score')->insert(['session_id' => 'legacy-4', 'pcode' => 'GT-01', 'juri' => 'juri1', 'round_no' => 1, 'status' => 1, 'best_presenter' => '1']);
+
+        // Matched by name, the nomination looks for the project in Sesi 2/2026 and finds nothing.
+        $this->artisan('inotek:backfill-legacy-presenters', ['--commit' => true])->assertSuccessful();
+        $this->assertNull($score->fresh()->best_presenter);
+
+        $this->artisan('inotek:backfill-legacy-presenters', ['--session' => $session->id, '--commit' => true])->assertSuccessful();
+        $this->assertSame('1', $score->fresh()->best_presenter);
+
+        $this->artisan('inotek:backfill-legacy-presenters', ['--session' => 999])->assertFailed();
+    }
 }

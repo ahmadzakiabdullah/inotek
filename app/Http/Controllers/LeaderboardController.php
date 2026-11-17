@@ -15,11 +15,22 @@ use Inertia\Response;
 class LeaderboardController extends Controller
 {
     /**
-     * Display the public leaderboard.
+     * Display the public leaderboard, or the staff leaderboard for any session.
      */
     public function index(Request $request): Response|JsonResponse
     {
-        $activeSession = CompetitionSession::active();
+        $isStaffLeaderboard = $request->routeIs('dashboard.leaderboard');
+        // The public board always shows the active session. Staff can open any
+        // session, so past results stay reachable after a new session starts;
+        // without a choice they get the active session, or the newest one.
+        $activeSession = match (true) {
+            $isStaffLeaderboard && $request->filled('session') => CompetitionSession::find($request->integer('session')),
+            $isStaffLeaderboard => CompetitionSession::active() ?? CompetitionSession::orderByDesc('id')->first(),
+            default => CompetitionSession::active(),
+        };
+        $sessions = $isStaffLeaderboard
+            ? CompetitionSession::orderByDesc('id')->get(['id', 'name', 'is_active', 'r2_locked'])
+            : collect();
 
         if (! $activeSession) {
             if ($request->wantsJson() || $request->input('api') === 'true') {
@@ -40,6 +51,7 @@ class LeaderboardController extends Controller
                 'leaderboardData' => [],
                 'resultsPublished' => false,
                 'resultsFinal' => false,
+                'sessions' => $sessions,
             ]);
         }
 
@@ -60,7 +72,6 @@ class LeaderboardController extends Controller
         // Scores, awards and judge comments are shown on the staff leaderboard to
         // admins always, and to everyone else only once results are finalized.
         $user = $request->user();
-        $isStaffLeaderboard = $request->routeIs('dashboard.leaderboard');
         $isAuthenticatedLeaderboard = $isStaffLeaderboard
             && ($isPublicResultsPublished || $user?->hasRole('admin'));
 
@@ -197,6 +208,7 @@ class LeaderboardController extends Controller
             'resultsPublished' => $isAuthenticatedLeaderboard || $isPublicResultsPublished,
             // Admins see scores before Round 2 is locked; this tells the page they are still a draft.
             'resultsFinal' => $isPublicResultsPublished,
+            'sessions' => $sessions,
         ]);
     }
 

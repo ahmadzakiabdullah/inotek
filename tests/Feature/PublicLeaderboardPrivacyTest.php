@@ -97,6 +97,35 @@ class PublicLeaderboardPrivacyTest extends TestCase
             ->assertJsonPath("leaderboardData.{$category->id}.0.best_presenter.votes", 1);
     }
 
+    public function test_staff_can_open_a_past_session_but_the_public_board_shows_only_the_active_one(): void
+    {
+        [$pastSession, $category, $project] = $this->makeScoredProject(true);
+        $pastSession->update(['is_active' => false]);
+        $newSession = CompetitionSession::create(['name' => 'Session 2027', 'is_active' => true, 'r2_locked' => false]);
+        $admin = User::factory()->create(['role_id' => 1]);
+
+        // By default staff get the active session, and can choose any other.
+        $this->actingAs($admin)->get(route('dashboard.leaderboard'))
+            ->assertInertia(fn ($page) => $page
+                ->where('activeSession.id', $newSession->id)
+                ->has('sessions', 2));
+
+        $this->actingAs($admin)->get(route('dashboard.leaderboard', ['session' => $pastSession->id]))
+            ->assertInertia(fn ($page) => $page
+                ->where('activeSession.id', $pastSession->id)
+                ->where('resultsFinal', true)
+                ->where("leaderboardData.{$category->id}.0.title", $project->title));
+
+        $this->actingAs($admin)->getJson(route('dashboard.leaderboard', ['api' => 'true', 'session' => $pastSession->id]))
+            ->assertJsonPath("leaderboardData.{$category->id}.0.final_score", 75);
+
+        // The public board ignores the parameter.
+        auth()->logout();
+        $this->getJson(route('leaderboard.index', ['session' => $pastSession->id]))
+            ->assertJsonPath('activeSession.id', $newSession->id)
+            ->assertJsonMissingPath("leaderboardData.{$category->id}");
+    }
+
     public function test_staff_leaderboard_marks_admin_scores_as_draft_until_round_two_is_locked(): void
     {
         [$session] = $this->makeScoredProject(false);

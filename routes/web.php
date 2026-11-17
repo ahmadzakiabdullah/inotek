@@ -162,6 +162,9 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         Route::post('round2/shortlist-limit', [Round2Controller::class, 'updateShortlistLimit'])->name('round2.shortlistLimit');
         Route::post('round2/lock', [Round2Controller::class, 'lockToggle'])->name('round2.lockToggle');
         Route::post('round2/{project}/award', [Round2Controller::class, 'assignAward'])->name('round2.assignAward');
+        // Wildcards: Best Presenter nominees added to Round 2 on top of the shortlist.
+        Route::post('round2/wildcards/{project}', [Round2Controller::class, 'addWildcard'])->name('round2.wildcards.add');
+        Route::post('round2/wildcards/{project}/remove', [Round2Controller::class, 'removeWildcard'])->name('round2.wildcards.remove');
 
         // System Audit Logs
         Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');

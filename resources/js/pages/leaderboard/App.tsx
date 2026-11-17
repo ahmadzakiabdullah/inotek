@@ -70,6 +70,8 @@ interface LeaderboardProject {
     final_score?: number;
     judges?: JudgeScore[];
     best_presenter?: { name: string; votes: number } | null;
+    /** Sent to admins only: added to Round 2 as a Best Presenter wildcard. */
+    round2_wildcard?: boolean;
 }
 
 interface SessionOption {
@@ -892,6 +894,15 @@ function ProjectRow({
                                 className="border-primary/40 px-1.5 py-0 text-[10px] text-primary"
                             >
                                 Round 2
+                            </Badge>
+                        )}
+                        {project.round2_wildcard && (
+                            <Badge
+                                variant="outline"
+                                className="border-amber-500/50 px-1.5 py-0 text-[10px] text-amber-700 dark:text-amber-400"
+                                title="Added to Round 2 by an admin as a Best Presenter wildcard. Only admins see this label."
+                            >
+                                Wildcard
                             </Badge>
                         )}
                     </div>

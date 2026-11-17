@@ -133,6 +133,25 @@ approved, unknown award, or a code listed twice with different awards).
 Projects missing from the file keep their current award. Awards stay hidden from
 participants until Round 2 is finalized for the session.
 
+### 1.6 Round 2 Wildcards
+At the organizer's request an admin can add Best Presenter nominees to Round 2
+on top of the automatic shortlist (Top 3/5/10 per category by Round 1 average),
+from the **Round 2 wildcards** panel on the Round 2 page. Rules, all enforced on
+the server (`App\Services\Round2Wildcards`):
+
+- admins only; a reason is required and the action is audit-logged
+  (`ADD_ROUND2_WILDCARD`, `REMOVE_ROUND2_WILDCARD`)
+- the project must have at least one Best Presenter nomination in Round 1
+- at most *N* wildcards per category, set under **System Settings > Round 2
+  wildcards per category** (default 1; 0 turns the feature off)
+- only before that category has any Round 2 score, and never after Round 2 is finalized
+- a wildcard with Round 2 judge assignments cannot be removed until they are
+
+A wildcard then competes exactly like a shortlisted finalist: judge assignment
+(manual and automatic), scoring, ranking and awards all use
+`ScoreCalculator::getRound2ProjectIds()`, the shortlist plus wildcards. The
+"Wildcard" label is shown only to admins (Round 2 page and staff leaderboard).
+
 ---
 
 ## 2. Real-Time Services (WebSockets & Queues)

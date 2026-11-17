@@ -3,14 +3,19 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\CompetitionSession;
 use App\Models\JudgeAssignment;
 use App\Models\Project;
+use App\Models\Round2Wildcard;
+use App\Models\Score;
 use App\Services\AuditLogger;
 use App\Services\CompetitionNotifier;
+use App\Services\Round2Wildcards;
 use App\Services\ScoreCalculator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -18,7 +23,7 @@ class Round2Controller extends Controller
 {
     protected ScoreCalculator $calculator;
 
-    public function __construct(ScoreCalculator $calculator)
+    public function __construct(ScoreCalculator $calculator, private readonly Round2Wildcards $wildcards)
     {
         $this->calculator = $calculator;
     }
@@ -36,6 +41,10 @@ class Round2Controller extends Controller
                 'shortlist' => [],
                 'activeSession' => null,
                 'limit' => 3,
+                'wildcards' => [],
+                'wildcardCandidates' => [],
+                'wildcardLimit' => Round2Wildcards::limit(),
+                'scoringStartedCategoryIds' => [],
             ]);
         }
 
@@ -53,12 +62,76 @@ class Round2Controller extends Controller
             ->select('projects.*', 'scores.total as round2_total', 'scores.judge_id', 'scores.comments')
             ->get();
 
+        // Wildcards are shown only on this admin page and to admins on the leaderboard.
+        $roundOneAverages = Score::where('session_id', $activeSession->id)
+            ->where('round_no', 1)
+            ->groupBy('project_id')
+            ->pluck(DB::raw('AVG(total)'), 'project_id');
+        $wildcards = $this->wildcards->forSession($activeSession->id)->map(fn (Round2Wildcard $wildcard) => [
+            'project_id' => $wildcard->project_id,
+            'avg_r1' => isset($roundOneAverages[$wildcard->project_id]) ? round((float) $roundOneAverages[$wildcard->project_id], 2) : null,
+            'pcode' => $wildcard->project?->pcode,
+            'title' => $wildcard->project?->title,
+            'category_id' => $wildcard->project?->category_id,
+            'reason' => $wildcard->reason,
+            'added_by' => $wildcard->addedBy?->name,
+            'added_at' => $wildcard->created_at?->toDateTimeString(),
+        ])->values();
+        $categories = Category::orderBy('code')->get(['id', 'code', 'name']);
+
         return Inertia::render('admin/round2/Index', [
+            'categories' => $categories,
             'shortlist' => $shortlist,
             'round2Scores' => $round2Scores,
             'activeSession' => $activeSession,
             'limit' => $limit,
+            'wildcards' => $wildcards,
+            'wildcardCandidates' => $this->wildcards->candidates($activeSession),
+            'wildcardLimit' => Round2Wildcards::limit(),
+            'scoringStartedCategoryIds' => $categories
+                ->filter(fn (Category $category) => $this->wildcards->roundTwoScoringStarted($activeSession->id, $category->id))
+                ->pluck('id')
+                ->values(),
         ]);
+    }
+
+    /**
+     * Add a Best Presenter nominee to Round 2 as a wildcard.
+     */
+    public function addWildcard(Request $request, Project $project): RedirectResponse
+    {
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'min:5', 'max:500'],
+        ]);
+        $activeSession = CompetitionSession::active();
+
+        if (! $activeSession) {
+            return $this->backWithError('No active competition session.');
+        }
+
+        $error = $this->wildcards->add($activeSession, $project, trim($validated['reason']), $request->user());
+
+        return $error === null
+            ? $this->backWithSuccess("Added {$project->pcode} to Round 2 as a wildcard.")
+            : $this->backWithError($error);
+    }
+
+    /**
+     * Take a wildcard back out of Round 2.
+     */
+    public function removeWildcard(Project $project): RedirectResponse
+    {
+        $activeSession = CompetitionSession::active();
+
+        if (! $activeSession) {
+            return $this->backWithError('No active competition session.');
+        }
+
+        $error = $this->wildcards->remove($activeSession, $project);
+
+        return $error === null
+            ? $this->backWithSuccess("Removed {$project->pcode} from Round 2.")
+            : $this->backWithError($error);
     }
 
     public function updateShortlistLimit(Request $request): RedirectResponse
@@ -72,10 +145,13 @@ class Round2Controller extends Controller
             return $this->backWithError('No active competition session.');
         }
 
+        // Wildcards stay in Round 2 whatever the shortlist size.
         $shortlistedProjectIds = $this->calculator->getRound1Shortlist(
             $activeSession->id,
             $validated['limit'],
-        )->flatten()->pluck('id')->map(fn ($id) => (int) $id)->all();
+        )->flatten()->pluck('id')
+            ->merge($this->wildcards->forSession($activeSession->id)->pluck('project_id'))
+            ->map(fn ($id) => (int) $id)->all();
         $existingRoundTwoProjectIds = JudgeAssignment::where('session_id', $activeSession->id)
             ->where('round_no', 2)
             ->distinct()
@@ -158,10 +234,8 @@ class Round2Controller extends Controller
             abort(404);
         }
 
-        $shortlistedProjectIds = $this->calculator->getRound1Shortlist(
-            $activeSession->id,
-            $activeSession->round2_shortlist_limit ?: 3,
-        )->flatten()->pluck('id')->map(fn ($id) => (int) $id)->all();
+        // Wildcards compete for awards exactly like shortlisted finalists.
+        $shortlistedProjectIds = $this->calculator->getRound2ProjectIds($activeSession);
 
         if (! in_array($project->id, $shortlistedProjectIds, true)) {
             return $this->backWithError('Awards can only be assigned to projects shortlisted for Round 2.');

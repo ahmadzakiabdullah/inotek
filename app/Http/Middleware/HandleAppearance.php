@@ -10,11 +10,16 @@ use Symfony\Component\HttpFoundation\Response;
 class HandleAppearance
 {
     /**
-     * Public portal pages, always shown in light mode: they have no theme
-     * switch, so visitors whose device prefers dark mode could not change it.
-     * Keep in sync with LIGHT_ONLY_PATHS in resources/js/hooks/use-appearance.tsx.
+     * Public portal and sign-in pages, always shown in light mode: they have
+     * no theme switch, so visitors whose device prefers dark mode could not
+     * change it. Keep in sync with LIGHT_ONLY_PATHS in
+     * resources/js/hooks/use-appearance.tsx.
      */
-    public const LIGHT_ONLY_PATHS = ['/', 'leaderboard', 'contact', 'verify/*'];
+    public const LIGHT_ONLY_PATHS = [
+        '/', 'leaderboard', 'contact', 'verify/*',
+        'login', 'register', 'forgot-password', 'reset-password/*',
+        'two-factor-challenge', 'email/verify', 'user/confirm-password',
+    ];
 
     /**
      * Handle an incoming request.

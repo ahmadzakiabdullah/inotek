@@ -112,6 +112,56 @@ class ScoreCalculator
     }
 
     /**
+     * Ties at the shortlist cut-off: categories where projects just outside the
+     * Top N have the same Round 1 average as the last shortlisted project. The
+     * shortlist breaks such ties by project code, so admins should review them.
+     *
+     * @return array<int, array{in: list<array{pcode: string|null, title: string, avg_score: float}>, out: list<array{pcode: string|null, title: string, avg_score: float}>}>
+     */
+    public function shortlistBoundaryTies(int $sessionId, int $limit): array
+    {
+        $rows = DB::table('projects')
+            ->where('projects.session_id', $sessionId)
+            ->where('projects.status', Project::STATUS_APPROVED)
+            ->whereNull('projects.deleted_at')
+            ->join('scores', 'projects.id', '=', 'scores.project_id')
+            ->where('scores.round_no', 1)
+            ->select('projects.id', 'projects.pcode', 'projects.title', 'projects.category_id', DB::raw('AVG(scores.total) as avg_score'))
+            ->groupBy('projects.id', 'projects.pcode', 'projects.title', 'projects.category_id')
+            // Same order as getRound1Shortlist().
+            ->orderBy('avg_score', 'desc')
+            ->orderBy('projects.pcode')
+            ->get()
+            ->groupBy('category_id');
+
+        $ties = [];
+
+        foreach ($rows as $categoryId => $projects) {
+            if ($projects->count() <= $limit) {
+                continue;
+            }
+
+            // Averages are compared at the precision shown on screen.
+            $cutOff = round((float) $projects[$limit - 1]->avg_score, 2);
+            $describe = fn ($project) => [
+                'pcode' => $project->pcode,
+                'title' => $project->title,
+                'avg_score' => round((float) $project->avg_score, 2),
+            ];
+            $out = $projects->slice($limit)->filter(fn ($project) => round((float) $project->avg_score, 2) === $cutOff);
+
+            if ($out->isNotEmpty()) {
+                $ties[(int) $categoryId] = [
+                    'in' => array_values($projects->take($limit)->filter(fn ($project) => round((float) $project->avg_score, 2) === $cutOff)->map($describe)->all()),
+                    'out' => array_values($out->map($describe)->all()),
+                ];
+            }
+        }
+
+        return $ties;
+    }
+
+    /**
      * Every project in Round 2: the automatic Round 1 shortlist plus the
      * wildcards an admin added. Use this, not the shortlist alone, wherever
      * Round 2 membership matters (judge assignments, awards).

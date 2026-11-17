@@ -21,7 +21,7 @@ class PublicLightThemeTest extends TestCase
 
     public function test_public_pages_are_light_even_when_the_visitor_chose_dark(): void
     {
-        foreach (['/', '/leaderboard', '/contact'] as $path) {
+        foreach (['/', '/leaderboard', '/contact', '/login', '/register', '/forgot-password'] as $path) {
             $html = $this->withUnencryptedCookie('appearance', 'dark')->get($path)->assertOk()->getContent();
 
             $this->assertStringNotContainsString('class="dark"', $html, $path);

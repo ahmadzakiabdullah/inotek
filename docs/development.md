@@ -86,23 +86,52 @@ php artisan test
 > need `public/build/manifest.json`, so run `npm run build` (or copy the build
 > folder) first; otherwise they fail with "Not a valid Inertia response".
 
-### 1.4 Legacy Data Import
-`inotek:import-legacy-competition` copies registrations and submitted scores from
-the legacy tables (`sessions`, `pendaftaran`, `score`) in the same database into
-the normalized competition tables:
-```bash
-# Preview: prints counts per item, writes nothing
-php artisan inotek:import-legacy-competition
+### 1.4 Legacy Data
+The legacy tables (`sessions`, `pendaftaran`, `score`) were imported once into
+Sesi 1/2026 (competition session ID 1). The one-time
+`inotek:import-legacy-competition` command was then removed, because running it
+again would copy the legacy `is_active` and `r2_locked` flags back onto the
+competition sessions; it remains in the git history (commit `e4312ad` and
+earlier). The legacy system recorded the June 2026 judging under "Sesi 2/2026"
+only because that session was active at the time; all of it belongs to Sesi 1/2026.
 
-# Import after reviewing the preview
-php artisan inotek:import-legacy-competition --commit
+Two follow-up commands remain. Both preview by default and write only with `--commit`:
+```bash
+# Copy Best Presenter nominations from the legacy score table (done for Sesi 1/2026)
+php artisan inotek:backfill-legacy-presenters --session=1
+
+# Set award levels from a CSV of project code and award (see section 1.5)
+php artisan inotek:import-awards awards.csv --session=1
 ```
-The command refuses to run unless the selected database is `db4inotekdev` or
-`db4inotek`, all required tables exist, and pending migrations have been applied.
-The import runs in a single transaction. Imported sessions only receive `name`,
-`is_active`, and `r2_locked`; set `registration_mode` and the session and
-registration dates for each one in the admin session editor afterwards (the form
-requires them).
+
+### 1.5 Importing Award Levels
+Awards are normally set one project at a time on the Round 2 screen, which only
+accepts Round 2 finalists. When a session's official results were decided
+elsewhere (as for Sesi 1/2026, judged in the legacy system), import them from a
+CSV instead. In Excel use *Save As > CSV UTF-8*. The first column is the project
+code and the second the award; a header row is optional:
+
+```csv
+Kod Projek,Anugerah
+GT-01,Gold
+SE-05,Perak
+```
+
+Awards may be written `Gold`/`Emas`, `Silver`/`Perak`, `Bronze`/`Gangsa`, or
+`None`/`Tiada` to clear one. Commas, semicolons and tabs all work as separators.
+
+```bash
+# Preview: lists what will change and any problem rows, writes nothing
+php artisan inotek:import-awards awards.csv --session=1
+
+# Write after reviewing the preview
+php artisan inotek:import-awards awards.csv --session=1 --commit
+```
+
+Nothing is written while any row has a problem (unknown code, project not
+approved, unknown award, or a code listed twice with different awards).
+Projects missing from the file keep their current award. Awards stay hidden from
+participants until Round 2 is finalized for the session.
 
 ---
 

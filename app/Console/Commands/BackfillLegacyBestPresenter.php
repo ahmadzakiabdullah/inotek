@@ -42,11 +42,14 @@ class BackfillLegacyBestPresenter extends Command
 
         // Same matching as inotek:import-legacy-competition: session by name,
         // project by session and code, judge by username.
-        // Alias both ids: they share the column name, so pluck would otherwise return the same one twice.
+        // Match names in PHP, not with a SQL join: in production the two name
+        // columns use different collations, which MySQL refuses to compare.
+        $targetIdsByName = DB::table('competition_sessions')->pluck('id', 'name');
         $sessionIds = DB::table('sessions')
-            ->join('competition_sessions', 'competition_sessions.name', '=', 'sessions.name')
-            ->select('sessions.id as legacy_id', 'competition_sessions.id as target_id')
-            ->pluck('target_id', 'legacy_id');
+            ->whereIn('id', $legacyScores->pluck('session_id')->unique()->values())
+            ->pluck('name', 'id')
+            ->map(fn ($name) => $targetIdsByName[$name] ?? null)
+            ->filter();
         $judgeIds = DB::table('users')->whereNotNull('username')->pluck('id', 'username');
 
         $values = $legacyScores->countBy(fn ($row) => trim((string) $row->best_presenter));

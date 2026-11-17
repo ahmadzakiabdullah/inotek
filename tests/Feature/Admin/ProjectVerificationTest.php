@@ -387,4 +387,41 @@ class ProjectVerificationTest extends TestCase
 
         $response->assertStatus(403);
     }
+
+    public function test_admin_can_add_team_members_only_for_team_categories(): void
+    {
+        $admin = User::factory()->create(['role_id' => 1]);
+        $session = CompetitionSession::create(['name' => 'Session 1', 'is_active' => true]);
+        $individual = Category::create(['session_id' => $session->id, 'code' => 'GT', 'name' => 'Green Technology', 'allow_team' => false]);
+        $team = Category::create(['session_id' => $session->id, 'code' => 'IDP', 'name' => 'Industrial Design Product', 'allow_team' => true]);
+
+        // The register form needs each category's team rule to show or hide the team section.
+        $this->actingAs($admin)->get(route('admin.approvals.index'))
+            ->assertInertia(fn ($page) => $page
+                ->where('categories.0.code', 'GT')
+                ->where('categories.0.allow_team', false)
+                ->where('categories.1.code', 'IDP')
+                ->where('categories.1.allow_team', true));
+
+        $payload = fn (Category $category, User $participant) => [
+            'user_id' => $participant->id,
+            'category_id' => $category->id,
+            'title' => 'Project',
+            'abstract' => 'Project abstract',
+            'institution_type' => 'utem',
+            'supervisor_name' => 'Dr. Supervisor',
+            'supervisor_email' => 'supervisor@utem.edu.my',
+            'team_members' => [['name' => 'Second Member', 'email' => 'member@example.com', 'phone' => '']],
+        ];
+
+        $solo = User::factory()->create(['role_id' => 4]);
+        $this->actingAs($admin)->post(route('admin.approvals.storeProject'), $payload($individual, $solo))
+            ->assertSessionHasErrors('team_members');
+        $this->assertDatabaseMissing('projects', ['user_id' => $solo->id]);
+
+        $leader = User::factory()->create(['role_id' => 4]);
+        $this->actingAs($admin)->post(route('admin.approvals.storeProject'), $payload($team, $leader))
+            ->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('team_members', ['name' => 'Second Member']);
+    }
 }

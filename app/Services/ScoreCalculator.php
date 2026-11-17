@@ -3,8 +3,10 @@
 namespace App\Services;
 
 use App\Models\Category;
+use App\Models\CompetitionSession;
 use App\Models\JudgeAssignment;
 use App\Models\Project;
+use App\Models\Round2Wildcard;
 use App\Models\Rubric;
 use App\Models\Score;
 use App\Models\User;
@@ -107,6 +109,26 @@ class ScoreCalculator
         }
 
         return $shortlist;
+    }
+
+    /**
+     * Every project in Round 2: the automatic Round 1 shortlist plus the
+     * wildcards an admin added. Use this, not the shortlist alone, wherever
+     * Round 2 membership matters (judge assignments, awards).
+     *
+     * @return array<int, int>
+     */
+    public function getRound2ProjectIds(CompetitionSession $session): array
+    {
+        $shortlisted = $this->getRound1Shortlist($session->id, $session->round2_shortlist_limit ?: 3)
+            ->flatten()
+            ->pluck('id');
+
+        $wildcards = Round2Wildcard::where('session_id', $session->id)
+            ->whereHas('project', fn ($query) => $query->where('status', Project::STATUS_APPROVED))
+            ->pluck('project_id');
+
+        return $shortlisted->merge($wildcards)->map(fn ($id) => (int) $id)->unique()->values()->all();
     }
 
     /**

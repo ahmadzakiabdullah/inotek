@@ -141,13 +141,8 @@ class JudgeAutoAssigner
             ->where('status', Project::STATUS_APPROVED);
 
         if ($roundNo === 2) {
-            $shortlistedIds = $this->calculator
-                ->getRound1Shortlist($session->id, $session->round2_shortlist_limit ?: 3)
-                ->flatten()
-                ->pluck('id')
-                ->all();
-
-            $query->whereIn('id', $shortlistedIds);
+            // The automatic shortlist plus any Round 2 wildcards.
+            $query->whereIn('id', $this->calculator->getRound2ProjectIds($session));
         }
 
         return $query->get();

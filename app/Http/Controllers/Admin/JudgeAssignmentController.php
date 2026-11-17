@@ -459,13 +459,8 @@ class JudgeAssignmentController extends Controller
      */
     private function shortlistedProjectIds(CompetitionSession $session): array
     {
-        return $this->calculator
-            ->getRound1Shortlist($session->id, $session->round2_shortlist_limit ?: 3)
-            ->flatten()
-            ->pluck('id')
-            ->map(fn ($id) => (int) $id)
-            ->values()
-            ->all();
+        // The automatic shortlist plus any Round 2 wildcards.
+        return $this->calculator->getRound2ProjectIds($session);
     }
 
     /**

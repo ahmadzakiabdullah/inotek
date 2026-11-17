@@ -23,8 +23,10 @@ interface SettingsProps {
         timezone: string;
         auto_assign_enabled: boolean;
         auto_assign_judges_per_project: number;
+        round2_wildcard_limit: number;
     };
     maxJudgesPerProject: number;
+    maxRound2Wildcards: number;
 }
 
 const fontList = [
@@ -66,7 +68,7 @@ const timezones = [
     { value: 'America/New_York', label: 'Eastern Time (America/New_York)' },
 ];
 
-export default function Index({ currentSettings, maxJudgesPerProject }: SettingsProps) {
+export default function Index({ currentSettings, maxJudgesPerProject, maxRound2Wildcards }: SettingsProps) {
     const { data, setData, post, processing, errors } = useForm({
         system_name: currentSettings.system_name,
         global_font: currentSettings.global_font,
@@ -75,6 +77,7 @@ export default function Index({ currentSettings, maxJudgesPerProject }: Settings
         timezone: currentSettings.timezone,
         auto_assign_enabled: currentSettings.auto_assign_enabled,
         auto_assign_judges_per_project: currentSettings.auto_assign_judges_per_project,
+        round2_wildcard_limit: currentSettings.round2_wildcard_limit,
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -325,6 +328,28 @@ export default function Index({ currentSettings, maxJudgesPerProject }: Settings
                                     />
                                     {errors.auto_assign_judges_per_project && (
                                         <p className="text-xs text-destructive">{errors.auto_assign_judges_per_project}</p>
+                                    )}
+                                </div>
+
+                                <div className="space-y-1.5 border-t border-border/50 pt-4">
+                                    <label htmlFor="round2_wildcard_limit" className="text-sm font-semibold text-foreground">
+                                        Round 2 wildcards per category
+                                    </label>
+                                    <p className="text-xs text-muted-foreground">
+                                        How many Best Presenter nominees an admin may add to Round 2 in each category, on top of the
+                                        automatic shortlist. Set to 0 to turn wildcards off.
+                                    </p>
+                                    <Input
+                                        id="round2_wildcard_limit"
+                                        type="number"
+                                        min={0}
+                                        max={maxRound2Wildcards}
+                                        value={data.round2_wildcard_limit}
+                                        onChange={(e) => setData('round2_wildcard_limit', Number(e.target.value))}
+                                        className={`w-28 ${errors.round2_wildcard_limit ? 'border-destructive' : ''}`}
+                                    />
+                                    {errors.round2_wildcard_limit && (
+                                        <p className="text-xs text-destructive">{errors.round2_wildcard_limit}</p>
                                     )}
                                 </div>
                             </CardContent>

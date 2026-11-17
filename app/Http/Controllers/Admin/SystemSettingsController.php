@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use App\Services\AuditLogger;
 use App\Services\JudgeAutoAssigner;
+use App\Services\Round2Wildcards;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -27,8 +28,10 @@ class SystemSettingsController extends Controller
                 'timezone' => Setting::get('timezone', 'Asia/Kuala_Lumpur'),
                 'auto_assign_enabled' => JudgeAutoAssigner::isEnabled(),
                 'auto_assign_judges_per_project' => JudgeAutoAssigner::judgesPerProject(),
+                'round2_wildcard_limit' => Round2Wildcards::limit(),
             ],
             'maxJudgesPerProject' => JudgeAutoAssigner::MAX_JUDGES_PER_PROJECT,
+            'maxRound2Wildcards' => Round2Wildcards::MAX_LIMIT,
         ]);
     }
 
@@ -45,6 +48,7 @@ class SystemSettingsController extends Controller
             'timezone' => 'required|string|timezone',
             'auto_assign_enabled' => 'sometimes|boolean',
             'auto_assign_judges_per_project' => 'sometimes|integer|min:1|max:'.JudgeAutoAssigner::MAX_JUDGES_PER_PROJECT,
+            'round2_wildcard_limit' => 'sometimes|integer|min:0|max:'.Round2Wildcards::MAX_LIMIT,
         ]);
 
         Setting::set('system_name', $validated['system_name']);
@@ -61,12 +65,16 @@ class SystemSettingsController extends Controller
             Setting::set(JudgeAutoAssigner::SETTING_JUDGES_PER_PROJECT, (string) $validated['auto_assign_judges_per_project'], 'integer');
         }
 
+        if (array_key_exists('round2_wildcard_limit', $validated)) {
+            Setting::set(Round2Wildcards::SETTING_LIMIT, (string) $validated['round2_wildcard_limit'], 'integer');
+        }
+
         // Log the change in system logs
         $adminName = auth()->user()->name;
         $autoAssign = JudgeAutoAssigner::isEnabled() ? 'on ('.JudgeAutoAssigner::judgesPerProject().' per project)' : 'off';
         AuditLogger::log(
             'UPDATE_SETTINGS',
-            "Admin '{$adminName}' updated system settings: Name='{$validated['system_name']}', Font='{$validated['global_font']}', Color='{$validated['primary_color']}', Timezone='{$validated['timezone']}', Auto-assign={$autoAssign}"
+            "Admin '{$adminName}' updated system settings: Name='{$validated['system_name']}', Font='{$validated['global_font']}', Color='{$validated['primary_color']}', Timezone='{$validated['timezone']}', Auto-assign={$autoAssign}, Round 2 wildcards per category=".Round2Wildcards::limit()
         );
 
         return $this->backWithSuccess('System configurations updated successfully in real-time!');

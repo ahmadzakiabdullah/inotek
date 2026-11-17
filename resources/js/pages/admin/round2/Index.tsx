@@ -2,6 +2,8 @@ import { Head, useForm, Link, router } from '@inertiajs/react';
 import { Sliders, Lock, Unlock, ClipboardList, CheckSquare, Sparkles, Trophy, MessageSquare } from 'lucide-react';
 import React, { useState } from 'react';
 import { toast } from 'sonner';
+import WildcardsPanel from '@/components/round2/wildcards-panel';
+import type { Round2Wildcard, WildcardCandidate, WildcardCategory } from '@/components/round2/wildcards-panel';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,9 +39,24 @@ interface Props {
     round2Scores: Round2Score[];
     activeSession: CompetitionSession | null;
     limit: number;
+    categories?: WildcardCategory[];
+    wildcards?: Round2Wildcard[];
+    wildcardCandidates?: WildcardCandidate[];
+    wildcardLimit?: number;
+    scoringStartedCategoryIds?: number[];
 }
 
-export default function Round2Index({ shortlist, round2Scores, activeSession, limit }: Props) {
+export default function Round2Index({
+    shortlist,
+    round2Scores,
+    activeSession,
+    limit,
+    categories = [],
+    wildcards = [],
+    wildcardCandidates = [],
+    wildcardLimit = 0,
+    scoringStartedCategoryIds = [],
+}: Props) {
     const lockForm = useForm({});
     const [currentLimit, setCurrentLimit] = useState(limit);
 
@@ -154,9 +171,9 @@ export default function Round2Index({ shortlist, round2Scores, activeSession, li
                         {/* Top Shortlist Grid by Category */}
                         <div className="grid gap-6 md:grid-cols-2">
                             {Object.entries(shortlist).map(([categoryId, projects]) => {
-                                // Find category name from project lists or fallback
-                                const firstProject = projects[0];
-                                const categoryName = firstProject ? 'Category ' + categoryId : 'Category ID ' + categoryId;
+                                const category = categories.find((c) => String(c.id) === categoryId);
+                                const categoryName = category ? `${category.name} (${category.code})` : `Category ${categoryId}`;
+                                const categoryWildcards = wildcards.filter((w) => String(w.category_id) === categoryId);
                                 
                                 return (
                                     <Card key={categoryId} className="border border-border/50 bg-card/60 backdrop-blur-sm shadow-md overflow-hidden">
@@ -167,10 +184,11 @@ export default function Round2Index({ shortlist, round2Scores, activeSession, li
                                                 </CardTitle>
                                                 <CardDescription className="text-[10px]">
                                                     Showing Top {limit} ordered by average Round 1 score
+                                                    {categoryWildcards.length > 0 && `, plus ${categoryWildcards.length} wildcard`}
                                                 </CardDescription>
                                             </div>
                                             <Badge className="font-mono text-[10px] bg-primary/10 text-primary hover:bg-primary/20 border-primary/20">
-                                                {projects.length} Qualified
+                                                {projects.length + categoryWildcards.length} Qualified
                                             </Badge>
                                         </CardHeader>
                                         <CardContent className="p-0">
@@ -210,6 +228,49 @@ export default function Round2Index({ shortlist, round2Scores, activeSession, li
                                                             </TableCell>
                                                         </TableRow>
                                                     )}
+                                                    {categoryWildcards.map((wildcard) => (
+                                                        <TableRow
+                                                            key={`wildcard-${wildcard.project_id}`}
+                                                            className="border-b border-border/20 bg-amber-500/5 text-xs"
+                                                        >
+                                                            <TableCell className="py-2.5 pl-4 font-mono font-bold text-primary">
+                                                                {wildcard.pcode || '-'}
+                                                            </TableCell>
+                                                            <TableCell className="font-medium max-w-[180px]">
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <Badge
+                                                                        variant="outline"
+                                                                        className="shrink-0 border-amber-500/50 px-1.5 py-0 text-[10px] text-amber-700 dark:text-amber-400"
+                                                                        title={`Wildcard (Best Presenter), added by ${wildcard.added_by ?? 'an admin'}`}
+                                                                    >
+                                                                        Wildcard
+                                                                    </Badge>
+                                                                    <span className="truncate" title={wildcard.title ?? ''}>{wildcard.title}</span>
+                                                                </div>
+                                                                <div className="mt-0.5 truncate text-[10px] text-muted-foreground" title={wildcard.reason}>
+                                                                    {wildcard.reason}
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell className="text-center">
+                                                                <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                                                    {wildcard.avg_r1 !== null ? `${wildcard.avg_r1.toFixed(2)}%` : '-'}
+                                                                </div>
+                                                                {!activeSession.r2_locked && (
+                                                                    <button
+                                                                        type="button"
+                                                                        className="text-[10px] text-destructive hover:underline"
+                                                                        onClick={() => {
+                                                                            if (window.confirm(`Take ${wildcard.pcode} out of Round 2?`)) {
+                                                                                router.post(`/dashboard/round2/wildcards/${wildcard.project_id}/remove`, {}, { preserveScroll: true });
+                                                                            }
+                                                                        }}
+                                                                    >
+                                                                        Remove
+                                                                    </button>
+                                                                )}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
                                                 </TableBody>
                                             </Table>
                                         </CardContent>
@@ -217,6 +278,15 @@ export default function Round2Index({ shortlist, round2Scores, activeSession, li
                                 );
                             })}
                         </div>
+
+                        <WildcardsPanel
+                            categories={categories}
+                            wildcards={wildcards}
+                            candidates={wildcardCandidates}
+                            limit={wildcardLimit}
+                            scoringStartedCategoryIds={scoringStartedCategoryIds}
+                            locked={activeSession.r2_locked}
+                        />
 
                         {/* Round 2 Scores Board Card */}
                         <Card className="border border-border/50 bg-card/40 backdrop-blur-sm shadow-md overflow-hidden">

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\CompetitionSession;
 use App\Models\Project;
+use App\Models\Round2Wildcard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -116,7 +117,13 @@ class LeaderboardController extends Controller
                 ->groupBy('project_id');
         }
 
-        $leaderboardData = $projects->map(function ($project) use ($r1Averages, $r2Averages, $scoreDetails, $isAuthenticatedLeaderboard, $isPublicResultsPublished, $ownScoresJudgeId) {
+        // Round 2 wildcards are labelled for admins only; everyone else sees a
+        // wildcard as an ordinary Round 2 finalist.
+        $wildcardIds = ($isStaffLeaderboard && $user?->hasRole('admin'))
+            ? Round2Wildcard::where('session_id', $activeSession->id)->pluck('project_id')->flip()
+            : null;
+
+        $leaderboardData = $projects->map(function ($project) use ($r1Averages, $r2Averages, $scoreDetails, $isAuthenticatedLeaderboard, $isPublicResultsPublished, $ownScoresJudgeId, $wildcardIds) {
             $r1 = $r1Averages->get($project->id);
             $r2 = $r2Averages->get($project->id);
 
@@ -167,6 +174,7 @@ class LeaderboardController extends Controller
                     'best_presenter' => $presenterVotes,
                 ] : []),
                 ...($ownScoresJudgeId !== null ? ['judges' => $judges] : []),
+                ...($wildcardIds !== null ? ['round2_wildcard' => $wildcardIds->has($project->id)] : []),
             ];
         });
 

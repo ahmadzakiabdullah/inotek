@@ -12,6 +12,22 @@ export type UseAppearanceReturn = {
 const listeners = new Set<() => void>();
 let currentAppearance: Appearance = 'system';
 
+/**
+ * Public portal pages are always shown in light mode: they have no theme
+ * switch, so visitors whose device prefers dark mode could not change it.
+ * Keep in sync with HandleAppearance::LIGHT_ONLY_PATHS on the server.
+ */
+const LIGHT_ONLY_PATHS = [
+    /^\/$/,
+    /^\/leaderboard\/?$/,
+    /^\/contact\/?$/,
+    /^\/verify\//,
+];
+let forceLight = false;
+
+export const isLightOnlyPath = (path: string): boolean =>
+    LIGHT_ONLY_PATHS.some((pattern) => pattern.test(path));
+
 const prefersDark = (): boolean => {
     if (typeof window === 'undefined') {
         return false;
@@ -46,7 +62,7 @@ const applyTheme = (appearance: Appearance): void => {
         return;
     }
 
-    const isDark = isDarkMode(appearance);
+    const isDark = !forceLight && isDarkMode(appearance);
 
     document.documentElement.classList.toggle('dark', isDark);
     document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
@@ -81,10 +97,28 @@ export function initializeTheme(): void {
     }
 
     currentAppearance = getStoredAppearance();
+    forceLight = isLightOnlyPath(window.location.pathname);
     applyTheme(currentAppearance);
 
     // Set up system theme change listener
     mediaQuery()?.addEventListener('change', handleSystemThemeChange);
+}
+
+/**
+ * Re-apply the theme after an Inertia visit, so moving between the public
+ * portal and the dashboard switches between forced light mode and the
+ * user's own choice.
+ */
+export function syncThemeWithPath(path: string): void {
+    const next = isLightOnlyPath(path);
+
+    if (next === forceLight) {
+        return;
+    }
+
+    forceLight = next;
+    applyTheme(currentAppearance);
+    notify();
 }
 
 export function useAppearance(): UseAppearanceReturn {
@@ -94,9 +128,14 @@ export function useAppearance(): UseAppearanceReturn {
         () => 'system',
     );
 
-    const resolvedAppearance: ResolvedAppearance = isDarkMode(appearance)
-        ? 'dark'
-        : 'light';
+    const forcedLight = useSyncExternalStore(
+        subscribe,
+        () => forceLight,
+        () => false,
+    );
+
+    const resolvedAppearance: ResolvedAppearance =
+        !forcedLight && isDarkMode(appearance) ? 'dark' : 'light';
 
     const updateAppearance = (mode: Appearance): void => {
         currentAppearance = mode;

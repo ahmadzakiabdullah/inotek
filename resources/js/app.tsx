@@ -1,8 +1,8 @@
-import { createInertiaApp } from '@inertiajs/react';
+import { createInertiaApp, router } from '@inertiajs/react';
 import { ActiveThemeProvider } from '@/components/active-theme';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { initializeTheme } from '@/hooks/use-appearance';
+import { initializeTheme, syncThemeWithPath } from '@/hooks/use-appearance';
 import AppLayout from '@/layouts/app-layout';
 import AuthLayout from '@/layouts/auth-layout';
 import PublicLayout from '@/layouts/public-layout';
@@ -48,3 +48,10 @@ createInertiaApp({
 
 // This will set light / dark mode on load...
 initializeTheme();
+
+// Public portal pages are always light; re-check after every Inertia visit.
+router.on('navigate', (event) => {
+    syncThemeWithPath(
+        new URL(event.detail.page.url, window.location.origin).pathname,
+    );
+});

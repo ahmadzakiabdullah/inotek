@@ -1,7 +1,8 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import {
     AlertCircle,
     CheckCircle2,
+    History,
     ChevronDown,
     Info,
     Lock,
@@ -71,12 +72,23 @@ interface LeaderboardProject {
     best_presenter?: { name: string; votes: number } | null;
 }
 
+interface SessionOption {
+    id: number;
+    name: string;
+    is_active: boolean;
+    r2_locked: boolean;
+}
+
 interface Props {
-    activeSession: { id: number; name: string } | null;
+    /** The session being shown: the active one unless staff picked another. */
+    activeSession:
+        | (Pick<SessionOption, 'id' | 'name'> & Partial<SessionOption>)
+        | null;
     categories: Category[];
     leaderboardData: Record<number, LeaderboardProject[]>;
     resultsPublished: boolean;
     resultsFinal?: boolean;
+    sessions?: SessionOption[];
 }
 
 type StatusFilter = 'all' | 'evaluated' | 'round2' | 'pending';
@@ -115,6 +127,7 @@ export default function StaffLeaderboard({
     leaderboardData,
     resultsPublished,
     resultsFinal = false,
+    sessions = [],
 }: Props) {
     const [data, setData] = useState(leaderboardData);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -129,9 +142,12 @@ export default function StaffLeaderboard({
 
     const refresh = () => {
         setIsRefreshing(true);
-        fetch('/dashboard/leaderboard?api=true', {
-            headers: { Accept: 'application/json' },
-        })
+        fetch(
+            `/dashboard/leaderboard?api=true&session=${activeSession?.id ?? ''}`,
+            {
+                headers: { Accept: 'application/json' },
+            },
+        )
             .then((res) => res.json())
             .then((json) => {
                 setData(json.leaderboardData ?? {});
@@ -141,7 +157,15 @@ export default function StaffLeaderboard({
             .finally(() => setIsRefreshing(false));
     };
 
+    // Only the active session receives new scores, so only it is kept live.
+    // Re-run when staff switch sessions so polling asks for the right one.
+    const isLive = activeSession?.is_active ?? true;
+
     useEffect(() => {
+        if (!isLive) {
+            return;
+        }
+
         const echo = (window as any).Echo;
         const channel = echo ? echo.channel('leaderboard') : null;
         channel?.listen('.score.updated', refresh);
@@ -151,7 +175,47 @@ export default function StaffLeaderboard({
             channel?.stopListening('.score.updated');
             clearInterval(poll);
         };
-    }, []);
+    }, [activeSession?.id, isLive]);
+
+    // A category picked in another session may not exist in this one.
+    useEffect(() => {
+        setCategoryId('all');
+        setExpanded(new Set());
+    }, [activeSession?.id]);
+
+    const switchSession = (id: string) =>
+        router.get(
+            '/dashboard/leaderboard',
+            { session: id },
+            { preserveState: false },
+        );
+
+    const sessionPicker =
+        sessions.length > 1 ? (
+            <Select
+                value={activeSession ? String(activeSession.id) : undefined}
+                onValueChange={switchSession}
+            >
+                <SelectTrigger
+                    className="h-9 sm:w-56"
+                    aria-label="Competition session"
+                >
+                    <SelectValue placeholder="Choose a session" />
+                </SelectTrigger>
+                <SelectContent>
+                    {sessions.map((s) => (
+                        <SelectItem key={s.id} value={String(s.id)}>
+                            {s.name}
+                            {s.is_active
+                                ? ' (active)'
+                                : s.r2_locked
+                                  ? ' (final)'
+                                  : ''}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        ) : null;
 
     const allProjects = useMemo(() => Object.values(data ?? {}).flat(), [data]);
 
@@ -257,11 +321,12 @@ export default function StaffLeaderboard({
                 <Head title="Leaderboard" />
                 <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed p-12 text-center">
                     <AlertCircle className="h-10 w-10 text-muted-foreground/50" />
-                    <h1 className="text-lg font-semibold">No active session</h1>
+                    <h1 className="text-lg font-semibold">Session not found</h1>
                     <p className="max-w-sm text-sm text-muted-foreground">
-                        The leaderboard shows the active competition session.
-                        Activate a session to see its projects and scores.
+                        There is no competition session to show. Choose one
+                        below, or create a session first.
                     </p>
+                    {sessionPicker}
                 </div>
             </>
         );
@@ -328,26 +393,48 @@ export default function StaffLeaderboard({
                             Leaderboard
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            {activeSession.name} · Updated{' '}
-                            {lastUpdated.toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                            })}{' '}
-                            · refreshes every 15 seconds
+                            {activeSession.name}
+                            {isLive ? (
+                                <>
+                                    {' '}
+                                    · Updated{' '}
+                                    {lastUpdated.toLocaleTimeString([], {
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                    })}{' '}
+                                    · refreshes every 15 seconds
+                                </>
+                            ) : (
+                                ' · not the active session'
+                            )}
                         </p>
                     </div>
-                    <Button
-                        onClick={refresh}
-                        variant="outline"
-                        size="sm"
-                        disabled={isRefreshing}
-                    >
-                        <RefreshCw
-                            className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`}
-                        />
-                        Refresh
-                    </Button>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        {sessionPicker}
+                        <Button
+                            onClick={refresh}
+                            variant="outline"
+                            size="sm"
+                            disabled={isRefreshing}
+                        >
+                            <RefreshCw
+                                className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`}
+                            />
+                            Refresh
+                        </Button>
+                    </div>
                 </div>
+
+                {!isLive && (
+                    <Banner
+                        tone="info"
+                        icon={<History className="h-4 w-4" />}
+                        title={`Viewing ${activeSession.name}, which is not the active session`}
+                    >
+                        These are the stored results of that session. Judging
+                        and the public leaderboard use the active session.
+                    </Banner>
+                )}
 
                 <StatusBanner mode={mode} resultsFinal={resultsFinal} />
 

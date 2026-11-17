@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Category;
 use App\Models\CompetitionSession;
+use App\Models\JudgeAssignment;
 use App\Models\Project;
 use App\Models\Score;
 use App\Models\User;
@@ -241,5 +242,33 @@ class DashboardTest extends TestCase
 
         // The listed certificate can be downloaded by its owner.
         $this->actingAs($student)->get(route('certificates.downloadParticipation', $past))->assertOk();
+    }
+
+    public function test_admin_dashboard_ignores_judge_assignments_of_deleted_projects()
+    {
+        $admin = User::factory()->create(['role_id' => 1]);
+        $judge = User::factory()->create(['role_id' => 3]);
+        $session = CompetitionSession::create(['name' => 'Sesi 2/2026', 'is_active' => true]);
+        $category = Category::create(['session_id' => $session->id, 'code' => 'C1', 'name' => 'Tech']);
+        $project = Project::create([
+            'session_id' => $session->id,
+            'category_id' => $category->id,
+            'user_id' => User::factory()->create(['role_id' => 4])->id,
+            'pcode' => 'SE-01',
+            'title' => 'Test project',
+            'abstract' => 'Abstract text',
+            'institution_type' => 'utem',
+            'status' => Project::STATUS_APPROVED,
+            'supervisor_name' => 'Supervisor A',
+            'supervisor_email' => 'a@utem.com',
+        ]);
+        JudgeAssignment::create(['project_id' => $project->id, 'judge_id' => $judge->id, 'session_id' => $session->id, 'round_no' => 1]);
+
+        // Soft-deleting the project leaves its assignment in place.
+        $project->delete();
+
+        $this->actingAs($admin)->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->has('pendingJudges', 0));
     }
 }

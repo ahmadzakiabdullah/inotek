@@ -34,6 +34,8 @@ class JudgingNudgeController extends Controller
         // Get all judge assignments for the active session
         $assignments = JudgeAssignment::with(['project.category', 'judge'])
             ->where('session_id', $activeSession->id)
+            // Skip assignments whose project has since been deleted.
+            ->whereHas('project')
             ->get();
 
         // Get all scores submitted for the active session

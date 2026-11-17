@@ -38,7 +38,7 @@ class ProjectApprovalController extends Controller
                 ? $query->get()
                 : $query->get()->each(fn (Project $project) => $project->hideUnpublishedAward()),
             'sessions' => CompetitionSession::orderByDesc('id')->get(),
-            'categories' => Category::orderBy('code')->get(['id', 'name', 'code']),
+            'categories' => Category::orderBy('code')->get(['id', 'name', 'code', 'allow_team']),
             // Only admins can register projects for students, so only they need the student list.
             'students' => $user->hasRole('admin')
                 ? User::withRole('user')->orderBy('name')->get(['id', 'name', 'email'])

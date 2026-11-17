@@ -222,6 +222,12 @@ return students;
         return () => document.removeEventListener('click', handleOutsideClick);
     }, []);
 
+    // Only categories that accept teams (such as IDP) may list team members;
+    // the server rejects them for every other category.
+    const categoryAllowsTeam = (categoryId: string) =>
+        !!categories.find((c) => c.id.toString() === categoryId)?.allow_team;
+    const createTeamAllowed = categoryAllowsTeam(data.category_id);
+
     const addTeamMember = () => {
         setData('team_members', [
             ...data.team_members,
@@ -1669,7 +1675,14 @@ setEditingProject(null);
                                 <Label htmlFor="category_id" className="text-sm font-semibold">Category</Label>
                                 <Select
                                     value={data.category_id}
-                                    onValueChange={(val) => setData('category_id', val)}
+                                    onValueChange={(val) =>
+                                        setData((current) => ({
+                                            ...current,
+                                            category_id: val,
+                                            // Drop members added under a team category.
+                                            team_members: categoryAllowsTeam(val) ? current.team_members : [],
+                                        }))
+                                    }
                                     disabled={!activeSession}
                                 >
                                     <SelectTrigger id="category_id" className="bg-background/50 border-border/50">
@@ -1814,7 +1827,8 @@ setEditingProject(null);
                             </div>
                         </div>
 
-                        {/* Team Members */}
+                        {/* Team Members: only for categories that accept teams */}
+                        {createTeamAllowed ? (
                         <div className="space-y-4 rounded-lg border border-border/50 bg-muted/5 p-4">
                             <div className="flex items-center justify-between">
                                 <div>
@@ -1901,7 +1915,15 @@ setEditingProject(null);
                                     No team members added yet. Single-presenter project.
                                 </p>
                             )}
+                            <InputError message={errors.team_members} />
                         </div>
+                        ) : (
+                            <p className="rounded-lg border border-dashed border-border/50 bg-muted/5 p-4 text-xs text-muted-foreground">
+                                {data.category_id
+                                    ? 'This category is for individual projects: one participant, no team members. Team members are only allowed in categories that accept teams, such as IDP.'
+                                    : 'Choose a category. Team members can be added only for categories that accept teams, such as IDP.'}
+                            </p>
+                        )}
 
                         <DialogFooter className="pt-4 gap-2 sm:gap-0">
                             <Button

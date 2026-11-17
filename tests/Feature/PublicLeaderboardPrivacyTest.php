@@ -72,6 +72,31 @@ class PublicLeaderboardPrivacyTest extends TestCase
             ->assertJsonPath("leaderboardData.{$category->id}.0.judges.0.comments", 'Private judging comment');
     }
 
+    public function test_staff_leaderboard_shows_judge_username_and_each_best_presenter_nomination(): void
+    {
+        [$session, $category, $project, $judge] = $this->makeScoredProject(false);
+        $secondJudge = User::factory()->create(['role_id' => 3, 'name' => 'Second judge']);
+        // Older evaluations store a yes flag instead of a name: it nominates the participant.
+        Score::create([
+            'project_id' => $project->id,
+            'judge_id' => $secondJudge->id,
+            'session_id' => $session->id,
+            'round_no' => 2,
+            'total' => 80,
+            'score_details' => [],
+            'best_presenter' => 'Yes',
+        ]);
+        $admin = User::factory()->create(['role_id' => 1]);
+
+        $this->actingAs($admin)->getJson(route('dashboard.leaderboard'))
+            ->assertOk()
+            ->assertJsonPath("leaderboardData.{$category->id}.0.judges.0.name", 'Private judge')
+            ->assertJsonPath("leaderboardData.{$category->id}.0.judges.0.username", $judge->username)
+            ->assertJsonPath("leaderboardData.{$category->id}.0.judges.0.best_presenter", 'Private nominee')
+            ->assertJsonPath("leaderboardData.{$category->id}.0.judges.1.best_presenter", 'Private participant')
+            ->assertJsonPath("leaderboardData.{$category->id}.0.best_presenter.votes", 1);
+    }
+
     public function test_staff_leaderboard_marks_admin_scores_as_draft_until_round_two_is_locked(): void
     {
         [$session] = $this->makeScoredProject(false);

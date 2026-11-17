@@ -496,7 +496,7 @@ class ImportLegacyCompetitionData extends Command
                 'total' => (float) $legacyScore->total,
                 'score_details' => json_encode($normalizedDetails, JSON_THROW_ON_ERROR),
                 'comments' => $this->nullableString($legacyScore->comment ?? null),
-                'best_presenter' => null,
+                'best_presenter' => $this->nullableString($legacyScore->best_presenter ?? null),
                 'created_at' => $submittedAt,
                 'updated_at' => $submittedAt,
             ]);

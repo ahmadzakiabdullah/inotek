@@ -5,6 +5,7 @@ import {
     ChevronDown,
     Info,
     Lock,
+    Mic,
     RefreshCw,
     Search,
     Trophy,
@@ -42,10 +43,14 @@ interface Category {
 }
 
 interface JudgeScore {
+    /** Full name (falls back to the account name). */
     name: string;
+    username?: string | null;
     round: number;
     score: number;
     comments: string | null;
+    /** Nominee's name when this judge nominated someone for Best Presenter. */
+    best_presenter?: string | null;
     submitted_at: string;
 }
 
@@ -84,6 +89,16 @@ type StatusFilter = 'all' | 'evaluated' | 'round2' | 'pending';
  */
 type ViewMode = 'scores' | 'own' | 'list';
 
+type View = 'projects' | 'presenters';
+
+interface Nomination {
+    nominee: string;
+    row: Row;
+    votes: number;
+    rounds: number[];
+    judges: string[];
+}
+
 interface Row {
     project: LeaderboardProject;
     category: Category | undefined;
@@ -108,6 +123,7 @@ export default function StaffLeaderboard({
     const [status, setStatus] = useState<StatusFilter>('all');
     const [search, setSearch] = useState('');
     const [expanded, setExpanded] = useState<Set<number>>(new Set());
+    const [view, setView] = useState<View>('projects');
 
     useEffect(() => setData(leaderboardData), [leaderboardData]);
 
@@ -206,6 +222,21 @@ export default function StaffLeaderboard({
             v?.toLowerCase().includes(term),
         );
     });
+
+    const nominations = collectNominations(
+        inCategory.filter(
+            (row) =>
+                !term ||
+                [row.project.title, row.project.pcode, row.project.username]
+                    .concat(
+                        (row.project.judges ?? []).map(
+                            (j) => j.best_presenter ?? '',
+                        ),
+                    )
+                    .some((v) => v?.toLowerCase().includes(term)),
+        ),
+    );
+    const canSeeNominations = mode !== 'list';
 
     const toggle = (id: number) =>
         setExpanded((prev) => {
@@ -383,106 +414,166 @@ export default function StaffLeaderboard({
                     </div>
                 </div>
 
-                {mode === 'scores' && <ScoringRules />}
-
-                {/* Results table */}
-                <Card className="gap-0 overflow-hidden p-0">
-                    <div className="overflow-x-auto">
-                        <Table>
-                            <TableHeader className="bg-muted/40">
-                                <TableRow className="hover:bg-transparent">
-                                    {mode === 'scores' && (
-                                        <TableHead className="w-16 pl-4 text-center">
-                                            Rank
-                                        </TableHead>
-                                    )}
-                                    <TableHead
-                                        className={
-                                            mode === 'scores' ? '' : 'pl-4'
-                                        }
+                {canSeeNominations && (
+                    <div
+                        role="tablist"
+                        aria-label="Leaderboard view"
+                        className="inline-flex rounded-lg border bg-muted/40 p-1"
+                    >
+                        {(
+                            [
+                                ['projects', 'Project ranking', Trophy, null],
+                                [
+                                    'presenters',
+                                    mode === 'own'
+                                        ? 'Your Best Presenter nominations'
+                                        : 'Best Presenter',
+                                    Mic,
+                                    nominations.length,
+                                ],
+                            ] as const
+                        ).map(([key, label, Icon, count]) => (
+                            <button
+                                key={key}
+                                type="button"
+                                role="tab"
+                                aria-selected={view === key}
+                                onClick={() => setView(key)}
+                                className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                                    view === key
+                                        ? 'bg-background text-foreground shadow-sm'
+                                        : 'text-muted-foreground hover:text-foreground'
+                                }`}
+                            >
+                                <Icon className="h-4 w-4" />
+                                {label}
+                                {count !== null && (
+                                    <Badge
+                                        variant="secondary"
+                                        className="px-1.5 py-0 text-[10px] tabular-nums"
                                     >
-                                        Project
-                                    </TableHead>
-                                    {mode === 'scores' && (
-                                        <>
-                                            <TableHead className="hidden w-32 text-center md:table-cell">
-                                                Round 1 avg
-                                            </TableHead>
-                                            <TableHead className="hidden w-32 text-center md:table-cell">
-                                                Round 2 avg
-                                            </TableHead>
-                                            <TableHead className="w-32 text-center">
-                                                Final score
-                                            </TableHead>
-                                            <TableHead className="w-28 text-center">
-                                                Award
-                                            </TableHead>
-                                        </>
-                                    )}
-                                    {mode === 'own' && (
-                                        <>
-                                            <TableHead className="w-32 text-center">
-                                                Your R1 score
-                                            </TableHead>
-                                            <TableHead className="w-32 text-center">
-                                                Your R2 score
-                                            </TableHead>
-                                            <TableHead className="w-24 text-center">
-                                                Status
-                                            </TableHead>
-                                        </>
-                                    )}
-                                    {mode === 'list' && (
-                                        <TableHead className="w-28 text-center">
-                                            Award
-                                        </TableHead>
-                                    )}
-                                    <TableHead className="w-12 pr-4">
-                                        <span className="sr-only">Details</span>
-                                    </TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {visible.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell
-                                            colSpan={columnCount}
-                                            className="py-12 text-center text-sm text-muted-foreground"
-                                        >
-                                            {inCategory.length === 0
-                                                ? 'No approved projects in this category yet.'
-                                                : 'No projects match the current filter or search.'}
-                                        </TableCell>
-                                    </TableRow>
-                                ) : (
-                                    visible.map((row) => (
-                                        <ProjectRow
-                                            key={row.project.id}
-                                            row={row}
-                                            mode={mode}
-                                            showCategory={showCategory}
-                                            columnCount={columnCount}
-                                            isOpen={expanded.has(
-                                                row.project.id,
-                                            )}
-                                            onToggle={() =>
-                                                toggle(row.project.id)
-                                            }
-                                        />
-                                    ))
+                                        {count}
+                                    </Badge>
                                 )}
-                            </TableBody>
-                        </Table>
+                            </button>
+                        ))}
                     </div>
-                    {visible.length > 0 && (
-                        <div className="border-t px-4 py-2.5 text-xs text-muted-foreground">
-                            Showing {visible.length} of {inCategory.length}{' '}
-                            projects.
-                            {mode !== 'list' &&
-                                " Click a row to see each judge's score and comments."}
-                        </div>
-                    )}
-                </Card>
+                )}
+
+                {view === 'presenters' && canSeeNominations ? (
+                    <BestPresenterPanel
+                        nominations={nominations}
+                        mode={mode}
+                        showCategory={showCategory}
+                    />
+                ) : (
+                    <>
+                        {mode === 'scores' && <ScoringRules />}
+
+                        {/* Results table */}
+                        <Card className="gap-0 overflow-hidden p-0">
+                            <div className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader className="bg-muted/40">
+                                        <TableRow className="hover:bg-transparent">
+                                            {mode === 'scores' && (
+                                                <TableHead className="w-16 pl-4 text-center">
+                                                    Rank
+                                                </TableHead>
+                                            )}
+                                            <TableHead
+                                                className={
+                                                    mode === 'scores'
+                                                        ? ''
+                                                        : 'pl-4'
+                                                }
+                                            >
+                                                Project
+                                            </TableHead>
+                                            {mode === 'scores' && (
+                                                <>
+                                                    <TableHead className="hidden w-32 text-center md:table-cell">
+                                                        Round 1 avg
+                                                    </TableHead>
+                                                    <TableHead className="hidden w-32 text-center md:table-cell">
+                                                        Round 2 avg
+                                                    </TableHead>
+                                                    <TableHead className="w-32 text-center">
+                                                        Final score
+                                                    </TableHead>
+                                                    <TableHead className="w-28 text-center">
+                                                        Award
+                                                    </TableHead>
+                                                </>
+                                            )}
+                                            {mode === 'own' && (
+                                                <>
+                                                    <TableHead className="w-32 text-center">
+                                                        Your R1 score
+                                                    </TableHead>
+                                                    <TableHead className="w-32 text-center">
+                                                        Your R2 score
+                                                    </TableHead>
+                                                    <TableHead className="w-24 text-center">
+                                                        Status
+                                                    </TableHead>
+                                                </>
+                                            )}
+                                            {mode === 'list' && (
+                                                <TableHead className="w-28 text-center">
+                                                    Award
+                                                </TableHead>
+                                            )}
+                                            <TableHead className="w-12 pr-4">
+                                                <span className="sr-only">
+                                                    Details
+                                                </span>
+                                            </TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {visible.length === 0 ? (
+                                            <TableRow>
+                                                <TableCell
+                                                    colSpan={columnCount}
+                                                    className="py-12 text-center text-sm text-muted-foreground"
+                                                >
+                                                    {inCategory.length === 0
+                                                        ? 'No approved projects in this category yet.'
+                                                        : 'No projects match the current filter or search.'}
+                                                </TableCell>
+                                            </TableRow>
+                                        ) : (
+                                            visible.map((row) => (
+                                                <ProjectRow
+                                                    key={row.project.id}
+                                                    row={row}
+                                                    mode={mode}
+                                                    showCategory={showCategory}
+                                                    columnCount={columnCount}
+                                                    isOpen={expanded.has(
+                                                        row.project.id,
+                                                    )}
+                                                    onToggle={() =>
+                                                        toggle(row.project.id)
+                                                    }
+                                                />
+                                            ))
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                            {visible.length > 0 && (
+                                <div className="border-t px-4 py-2.5 text-xs text-muted-foreground">
+                                    Showing {visible.length} of{' '}
+                                    {inCategory.length} projects.
+                                    {mode !== 'list' &&
+                                        " Click a row to see each judge's score and comments."}
+                                </div>
+                            )}
+                        </Card>
+                    </>
+                )}
             </div>
         </>
     );
@@ -672,6 +763,10 @@ function ProjectRow({
     const canExpand = mode !== 'list';
     const ownR1 = judges.find((j) => j.round === 1)?.score;
     const ownR2 = judges.find((j) => j.round === 2)?.score;
+    const presenterNominee =
+        mode === 'scores'
+            ? project.best_presenter?.name
+            : judges.find((j) => j.best_presenter)?.best_presenter;
 
     return (
         <Fragment>
@@ -713,6 +808,18 @@ function ProjectRow({
                             </Badge>
                         )}
                     </div>
+                    {presenterNominee && (
+                        <div className="mt-1 flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400">
+                            <Mic className="h-3 w-3 shrink-0" />
+                            <span>
+                                Best Presenter nominee:{' '}
+                                <strong>{presenterNominee}</strong>
+                                {mode === 'scores' &&
+                                    project.best_presenter &&
+                                    ` (${votes(project.best_presenter.votes)})`}
+                            </span>
+                        </div>
+                    )}
                 </TableCell>
 
                 {mode === 'scores' && (
@@ -896,13 +1003,21 @@ function EvaluationDetails({
                                         className="px-3 py-2.5 text-sm"
                                     >
                                         <div className="flex items-baseline justify-between gap-3">
-                                            <span className="font-medium">
-                                                {judge.name}
-                                            </span>
+                                            <JudgeName judge={judge} />
                                             <span className="font-mono font-semibold">
                                                 {fmt(judge.score)}
                                             </span>
                                         </div>
+                                        {judge.best_presenter && (
+                                            <div className="mt-1 flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400">
+                                                <Mic className="h-3 w-3 shrink-0" />
+                                                Nominated{' '}
+                                                <strong>
+                                                    {judge.best_presenter}
+                                                </strong>{' '}
+                                                for Best Presenter
+                                            </div>
+                                        )}
                                         <p
                                             className={`mt-1 text-xs ${judge.comments ? 'text-muted-foreground' : 'text-muted-foreground/60 italic'}`}
                                         >
@@ -914,21 +1029,184 @@ function EvaluationDetails({
                     </div>
                 ))}
             </div>
+        </div>
+    );
+}
 
-            {mode === 'scores' && (
-                <div className="text-xs text-muted-foreground">
-                    Best presenter:{' '}
-                    {project.best_presenter ? (
-                        <strong className="text-foreground">
-                            {project.best_presenter.name} (
-                            {project.best_presenter.votes} vote
-                            {project.best_presenter.votes === 1 ? '' : 's'})
-                        </strong>
-                    ) : (
-                        'not nominated'
-                    )}
+const votes = (count: number) => `${count} vote${count === 1 ? '' : 's'}`;
+
+function JudgeName({ judge }: { judge: JudgeScore }) {
+    const showUsername =
+        judge.username &&
+        judge.username.toLowerCase() !== judge.name.toLowerCase();
+
+    return (
+        <span>
+            <span className="font-medium">{judge.name}</span>
+            {showUsername && (
+                <span className="ml-1.5 font-mono text-xs text-muted-foreground">
+                    ({judge.username})
+                </span>
+            )}
+        </span>
+    );
+}
+
+/**
+ * Every Best Presenter nomination in the given rows, one entry per project and
+ * nominee, most votes first. Round 1 and Round 2 nominations count together.
+ */
+function collectNominations(rows: Row[]): Nomination[] {
+    const byKey = new Map<string, Nomination>();
+
+    rows.forEach((row) => {
+        (row.project.judges ?? []).forEach((judge) => {
+            if (!judge.best_presenter) {
+                return;
+            }
+
+            const key = `${row.project.id}|${judge.best_presenter}`;
+            const entry = byKey.get(key) ?? {
+                nominee: judge.best_presenter,
+                row,
+                votes: 0,
+                rounds: [],
+                judges: [],
+            };
+
+            entry.votes++;
+
+            if (!entry.rounds.includes(judge.round)) {
+                entry.rounds.push(judge.round);
+            }
+
+            entry.judges.push(`${judge.name} (R${judge.round})`);
+            byKey.set(key, entry);
+        });
+    });
+
+    return [...byKey.values()].sort(
+        (a, b) =>
+            b.votes - a.votes ||
+            (b.row.project.final_score ?? 0) - (a.row.project.final_score ?? 0),
+    );
+}
+
+function BestPresenterPanel({
+    nominations,
+    mode,
+    showCategory,
+}: {
+    nominations: Nomination[];
+    mode: ViewMode;
+    showCategory: boolean;
+}) {
+    return (
+        <Card className="gap-0 overflow-hidden p-0">
+            <div className="border-b bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+                {mode === 'own'
+                    ? 'Presenters you nominated for Best Presenter, in Round 1 or Round 2.'
+                    : "Judges nominate a presenter while scoring a project, in Round 1 or Round 2. Presenters are listed by the number of judges who nominated them; ties are ordered by the project's final score."}
+            </div>
+            {nominations.length === 0 ? (
+                <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+                    {mode === 'own'
+                        ? 'You have not nominated anyone yet.'
+                        : 'No judge has nominated a Best Presenter for these projects yet.'}
+                </div>
+            ) : (
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader className="bg-muted/40">
+                            <TableRow className="hover:bg-transparent">
+                                {mode === 'scores' && (
+                                    <TableHead className="w-16 pl-4 text-center">
+                                        #
+                                    </TableHead>
+                                )}
+                                <TableHead
+                                    className={mode === 'scores' ? '' : 'pl-4'}
+                                >
+                                    Nominee
+                                </TableHead>
+                                <TableHead>Project</TableHead>
+                                {mode === 'scores' && (
+                                    <TableHead className="w-24 text-center">
+                                        Votes
+                                    </TableHead>
+                                )}
+                                <TableHead className="pr-4">
+                                    Nominated by
+                                </TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {nominations.map((entry, index) => {
+                                const { project, category } = entry.row;
+                                const rank =
+                                    index > 0 &&
+                                    nominations[index - 1].votes === entry.votes
+                                        ? null
+                                        : index + 1;
+
+                                return (
+                                    <TableRow
+                                        key={`${project.id}-${entry.nominee}`}
+                                    >
+                                        {mode === 'scores' && (
+                                            <TableCell className="pl-4 text-center">
+                                                {rank !== null && (
+                                                    <RankBadge rank={rank} />
+                                                )}
+                                            </TableCell>
+                                        )}
+                                        <TableCell
+                                            className={`font-medium whitespace-normal ${mode === 'scores' ? '' : 'pl-4'}`}
+                                        >
+                                            {entry.nominee}
+                                        </TableCell>
+                                        <TableCell className="whitespace-normal">
+                                            <div className="leading-snug">
+                                                {project.title}
+                                            </div>
+                                            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+                                                <span className="font-mono font-semibold">
+                                                    {project.pcode ?? 'No code'}
+                                                </span>
+                                                {showCategory && category && (
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="px-1.5 py-0 text-[10px]"
+                                                        title={category.name}
+                                                    >
+                                                        {category.code}
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                        {mode === 'scores' && (
+                                            <TableCell className="text-center">
+                                                <div className="font-mono text-base font-bold text-amber-700 dark:text-amber-400">
+                                                    {entry.votes}
+                                                </div>
+                                                <div className="text-[11px] text-muted-foreground">
+                                                    {entry.rounds
+                                                        .sort()
+                                                        .map((r) => `R${r}`)
+                                                        .join(' + ')}
+                                                </div>
+                                            </TableCell>
+                                        )}
+                                        <TableCell className="pr-4 text-xs whitespace-normal text-muted-foreground">
+                                            {entry.judges.join(', ')}
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
+                        </TableBody>
+                    </Table>
                 </div>
             )}
-        </div>
+        </Card>
     );
 }

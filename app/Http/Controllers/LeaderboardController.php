@@ -8,6 +8,7 @@ use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -96,7 +97,9 @@ class LeaderboardController extends Controller
                 ->join('users', 'users.id', '=', 'scores.judge_id')
                 ->where('scores.session_id', $activeSession->id)
                 ->when($ownScoresJudgeId !== null, fn ($query) => $query->where('scores.judge_id', $ownScoresJudgeId))
-                ->select('scores.project_id', 'scores.round_no', 'scores.total', 'scores.best_presenter', 'scores.comments', 'scores.created_at', 'users.name as judge_name')
+                ->select('scores.project_id', 'scores.round_no', 'scores.total', 'scores.best_presenter', 'scores.comments', 'scores.created_at', 'users.name as judge_name', 'users.username as judge_username')
+                // Accounts carried over from the legacy system keep the full name in `nama`; `name` holds the username.
+                ->when(Schema::hasColumn('users', 'nama'), fn ($query) => $query->addSelect('users.nama as judge_full_name'))
                 ->orderBy('scores.round_no')
                 ->get()
                 ->groupBy('project_id');
@@ -112,19 +115,25 @@ class LeaderboardController extends Controller
             // Presence of a Round 2 score, not its numeric value, determines priority.
             $finalScore = $r2 ? $avgR2 : $avgR1;
 
-            $judges = ($isAuthenticatedLeaderboard || $ownScoresJudgeId !== null) ? $scoreDetails->get($project->id, collect())->map(fn ($score) => [
-                'name' => $score->judge_name,
+            $projectScores = $scoreDetails->get($project->id, collect());
+
+            $judges = ($isAuthenticatedLeaderboard || $ownScoresJudgeId !== null) ? $projectScores->map(fn ($score) => [
+                'name' => $this->judgeFullName($score),
+                'username' => $score->judge_username,
                 'round' => (int) $score->round_no,
                 'score' => round((float) $score->total, 2),
                 'comments' => $score->comments,
+                'best_presenter' => $this->presenterName($score->best_presenter, $project),
                 'submitted_at' => $score->created_at,
             ])->values()->all() : [];
 
-            $presenterVotes = $isAuthenticatedLeaderboard ? $scoreDetails->get($project->id, collect())
-                ->filter(fn ($score) => filled($score->best_presenter))
-                ->groupBy('best_presenter')
-                ->map(fn ($votes, $name) => ['name' => $name, 'votes' => $votes->count()])
-                ->sortByDesc('votes')->values()->first() : null;
+            $presenterVotes = $isAuthenticatedLeaderboard ? $projectScores
+                ->map(fn ($score) => $this->presenterName($score->best_presenter, $project))
+                ->filter()
+                ->countBy()
+                ->sortDesc()
+                ->map(fn ($votes, $name) => ['name' => $name, 'votes' => $votes])
+                ->values()->first() : null;
 
             return [
                 'id' => $project->id,
@@ -189,5 +198,35 @@ class LeaderboardController extends Controller
             // Admins see scores before Round 2 is locked; this tells the page they are still a draft.
             'resultsFinal' => $isPublicResultsPublished,
         ]);
+    }
+
+    /**
+     * The judge's full name: the legacy `nama` column when filled, otherwise `name`.
+     */
+    private function judgeFullName(\stdClass $score): string
+    {
+        $fullName = trim((string) ($score->judge_full_name ?? ''));
+
+        return $fullName !== '' ? $fullName : (string) $score->judge_name;
+    }
+
+    /**
+     * Turn a stored best presenter nomination into the nominee's name. Older
+     * evaluations store a plain yes/no flag instead of a name; a "yes" there
+     * nominates the project's registered participant.
+     */
+    private function presenterName(?string $value, Project $project): ?string
+    {
+        $value = trim((string) $value);
+
+        if (in_array(strtolower($value), ['', '0', 'no', 'n', 'tidak', 'false'], true)) {
+            return null;
+        }
+
+        if (in_array(strtolower($value), ['1', 'yes', 'y', 'ya', 'true'], true)) {
+            return $project->user->name ?? 'Project presenter';
+        }
+
+        return $value;
     }
 }

@@ -1,14 +1,12 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import {
     Trophy,
-    Award,
-    Sparkles,
     AlertCircle,
     RefreshCw,
     BarChart3,
-    Medal,
 } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
+import { AwardBadge } from '@/components/leaderboard/award-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,6 +16,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
     Table,
     TableBody,
@@ -27,7 +26,6 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Category {
     id: number;
@@ -68,9 +66,7 @@ export default function LeaderboardIndex({
     leaderboardData,
     resultsPublished,
 }: Props) {
-    const { component } = usePage();
-    const isAppLayout = component === 'leaderboard/App';
-    // The server decides visibility: lecturers get public-shaped data until results are locked.
+    // Public leaderboard only; staff use leaderboard/App. Scores appear once Round 2 is locked.
     const showResults = resultsPublished;
     const [localLeaderboardData, setLocalLeaderboardData] =
         useState(leaderboardData);
@@ -87,7 +83,7 @@ export default function LeaderboardIndex({
     // Fetch updated score rankings
     const fetchRankings = () => {
         setIsRefreshing(true);
-        fetch(`${isAppLayout ? '/dashboard/leaderboard' : '/leaderboard'}?api=true`)
+        fetch('/leaderboard?api=true')
             .then((res) => res.json())
             .then((data) => {
                 setLocalLeaderboardData(data.leaderboardData);
@@ -145,66 +141,13 @@ export default function LeaderboardIndex({
         );
     }
 
-    // Helper to get award badge variant/class
-    const getAwardBadge = (award: string | null) => {
-        if (!award) {
-return null;
-}
-
-        const normalized = award.toLowerCase();
-
-        if (normalized === 'gold') {
-            return (
-                <Badge className="gap-1 border-none bg-yellow-500 px-2 py-0.5 text-[10px] font-bold tracking-wider text-slate-900 uppercase hover:bg-yellow-600">
-                    <Medal className="h-3 w-3" /> Gold
-                </Badge>
-            );
-        }
-
-        if (normalized === 'silver') {
-            return (
-                <Badge className="gap-1 border-none bg-slate-300 px-2 py-0.5 text-[10px] font-bold tracking-wider text-slate-900 uppercase hover:bg-slate-400">
-                    <Medal className="h-3 w-3" /> Silver
-                </Badge>
-            );
-        }
-
-        if (normalized === 'bronze') {
-            return (
-                <Badge className="gap-1 border-none bg-amber-600 px-2 py-0.5 text-[10px] font-bold tracking-wider text-white uppercase hover:bg-amber-700">
-                    <Medal className="h-3 w-3" /> Bronze
-                </Badge>
-            );
-        }
-
-        return (
-            <Badge
-                variant="outline"
-                className="border-primary/30 text-[10px] font-bold tracking-wider text-primary uppercase"
-            >
-                {award}
-            </Badge>
-        );
-    };
 
     return (
         <>
             <Head title="Live Scoring Leaderboard" />
 
-            <div
-                className={
-                    isAppLayout
-                        ? 'space-y-6'
-                        : 'min-h-screen bg-background px-6 py-8 text-foreground lg:px-8'
-                }
-            >
-                <div
-                    className={
-                    isAppLayout
-                        ? 'w-full space-y-6'
-                            : 'mx-auto w-full max-w-7xl space-y-8'
-                    }
-                >
+            <div className="min-h-screen bg-background px-6 py-8 text-foreground lg:px-8">
+                <div className="mx-auto w-full max-w-7xl space-y-8">
                     {/* Header Banner */}
                     <div className="rounded-xl border border-border/60 bg-card/60 p-6 shadow-sm">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -334,21 +277,6 @@ return null;
                                                                     Project
                                                                     Details
                                                                 </TableHead>
-                                                                {isAppLayout && <TableHead className="w-[120px] text-center font-bold">
-                                                                    R1 Avg
-                                                                </TableHead>}
-                                                                {isAppLayout && <TableHead className="w-[120px] text-center font-bold">
-                                                                    R2 Avg
-                                                                </TableHead>}
-                                                                {isAppLayout && (
-                                                                    <>
-                                                                        <TableHead className="min-w-[210px] font-bold">Judges / Scores</TableHead>
-                                                                        <TableHead className="min-w-[170px] font-bold">Best Presenter</TableHead>
-                                                                    </>
-                                                                )}
-                                                                {isAppLayout && <TableHead className="w-[150px] text-center font-bold">
-                                                                    Final Score
-                                                                </TableHead>}
                                                                 <TableHead className="w-[150px] pr-6 text-right font-bold">
                                                                     Award
                                                                 </TableHead>
@@ -423,99 +351,10 @@ return null;
                                                                                                 proj.title
                                                                                             }
                                                                                         </div>
-                                                                                        {isAppLayout && proj.username && <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground"><span>Registered by: {proj.username}</span></div>}
-                                                                                        {isAppLayout && (proj.judges ?? []).length > 0 && (
-                                                                                            <details className="mt-2 rounded-md border border-border/50 bg-muted/20 p-2 text-[10px]">
-                                                                                                <summary className="cursor-pointer font-semibold text-primary">View evaluation details</summary>
-                                                                                                <div className="mt-2 space-y-3">
-                                                                                                    {(proj.judges ?? []).map((judge, judgeIndex) => (
-                                                                                                        <div key={`detail-${judge.name}-${judge.round}-${judgeIndex}`} className="space-y-1 border-t border-border/40 pt-2 first:border-0 first:pt-0">
-                                                                                                            <div className="flex justify-between font-semibold"><span>{judge.name} · Round {judge.round}</span><span>{judge.score}%</span></div>
-                                                                                                            <p className="text-muted-foreground">{judge.comments || 'No comments provided.'}</p>
-                                                                                                        </div>
-                                                                                                    ))}
-                                                                                                </div>
-                                                                                            </details>
-                                                                                        )}
                                                                                     </div>
                                                                                 </TableCell>
-                                                                                {isAppLayout && <TableCell className="py-4 text-center align-middle font-mono text-xs text-muted-foreground">
-                                                                                    {(proj.judges_r1 ?? 0) >
-                                                                                    0 ? (
-                                                                                        <span>
-                                                                                            {
-                                                                                                proj.avg_r1
-                                                                                            }
-                                                                                            %{' '}
-                                                                                            <span className="text-[9px] opacity-60">
-                                                                                                (
-                                                                                                {
-                                                                                                    proj.judges_r1
-                                                                                                }{' '}
-                                                                                                J)
-                                                                                            </span>
-                                                                                        </span>
-                                                                                    ) : (
-                                                                                        <span className="text-slate-700 italic">
-                                                                                            -
-                                                                                        </span>
-                                                                                    )}
-                                                                                </TableCell>}
-                                                                                {isAppLayout && <TableCell className="py-4 text-center align-middle font-mono text-xs text-muted-foreground">
-                                                                                    {(proj.judges_r2 ?? 0) >
-                                                                                    0 ? (
-                                                                                        <span>
-                                                                                            {
-                                                                                                proj.avg_r2
-                                                                                            }
-                                                                                            %{' '}
-                                                                                            <span className="text-[9px] opacity-60">
-                                                                                                (
-                                                                                                {
-                                                                                                    proj.judges_r2
-                                                                                                }{' '}
-                                                                                                J)
-                                                                                            </span>
-                                                                                        </span>
-                                                                                    ) : (
-                                                                                        <span className="text-slate-700 italic">
-                                                                                            -
-                                                                                        </span>
-                                                                                    )}
-                                                                                </TableCell>}
-                                                                                {isAppLayout && (
-                                                                                    <>
-                                                                                        <TableCell className="align-middle text-xs">
-                                                                                            {(proj.judges ?? []).length > 0 ? (
-                                                                                                <div className="space-y-1.5">
-                                                                                            {(proj.judges ?? []).map((judge, judgeIndex) => (
-                                                                                                        <div key={`${judge.name}-${judge.round}-${judgeIndex}`} className="flex items-center justify-between gap-3">
-                                                                                                            <span className="max-w-[130px] truncate" title={judge.name}>{judge.name}</span>
-                                                                                                            <Badge variant="outline" className="shrink-0 font-mono text-[10px]">R{judge.round} · {judge.score}%</Badge>
-                                                                                                        </div>
-                                                                                                    ))}
-                                                                                                </div>
-                                                                                            ) : <span className="text-muted-foreground italic">No scores submitted</span>}
-                                                                                        </TableCell>
-                                                                                        <TableCell className="align-middle text-xs">
-                                                                                            {proj.best_presenter ? <><div className="font-semibold text-amber-600 dark:text-amber-400">{proj.best_presenter.name}</div><div className="text-muted-foreground">{proj.best_presenter.votes} vote{proj.best_presenter.votes === 1 ? '' : 's'}</div></> : <span className="text-muted-foreground italic">Not nominated</span>}
-                                                                                        </TableCell>
-                                                                                    </>
-                                                                                )}
-                                                                                {isAppLayout && <TableCell className="py-4 text-center align-middle">
-                                                                                    <Badge
-                                                                                        variant="outline"
-                                                                                        className={`rounded border-border bg-muted/60 px-2.5 py-0.5 font-mono text-xs font-bold ${((proj.judges_r2 ?? 0) > 0 || (proj.judges_r1 ?? 0) > 0) ? 'text-primary' : 'text-muted-foreground'}`}
-                                                                                    >
-                                                                                        {((proj.judges_r2 ?? 0) > 0 || (proj.judges_r1 ?? 0) > 0)
-                                                                                            ? `${proj.final_score}%`
-                                                                                            : 'No scores'}
-                                                                                    </Badge>
-                                                                                </TableCell>}
                                                                                 <TableCell className="py-4 pr-6 text-right align-middle">
-                                                                                    {getAwardBadge(
-                                                                                        proj.award_level,
-                                                                                    )}
+                                                                                    <AwardBadge award={proj.award_level} />
                                                                                 </TableCell>
                                                                             </TableRow>
                                                                         );
@@ -524,7 +363,7 @@ return null;
                                                             ) : (
                                                                 <TableRow>
                                                                     <TableCell
-                                                                            colSpan={isAppLayout ? 9 : 5}
+                                                                            colSpan={4}
                                                                         className="py-12 text-center text-sm text-muted-foreground italic"
                                                                     >
                                                                         No approved projects are listed in this category yet.

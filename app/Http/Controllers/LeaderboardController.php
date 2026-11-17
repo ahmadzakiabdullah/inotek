@@ -38,6 +38,7 @@ class LeaderboardController extends Controller
                 'categories' => [],
                 'leaderboardData' => [],
                 'resultsPublished' => false,
+                'resultsFinal' => false,
             ]);
         }
 
@@ -185,6 +186,8 @@ class LeaderboardController extends Controller
             'categories' => $categories,
             'leaderboardData' => $groupedData,
             'resultsPublished' => $isAuthenticatedLeaderboard || $isPublicResultsPublished,
+            // Admins see scores before Round 2 is locked; this tells the page they are still a draft.
+            'resultsFinal' => $isPublicResultsPublished,
         ]);
     }
 }

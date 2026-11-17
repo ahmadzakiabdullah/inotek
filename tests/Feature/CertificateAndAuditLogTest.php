@@ -80,18 +80,30 @@ class CertificateAndAuditLogTest extends TestCase
             'pcode' => 'C1-01',
         ]);
 
-        // 3. Project owner can download participation certificate
+        // 3. Approval alone is not enough: the certificate comes with the results
+        $this->actingAs($this->student)
+            ->get(route('certificates.downloadParticipation', $this->project))
+            ->assertStatus(403);
+
+        // Admins can check the certificate before the results are announced
+        $this->actingAs($this->admin)
+            ->get(route('certificates.downloadParticipation', $this->project))
+            ->assertStatus(200);
+
+        $this->session->update(['r2_locked' => true]);
+
+        // 4. Once results are announced the project owner can download it
         $response = $this->actingAs($this->student)
             ->get(route('certificates.downloadParticipation', $this->project));
         $response->assertStatus(200);
         $response->assertHeader('Content-Type', 'application/pdf');
 
-        // 4. Other student cannot download their certificate
+        // 5. Other student cannot download their certificate
         $response = $this->actingAs($this->student2)
             ->get(route('certificates.downloadParticipation', $this->project));
         $response->assertStatus(403);
 
-        // 5. Admin can download the certificate
+        // 6. Admin can download the certificate
         $response = $this->actingAs($this->admin)
             ->get(route('certificates.downloadParticipation', $this->project));
         $response->assertStatus(200);

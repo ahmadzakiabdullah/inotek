@@ -19,10 +19,16 @@ class CertificateController extends Controller
      */
     public function downloadParticipation(Project $project): SymfonyResponse
     {
-        $this->authorizeDownload($project);
+        $user = $this->authorizeDownload($project);
 
         if ($project->status !== Project::STATUS_APPROVED) {
             return back()->withErrors(['status' => 'Certificates are only available for approved projects.']);
+        }
+
+        // Approval only confirms registration; the participant has not taken
+        // part yet. Like the achievement certificate, it is released with the results.
+        if (! $user->hasRole('admin') && ! $project->session?->r2_locked) {
+            abort(403, 'Participation certificates are available after the results are announced.');
         }
 
         return $this->renderCertificate($project, 'pdf.participation', 'Certificate_Participation');

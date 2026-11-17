@@ -48,6 +48,8 @@ import { Textarea } from '@/components/ui/textarea';
 interface CompetitionSession {
     id: number;
     name: string;
+    /** Results announced: certificates and feedback are released. */
+    r2_locked?: boolean;
 }
 
 interface Category {
@@ -343,7 +345,12 @@ return;
                                                 </Button>
                                             </>
                                         )}
-                                        {project.status === 4 && (
+                                        {project.status === 4 && !activeSession?.r2_locked && (
+                                            <span className="self-center text-xs text-muted-foreground">
+                                                Certificates are available after the results are announced.
+                                            </span>
+                                        )}
+                                        {project.status === 4 && activeSession?.r2_locked && (
                                             <>
                                                 <Button
                                                     asChild

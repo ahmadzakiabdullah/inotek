@@ -92,16 +92,18 @@ function PastProjectItem({ project }: { project: PastProject }) {
                 </div>
 
                 <div className="flex flex-wrap gap-2 md:justify-end">
-                    <Button asChild variant="outline" size="sm">
-                        <a
-                            href={`/dashboard/projects/${project.id}/certificate/participation`}
-                            target="_blank"
-                            rel="noreferrer"
-                        >
-                            <FileText className="mr-2 h-4 w-4" />
-                            Participation certificate
-                        </a>
-                    </Button>
+                    {project.results_published && (
+                        <Button asChild variant="outline" size="sm">
+                            <a
+                                href={`/dashboard/projects/${project.id}/certificate/participation`}
+                                target="_blank"
+                                rel="noreferrer"
+                            >
+                                <FileText className="mr-2 h-4 w-4" />
+                                Participation certificate
+                            </a>
+                        </Button>
+                    )}
                     {project.award_level && (
                         <Button
                             asChild
@@ -136,8 +138,9 @@ function PastProjectItem({ project }: { project: PastProject }) {
 
             {!project.results_published && (
                 <p className="mt-3 text-xs text-muted-foreground">
-                    The results of this session have not been published yet. The
-                    award and judges' feedback will appear here once they are.
+                    The results of this session have not been published yet.
+                    Certificates, the award and judges' feedback will appear
+                    here once they are.
                 </p>
             )}
 

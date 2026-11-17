@@ -75,16 +75,8 @@ php artisan migrate:fresh --seed
 
 New registrations receive the `user` role. The system roles are `admin`, `lecturer`, `judge`, and `user`; role IDs must not be hard-coded in application logic.
 
-#### Importing legacy competition data (optional)
-Registrations and submitted scores from the legacy system (`sessions`, `pendaftaran`, `score` tables in the same database) can be imported into the normalized competition tables:
-```bash
-# Preview only: prints counts, writes nothing
-php artisan inotek:import-legacy-competition
-
-# Write the import after reviewing the preview
-php artisan inotek:import-legacy-competition --commit
-```
-The command only runs against a database named `db4inotekdev` or `db4inotek` and requires pending migrations to be applied first. Imported sessions do not carry a registration mode or dates, so edit each one under the admin session screen and set `registration_mode` and the session/registration dates before using it.
+#### Legacy competition data
+The legacy data (`sessions`, `pendaftaran`, `score`) was imported once into Sesi 1/2026, and the one-time `inotek:import-legacy-competition` command was then removed: running it again would copy the legacy `is_active` and `r2_locked` flags back onto the competition sessions. It remains in the git history (commit `e4312ad` and earlier). Note that the legacy system recorded the June 2026 judging under "Sesi 2/2026", but all of it belongs to Sesi 1/2026.
 
 ### 4. Compiling Assets
 ```bash

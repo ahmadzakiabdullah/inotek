@@ -68,7 +68,7 @@ class BackfillLegacyBestPresenter extends Command
 
             $sessionIds = $legacySessionNames->map(fn () => (int) $targetId);
         } else {
-            // Same matching as inotek:import-legacy-competition: session by name.
+            // Same matching the one-time legacy import used: session by name.
             // Names are matched in PHP, not with a SQL join: in production the two
             // name columns use different collations, which MySQL refuses to compare.
             $targetIdsByName = DB::table('competition_sessions')->pluck('id', 'name');

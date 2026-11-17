@@ -185,6 +185,34 @@ class Round2WildcardTest extends TestCase
         $this->assertArrayNotHasKey('round2_wildcard', $find($this->getJson(route('leaderboard.index'))));
     }
 
+    public function test_round_two_page_warns_about_a_tie_at_the_shortlist_cut_off(): void
+    {
+        $this->actingAs($this->admin)->get(route('admin.round2.index'))
+            ->assertInertia(fn ($page) => $page->where('shortlistTies', []));
+
+        // GT-07 ties GT-03 (80) for third place; the code order leaves it out.
+        $tied = $this->project('GT-07', $this->category);
+        Score::create(['project_id' => $tied->id, 'judge_id' => $this->judge->id, 'session_id' => $this->session->id, 'round_no' => 1, 'total' => 80, 'score_details' => []]);
+
+        $this->actingAs($this->admin)->get(route('admin.round2.index'))
+            ->assertInertia(fn ($page) => $page
+                ->where("shortlistTies.{$this->category->id}.in.0.pcode", 'GT-03')
+                ->where("shortlistTies.{$this->category->id}.out.0.pcode", 'GT-07')
+                ->where("shortlistTies.{$this->category->id}.out.0.avg_score", 80));
+    }
+
+    public function test_deleting_a_project_removes_its_judge_assignments_but_keeps_scores(): void
+    {
+        $project = $this->projects['GT-01'];
+        JudgeAssignment::create(['project_id' => $project->id, 'judge_id' => $this->judge->id, 'session_id' => $this->session->id, 'round_no' => 1]);
+
+        $this->actingAs($this->admin)->post(route('admin.approvals.delete', $project))->assertRedirect();
+
+        $this->assertSoftDeleted('projects', ['id' => $project->id]);
+        $this->assertDatabaseMissing('judge_assignments', ['project_id' => $project->id]);
+        $this->assertDatabaseHas('scores', ['project_id' => $project->id]);
+    }
+
     public function test_the_limit_is_set_in_system_settings(): void
     {
         $this->actingAs($this->admin)->post(route('admin.settings.update'), [

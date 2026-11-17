@@ -68,6 +68,16 @@ class Project extends Model
         'video_url' => SafeLink::class,
     ];
 
+    protected static function booted(): void
+    {
+        // A deleted project can no longer be judged. Its assignments would
+        // otherwise linger and break every page that lists them (scores are
+        // kept as history). Restoring a project does not bring them back.
+        static::deleted(function (Project $project): void {
+            $project->judgeAssignments()->delete();
+        });
+    }
+
     /**
      * Hide the award from serialization until the session's results are locked.
      * Use before passing projects to non-admin users.

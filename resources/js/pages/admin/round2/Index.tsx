@@ -44,6 +44,19 @@ interface Props {
     wildcardCandidates?: WildcardCandidate[];
     wildcardLimit?: number;
     scoringStartedCategoryIds?: number[];
+    shortlistTies?: Record<number, ShortlistTie>;
+}
+
+interface TiedProject {
+    pcode: string | null;
+    title: string;
+    avg_score: number;
+}
+
+/** Projects sharing the cut-off Round 1 average, inside and just outside the shortlist. */
+interface ShortlistTie {
+    in: TiedProject[];
+    out: TiedProject[];
 }
 
 export default function Round2Index({
@@ -56,6 +69,7 @@ export default function Round2Index({
     wildcardCandidates = [],
     wildcardLimit = 0,
     scoringStartedCategoryIds = [],
+    shortlistTies = {},
 }: Props) {
     const lockForm = useForm({});
     const [currentLimit, setCurrentLimit] = useState(limit);
@@ -174,6 +188,7 @@ export default function Round2Index({
                                 const category = categories.find((c) => String(c.id) === categoryId);
                                 const categoryName = category ? `${category.name} (${category.code})` : `Category ${categoryId}`;
                                 const categoryWildcards = wildcards.filter((w) => String(w.category_id) === categoryId);
+                                const tie = shortlistTies[Number(categoryId)];
                                 
                                 return (
                                     <Card key={categoryId} className="border border-border/50 bg-card/60 backdrop-blur-sm shadow-md overflow-hidden">
@@ -191,6 +206,14 @@ export default function Round2Index({
                                                 {projects.length + categoryWildcards.length} Qualified
                                             </Badge>
                                         </CardHeader>
+                                        {tie && (
+                                            <div className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-[11px] text-amber-800 dark:text-amber-300">
+                                                <span className="font-bold">Tie at the cut-off ({tie.out[0].avg_score.toFixed(2)}%):</span>{' '}
+                                                {tie.out.map((p) => p.pcode).join(', ')} {tie.out.length === 1 ? 'has' : 'have'} the same Round 1
+                                                average as {tie.in.map((p) => p.pcode).join(', ')} but {tie.out.length === 1 ? 'is' : 'are'} not
+                                                shortlisted, because ties are broken by project code. Review this before assigning Round 2 judges.
+                                            </div>
+                                        )}
                                         <CardContent className="p-0">
                                             <Table>
                                                 <TableHeader>

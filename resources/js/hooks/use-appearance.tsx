@@ -13,15 +13,17 @@ const listeners = new Set<() => void>();
 let currentAppearance: Appearance = 'system';
 
 /**
- * Public portal pages are always shown in light mode: they have no theme
- * switch, so visitors whose device prefers dark mode could not change it.
- * Keep in sync with HandleAppearance::LIGHT_ONLY_PATHS on the server.
+ * Public portal and sign-in pages are always shown in light mode: they have
+ * no theme switch, so visitors whose device prefers dark mode could not
+ * change it. Keep in sync with HandleAppearance::LIGHT_ONLY_PATHS on the server.
  */
 const LIGHT_ONLY_PATHS = [
     /^\/$/,
     /^\/leaderboard\/?$/,
     /^\/contact\/?$/,
     /^\/verify\//,
+    /^\/(login|register|forgot-password|two-factor-challenge|email\/verify|user\/confirm-password)\/?$/,
+    /^\/reset-password\//,
 ];
 let forceLight = false;
 

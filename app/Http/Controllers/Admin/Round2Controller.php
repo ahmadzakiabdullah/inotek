@@ -88,6 +88,7 @@ class Round2Controller extends Controller
             'wildcards' => $wildcards,
             'wildcardCandidates' => $this->wildcards->candidates($activeSession),
             'wildcardLimit' => Round2Wildcards::limit(),
+            'shortlistTies' => (object) $this->calculator->shortlistBoundaryTies($activeSession->id, $limit),
             'scoringStartedCategoryIds' => $categories
                 ->filter(fn (Category $category) => $this->wildcards->roundTwoScoringStarted($activeSession->id, $category->id))
                 ->pluck('id')

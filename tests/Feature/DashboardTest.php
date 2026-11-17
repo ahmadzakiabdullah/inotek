@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Category;
 use App\Models\CompetitionSession;
 use App\Models\Project;
+use App\Models\Score;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -181,5 +182,64 @@ class DashboardTest extends TestCase
             ->component('dashboard')
             ->where('project', null)
         );
+    }
+
+    public function test_student_dashboard_lists_past_projects_with_certificates_and_published_feedback()
+    {
+        $student = User::factory()->create(['role_id' => 4]);
+        $judge = User::factory()->create(['role_id' => 3]);
+        $finalized = CompetitionSession::create(['name' => 'Sesi 1/2026', 'is_active' => false, 'r2_locked' => true]);
+        $unfinished = CompetitionSession::create(['name' => 'Sesi 2/2025', 'is_active' => false, 'r2_locked' => false]);
+        $current = CompetitionSession::create(['name' => 'Sesi 2/2026', 'is_active' => true]);
+
+        $make = function (CompetitionSession $session, string $title, int $status = Project::STATUS_APPROVED, ?User $owner = null) use ($student) {
+            $category = Category::firstOrCreate(['code' => 'C1'], ['name' => 'Tech']);
+
+            return Project::create([
+                'session_id' => $session->id,
+                'category_id' => $category->id,
+                'user_id' => ($owner ?? $student)->id,
+                'title' => $title,
+                'abstract' => 'Abstract text',
+                'institution_type' => 'utem',
+                'status' => $status,
+                'award_level' => 'Gold',
+                'supervisor_name' => 'Supervisor A',
+                'supervisor_email' => 'a@utem.com',
+            ]);
+        };
+
+        $past = $make($finalized, 'Finalized Project');
+        $make($unfinished, 'Unfinished Project');
+        $make($current, 'Current Project', Project::STATUS_SUBMITTED);
+        $make($finalized, 'Cancelled Project', Project::STATUS_CANCELLED);
+        $make($finalized, 'Someone Else', Project::STATUS_APPROVED, User::factory()->create(['role_id' => 4]));
+        Score::create([
+            'project_id' => $past->id,
+            'judge_id' => $judge->id,
+            'session_id' => $finalized->id,
+            'round_no' => 1,
+            'total' => 80,
+            'score_details' => [],
+            'comments' => 'Well presented',
+        ]);
+
+        $this->actingAs($student)->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('project.title', 'Current Project')
+                ->has('past_projects', 2)
+                // Newest session first.
+                ->where('past_projects.0.title', 'Unfinished Project')
+                ->where('past_projects.0.results_published', false)
+                ->where('past_projects.0.award_level', null)
+                ->where('past_projects.0.feedback', [])
+                ->where('past_projects.1.title', 'Finalized Project')
+                ->where('past_projects.1.session_name', 'Sesi 1/2026')
+                ->where('past_projects.1.award_level', 'Gold')
+                ->where('past_projects.1.feedback.0.evaluations.0.comments', 'Well presented'));
+
+        // The listed certificate can be downloaded by its owner.
+        $this->actingAs($student)->get(route('certificates.downloadParticipation', $past))->assertOk();
     }
 }

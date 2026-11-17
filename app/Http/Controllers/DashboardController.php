@@ -86,6 +86,8 @@ class DashboardController extends Controller
                 // Calculate pending judges and their projects
                 $assignments = \App\Models\JudgeAssignment::with(['project.category', 'judge'])
                     ->where('session_id', $activeSession->id)
+                    // Skip assignments whose project has since been deleted.
+                    ->whereHas('project')
                     ->get();
 
                 $scores = \App\Models\Score::where('session_id', $activeSession->id)

@@ -22,6 +22,8 @@ import {
 } from 'lucide-react';
 import React from 'react';
 import DashboardNotifications from '@/components/dashboard-notifications';
+import PastParticipations from '@/components/participant/past-participations';
+import type { PastProject } from '@/components/participant/past-participations';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -136,6 +138,7 @@ interface Props {
     recent_projects?: Project[];
     my_projects?: Project[];
     project?: Project | null;
+    past_projects?: PastProject[];
     categoryProgress?: CategoryProgress[];
     pendingJudges?: PendingJudge[];
 }
@@ -1179,6 +1182,7 @@ export default function Dashboard({
     recent_projects = [],
     my_projects = [],
     project = null,
+    past_projects = [],
     categoryProgress = [],
     pendingJudges = [],
 }: Props) {
@@ -1204,10 +1208,13 @@ export default function Dashboard({
                 );
             default:
                 return (
-                    <UserDashboard
-                        activeSession={activeSession}
-                        project={project}
-                    />
+                    <div className="space-y-6">
+                        <UserDashboard
+                            activeSession={activeSession}
+                            project={project}
+                        />
+                        <PastParticipations projects={past_projects} />
+                    </div>
                 );
         }
     };

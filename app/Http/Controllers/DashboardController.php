@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CompetitionSession;
 use App\Models\Project;
+use App\Services\ParticipantFeedback;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -16,7 +17,7 @@ class DashboardController extends Controller
     /**
      * Handle the dashboard view.
      */
-    public function index(): Response|RedirectResponse
+    public function index(ParticipantFeedback $feedback): Response|RedirectResponse
     {
         $user = Auth::user();
         
@@ -149,6 +150,32 @@ class DashboardController extends Controller
                     ?->hideUnpublishedAward($activeSession);
             }
             $data['project'] = $project;
+
+            // Projects from earlier sessions stay reachable after a new session
+            // starts: certificates, plus the award and judges' feedback once that
+            // session's results are finalized.
+            $data['past_projects'] = Project::with(['category:id,code,name', 'session:id,name,r2_locked'])
+                ->where('user_id', $user->id)
+                ->where('status', Project::STATUS_APPROVED)
+                ->when($activeSession, fn ($query) => $query->where('session_id', '!=', $activeSession->id))
+                ->orderByDesc('session_id')
+                ->get()
+                ->map(function (Project $past) use ($feedback) {
+                    $published = (bool) $past->session?->r2_locked;
+
+                    return [
+                        'id' => $past->id,
+                        'title' => $past->title,
+                        'pcode' => $past->pcode,
+                        'session_name' => $past->session?->name,
+                        'category' => $past->category?->only(['code', 'name']),
+                        'results_published' => $published,
+                        'award_level' => $published ? $past->award_level : null,
+                        'feedback' => $published ? $feedback->forProject($past) : [],
+                    ];
+                })
+                ->values()
+                ->all();
         }
 
         return Inertia::render('dashboard', $data);

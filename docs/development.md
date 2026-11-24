@@ -389,7 +389,7 @@ the same restricted view as the public board.
 Authenticated admin-only downloads used by the Reports & Export page.
 - **Endpoint**: `GET /dashboard/reports/{type}.{format}`
 - **Parameters**:
-  - `type`: `results`, `participants`, `judge-scores` or `judging-status`.
+  - `type`: `results`, `participants`, `judge-scores`, `judge-criteria` (one row per rubric criterion per evaluation) or `judging-status`.
   - `format`: `csv` (UTF-8 with BOM, opens in Excel) or `pdf`.
   - `session_id` (query, required): the competition session to report on.
 - Each download is recorded in the audit log.

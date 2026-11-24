@@ -30,7 +30,7 @@ class ReportBuilder
         ],
         'judge-criteria' => [
             'title' => 'Judge Scores by Rubric Criterion',
-            'description' => 'Every submitted evaluation broken down by rubric criterion: points given, maximum, weight and contribution to the total.',
+            'description' => 'One row per evaluation with the points given for each rubric criterion (A1, A2, ...) and the total score.',
         ],
         'judging-status' => [
             'title' => 'Judging Progress',
@@ -137,9 +137,11 @@ class ReportBuilder
     }
 
     /**
-     * One row per rubric criterion per evaluation, so admins can audit how
-     * each judge arrived at the total. Categories may use different rubrics,
-     * which is why criteria are rows rather than columns.
+     * One row per evaluation with one column per rubric criterion (raw points
+     * the judge gave), so admins can audit how each judge arrived at the
+     * total. Categories may use different rubrics, so the columns are the
+     * union of every criterion used; a criterion outside a project's rubric
+     * is left blank.
      */
     private function judgeCriteria(CompetitionSession $session): Report
     {
@@ -154,57 +156,45 @@ class ReportBuilder
             ->flatMap(fn (Score $score) => array_keys($score->score_details ?? []))
             ->unique()
             ->values();
-        $items = RubricItem::whereIn('id', $itemIds)->orderBy('id')->get()->keyBy('id');
-        // The total normalizes weights over the whole rubric, so the share of each
-        // criterion must use the same denominator.
-        $rubricWeights = RubricItem::whereIn('rubric_id', $items->pluck('rubric_id')->unique())
-            ->get()
-            ->groupBy('rubric_id')
-            ->map(fn ($rubricItems) => (float) $rubricItems->sum(fn (RubricItem $item) => (float) $item->weight));
+        $items = RubricItem::whereIn('id', $itemIds)->orderBy('rubric_id')->orderBy('id')->get();
+
+        // Criteria sharing a label (e.g. "A1" in two rubrics) share a column.
+        $columns = [];
+        foreach ($items as $item) {
+            $label = $item->code ?: $item->criteria_name;
+            $columns[$label][] = $item->id;
+        }
 
         $rows = [];
         foreach ($scores as $score) {
-            $base = [
+            $details = $score->score_details ?? [];
+            $points = [];
+            foreach ($columns as $ids) {
+                $value = '';
+                foreach ($ids as $id) {
+                    if (array_key_exists($id, $details) || array_key_exists((string) $id, $details)) {
+                        $value = round((float) ($details[$id] ?? $details[(string) $id]), 2);
+                        break;
+                    }
+                }
+                $points[] = $value;
+            }
+
+            $rows[] = [
                 $score->round_no,
                 $score->project->pcode ?? '-',
                 $score->project->title,
                 $score->project->category->name ?? '-',
                 $score->judge->name ?? '(deleted judge)',
+                ...$points,
+                round($score->total, 2),
             ];
-            $details = $score->score_details ?? [];
-            $criteria = $items->filter(
-                fn (RubricItem $item) => array_key_exists($item->id, $details) || array_key_exists((string) $item->id, $details)
-            );
-
-            if ($criteria->isEmpty()) {
-                $rows[] = [...$base, '-', '(no criterion breakdown recorded)', '-', '-', '-', '-', round($score->total, 2)];
-
-                continue;
-            }
-
-            foreach ($criteria as $item) {
-                $points = (float) ($details[$item->id] ?? $details[(string) $item->id]);
-                $max = (int) $item->max_points;
-                $totalWeight = $rubricWeights->get($item->rubric_id, 0.0);
-                $share = $totalWeight > 0 ? (float) $item->weight / $totalWeight * 100 : 0.0;
-
-                $rows[] = [
-                    ...$base,
-                    $item->section ?: '-',
-                    trim(($item->code ? "{$item->code} " : '').$item->criteria_name),
-                    round($points, 2),
-                    $max,
-                    round($share, 2),
-                    $max > 0 ? round($points / $max * $share, 2) : 0,
-                    round($score->total, 2),
-                ];
-            }
         }
 
         return new Report(
             title: self::TYPES['judge-criteria']['title'],
             sessionName: $session->name,
-            columns: ['Round', 'Code', 'Project Title', 'Category', 'Judge', 'Section', 'Criterion', 'Points', 'Max', 'Weight (%)', 'Weighted (/100)', 'Evaluation Total'],
+            columns: ['Round', 'Code', 'Project Title', 'Category', 'Judge', ...array_map('strval', array_keys($columns)), 'Total'],
             rows: $rows,
         );
     }

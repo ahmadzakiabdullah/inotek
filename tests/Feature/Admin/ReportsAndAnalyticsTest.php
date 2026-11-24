@@ -103,7 +103,7 @@ class ReportsAndAnalyticsTest extends TestCase
         }
     }
 
-    public function test_judge_criteria_report_lists_points_per_rubric_criterion(): void
+    public function test_judge_criteria_report_has_one_column_per_rubric_criterion(): void
     {
         $rubric = Rubric::create(['name' => 'Rubric']);
         $novelty = RubricItem::create(['rubric_id' => $rubric->id, 'section' => 'A', 'code' => 'A1', 'criteria_name' => 'Novelty', 'weight' => 3, 'max_points' => 5]);
@@ -119,13 +119,12 @@ class ReportsAndAnalyticsTest extends TestCase
             ->streamedContent();
         $lines = array_values(array_filter(explode("\n", substr($csv, 3))));
 
-        $this->assertStringContainsString('Section,Criterion,Points,Max,"Weight (%)","Weighted (/100)","Evaluation Total"', $lines[0]);
-        // Rubric order, not saved order; Novelty: 3/5 of a 75% share = 45.
-        $this->assertStringContainsString('"Lenient Judge",A,"A1 Novelty",3,5,75,45,65', $lines[1]);
-        $this->assertStringContainsString('"Lenient Judge",B,"B1 Impact",8,10,25,20,65', $lines[2]);
-        // An evaluation without a breakdown is still listed, not silently dropped.
-        $this->assertStringContainsString('Legacy Entry', $lines[3]);
-        $this->assertStringContainsString('(no criterion breakdown recorded)', $lines[3]);
+        // One column per criterion in rubric order, not saved order.
+        $this->assertStringContainsString('Judge,A1,B1,Total', $lines[0]);
+        $this->assertStringContainsString('"Lenient Judge",3,8,65', $lines[1]);
+        // An evaluation without a breakdown is still listed, with blank criteria.
+        $this->assertStringContainsString('Legacy Entry', $lines[2]);
+        $this->assertStringEndsWith(',,,50', rtrim($lines[2]));
     }
 
     public function test_csv_starts_with_a_bom_marks_drafts_and_neutralizes_formulas(): void
